@@ -660,43 +660,41 @@ window.fashion.$run.evaluate = function(valueObject, domElement, variables, type
     return evaluateSingleValue(valueObject);
   }
 };
-var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
-
-window.fashion.$run.watchVariables = function(variableObject) {
-  var ignore;
-  if (variableObject == null) {
-    variableObject = window[FASHION.config.variableObject];
+window.fashion.$run.defineProperties = function(variables, objectName) {
+  var container, propObject, varName, varObj, _results;
+  if (variables == null) {
+    variables = FASHION.variables;
   }
-  ignore = [];
-  return Object.observe(variableObject, (function(_this) {
-    return function(changes) {
-      var change, newValue, syncTo, variable, _i, _len, _ref, _results;
-      _results = [];
-      for (_i = 0, _len = changes.length; _i < _len; _i++) {
-        change = changes[_i];
-        if (_ref = change.name, __indexOf.call(ignore, _ref) >= 0) {
-          ignore.splice(ignore.indexOf(change.name), 1);
-          continue;
-        }
-        if (change.type === "update") {
-          variable = change.name;
-          newValue = change.object[variable];
-          syncTo = "$" + variable;
-          if (variable[0] === "$") {
-            variable = variable.substr(1);
-            syncTo = variable;
-          }
-          ignore.push(syncTo);
-          variableObject[syncTo] = newValue;
-          _this.updateVariable(variable, newValue);
-          continue;
-        } else {
-          _results.push(void 0);
-        }
-      }
-      return _results;
+  if (objectName == null) {
+    objectName = FASHION.config.variableObject;
+  }
+  container = void 0;
+  if (objectName) {
+    container = window[objectName] = {};
+  } else {
+    container = window;
+  }
+  _results = [];
+  for (varName in variables) {
+    varObj = variables[varName];
+    propObject = {
+      get: (function(varObj) {
+        return function() {
+          return varObj.value;
+        };
+      })(varObj),
+      set: ((function(_this) {
+        return function(varName, varObj) {
+          return function(newValue) {
+            return _this.updateVariable(varName, newValue);
+          };
+        };
+      })(this))(varName, varObj)
     };
-  })(this));
+    Object.defineProperty(container, varName, propObject);
+    _results.push(Object.defineProperty(container, "$" + varName, propObject));
+  }
+  return _results;
 };
 var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -975,8 +973,6 @@ window.fashion.$actualizer.subCSSRule = function(ruleText, sheetElement, index) 
   sheetElement.sheet.deleteRule(index);
   return sheetElement.sheet.insertRule(ruleText, index);
 };
-var addVariablesToWindow;
-
 window.fashion.$actualizer.addScriptFromTree = function(tree, selMap) {
   var jsElement, jsText;
   jsText = window.fashion.$actualizer.createScriptFromTree(tree, selMap);
@@ -988,35 +984,19 @@ window.fashion.$actualizer.addScriptFromTree = function(tree, selMap) {
 window.fashion.$actualizer.createScriptFromTree = function(tree, selMap) {
   var jsText;
   jsText = window.fashion.$blueprint.initialize(tree, selMap);
-  jsText += window.fashion.$blueprint.basicRuntime();
-  jsText += "\n" + addVariablesToWindow(tree.variables) + "\n";
+  jsText += window.fashion.$blueprint.basicRuntime() + "\n";
   jsText += window.fashion.$blueprint.startRuntime();
   return jsText;
-};
-
-addVariablesToWindow = function(variables) {
-  var formattedVal, name, obj, styleObj;
-  styleObj = {};
-  for (name in variables) {
-    obj = variables[name];
-    formattedVal = obj.value;
-    if (obj.type === window.fashion.$type.String) {
-      formattedVal = "\"" + formattedVal + "\"";
-    }
-    styleObj[name] = formattedVal;
-    styleObj["$" + name] = formattedVal;
-  }
-  return "w." + window.fashion.variableObject + " = " + (JSON.stringify(styleObj)) + ";";
 };
 window.fashion.$blueprint = {
   initialize: function(parseTree, selMap) {
     return "" + window.fashion.fileHeader + "\nw = window;\nw.FASHION = {\n	variables: " + (JSON.stringify(parseTree.variables)) + ",\n	selectors:  " + (JSON.stringify(parseTree.selectors)) + ",\n	cssMap: " + (JSON.stringify(selMap)) + ",\n	type: " + (JSON.stringify(window.fashion.$type)) + ",\n	unit: " + (JSON.stringify(window.fashion.$unit)) + ",\n	constants: " + (JSON.stringify(window.fashion.$typeConstants)) + ",\n	config: {\n		variableObject: '" + window.fashion.variableObject + "',\n		cssId: '" + window.fashion.cssId + "'\n	}\n};\n";
   },
   basicRuntime: function() {
-    return "var __indexOf = " + ('[].indexOf' || __indexOf.toString()) + ";\nw.FASHION.runtime = {\n	throwError: " + (window.fashion.$run.throwError.toString()) + ",\n	initializeSelector: " + (window.fashion.$run.initializeSelector.toString()) + ",\n	updateVariable: " + (window.fashion.$run.updateVariable.toString()) + ",\n	getVariable: " + (window.fashion.$run.getVariable.toString()) + ",\n	evaluate: " + (window.fashion.$run.evaluate.toString()) + ",\n	determineType: " + (window.fashion.$run.determineType.toString()) + ",\n	getUnit: " + (window.fashion.$run.getUnit.toString()) + ",\n	watchVariables: " + (window.fashion.$run.watchVariables.toString()) + ",\n	updateSelector: " + (window.fashion.$run.updateSelector.toString()) + ",\n	regenerateSelector: " + (window.fashion.$run.regenerateSelector.toString()) + "\n}";
+    return "var __indexOf = " + ('[].indexOf' || __indexOf.toString()) + ";\nw.FASHION.runtime = {\n	throwError: " + (window.fashion.$run.throwError.toString()) + ",\n	initializeSelector: " + (window.fashion.$run.initializeSelector.toString()) + ",\n	updateVariable: " + (window.fashion.$run.updateVariable.toString()) + ",\n	getVariable: " + (window.fashion.$run.getVariable.toString()) + ",\n	evaluate: " + (window.fashion.$run.evaluate.toString()) + ",\n	determineType: " + (window.fashion.$run.determineType.toString()) + ",\n	getUnit: " + (window.fashion.$run.getUnit.toString()) + ",\n	defineProperties: " + (window.fashion.$run.defineProperties.toString()) + ",\n	updateSelector: " + (window.fashion.$run.updateSelector.toString()) + ",\n	regenerateSelector: " + (window.fashion.$run.regenerateSelector.toString()) + "\n}";
   },
   startRuntime: function() {
-    return "w.FASHION.runtime.initializeSelector()\nw.FASHION.runtime.watchVariables.call(w.FASHION.runtime)";
+    return "w.FASHION.runtime.initializeSelector()\nw.FASHION.runtime.defineProperties.call(w.FASHION.runtime)";
   }
 };
 window.fashion.$functions = {

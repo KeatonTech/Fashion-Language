@@ -34,7 +34,7 @@ window.fashion.$blueprint =
 			evaluate: #{window.fashion.$run.evaluate.toString()},
 			determineType: #{window.fashion.$run.determineType.toString()},
 			getUnit: #{window.fashion.$run.getUnit.toString()},
-			watchVariables: #{window.fashion.$run.watchVariables.toString()},
+			defineProperties: #{window.fashion.$run.defineProperties.toString()},
 			updateSelector: #{window.fashion.$run.updateSelector.toString()},
 			regenerateSelector: #{window.fashion.$run.regenerateSelector.toString()}
 		}
@@ -44,5 +44,5 @@ window.fashion.$blueprint =
 	startRuntime: () ->
 		"""
 		w.FASHION.runtime.initializeSelector()
-		w.FASHION.runtime.watchVariables.call(w.FASHION.runtime)
+		w.FASHION.runtime.defineProperties.call(w.FASHION.runtime)
 		"""
