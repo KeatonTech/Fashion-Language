@@ -10,8 +10,8 @@ window.fashion.$parser.parseSections = (fashionText) ->
 	# Regex parses out the important bits, but doesn't count brackets
 	regex = ///(
 			[\s]*(							# Padded with whitespace
-			\$([\w\-]+?)\:[\s]*(.*?)\;|		# Variable definitions
-			\@([\w\-]+?)[\s]*(.*?)[\s]*\{| 	# Beginning of blocks
+			\$([\w\-]+)\:[\s]*(.*?)\;|		# Variable definitions
+			\@([\w\-]+)[\s]*(.*?)[\s]*\{| 	# Beginning of blocks
 			(.*?)[\s]*?\{)|					# Beginning of selector
 			\{|\}							# Opening and closing brackets
 			)///g

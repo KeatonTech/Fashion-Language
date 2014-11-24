@@ -55,7 +55,7 @@
         expect(result.selectors['*']['height']).toBe("30px");
         return expect(result.selectors['ul.test td:last-child']['background']).toBe("black");
       });
-      return it("should parse nested selectors", function() {
+      it("should parse nested selectors", function() {
         var result;
         result = parse(".outer {\n	opacity: 1.0;\n	.middle {\n		opacity: 0.5;\n		.inner {opacity: 0.0;}\n		&.super {opacity: 0.75;}\n		height: 50px\n	}\n	height: 100px\n}");
         expect(result.selectors['.outer']['opacity']).toBe("1.0");
@@ -64,6 +64,25 @@
         expect(result.selectors['.outer .middle.super']['opacity']).toBe("0.75");
         expect(result.selectors['.outer']['height']).toBe("100px");
         return expect(result.selectors['.outer .middle']['height']).toBe("50px");
+      });
+      it("should allow selectors to be variables", function() {
+        var result;
+        result = parse("$contentDiv: content;\n.$contentDiv {\n	background: black;\n}");
+        expect(result.selectors['.$contentDiv']['background']).toBe("black");
+        return expect(result.variables.contentDiv.dependants).toEqual({
+          ".$contentDiv": [" "]
+        });
+      });
+      return it("should allow variables to be part of selectors", function() {
+        var result;
+        result = parse("$contentDiv: .content;\n$contentSub: p;\n$contentDiv h3 $contentSub {\n	color: black;\n}");
+        expect(result.selectors['$contentDiv h3 $contentSub']['color']).toBe("black");
+        expect(result.variables.contentDiv.dependants).toEqual({
+          "$contentDiv h3 $contentSub": [" "]
+        });
+        return expect(result.variables.contentSub.dependants).toEqual({
+          "$contentDiv h3 $contentSub": [" "]
+        });
       });
     });
     describe("Properties", function() {

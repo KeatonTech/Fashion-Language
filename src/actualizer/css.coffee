@@ -45,10 +45,18 @@ window.fashion.$actualizer.generateStyleProperties = (selectors, variables) ->
 		# Loop over every selector
 		for selector, properties of selectors
 
+			# Expand out any variables in the selector string
+			newSelector = window.fashion.$run.expandVariables selector, variables
+
 			# Separate styles based on whether or not they'll actually change
-			dynamicProps = staticProps = "#{selector} {"
+			dynamicProps = staticProps = "#{newSelector} {"
+			dynamicSelector = newSelector isnt selector
+			hasDynamicProps = hasStaticProps = false
+			if dynamicSelector then hasDynamicProps = true
+
+			# Deal with CSS3 transitions
 			transitions = []
-			hasTransition = hasDynamicProps = hasStaticProps = false
+			hasTransition = false
 
 			# Loop over every property in the selector
 			for property, valueObject of properties
@@ -63,7 +71,7 @@ window.fashion.$actualizer.generateStyleProperties = (selectors, variables) ->
 					transitions[property] = valueObject.transition
 
 				# Add the property to the appropriate string
-				if valueObject["dynamic"] is true
+				if dynamicSelector or valueObject["dynamic"] is true
 					dynamicProps += "#{property}: #{val};"
 					hasDynamicProps = true
 				else
@@ -131,7 +139,10 @@ window.fashion.$actualizer.subInFinalRules =
 # Simple function adds a single rule to a sheet and returns the index
 window.fashion.$actualizer.addCSSRule = (ruleText, sheetElement) ->
 	staticIndex = window.fashion.$dom.incrementSheetIndex(sheetElement)
-	sheetElement.sheet.insertRule ruleText, staticIndex
+	try
+		sheetElement.sheet.insertRule ruleText, staticIndex
+	catch error
+		console.log "[FASHION] Invalid rule: '#{ruleText}'"
 	return staticIndex
 
 # Simple function adds a single rule to a sheet and returns the index

@@ -23,6 +23,29 @@ This part may look a little new:
 
 Obviously changing page styles from Javascript is nothing new, so this may not seem particularly exciting. Notice, though, that there are no CSS selectors involved here. So if you needed to move the page background to a div, or apply the background color to a new element, your Javascript wouldn't have to change at all! You also might be interested to know that Fashion doesn't use any 'style' attributes, so your normal CSS inheritance will stay in tact.
 
+Variables aren't just useful for changing things like colors and sizes, they can be used to select elements too. So, if you wanted to build a simple sidebar menu and control which item was selected, you could do it without any DOM hassle.
+
+	<head>
+		<script src="../../build/fashion.0.1.js"></script>
+		<style type="text/x-fashion">
+
+		$item: awesome;
+		#$item {
+			background-color: red;
+		}
+
+		</style>
+	</head>
+	<body>
+		<ul>
+			<li id="awesome">Awesome Item!</li>
+			<li id="cool">Cool Item!</li>
+			<li id="sweet">Sweet Item!</li>
+		</ul>
+	</body>
+
+Then selecting the 'cool' item would be as simple as running style.item = 'cool'
+
 ### Transitions & Animations
 
 The web is an increasingly animated place. Far beyond the geocities gifs of yesteryear, animations on the modern web can visually guide users around a website and provide context for interactions. CSS3 introduced syntax for GPU-accelerated transitions, which tend to work pretty well. The only downside is that the syntax is cumbersome and needs to be browser-prefixed, which might lead some developers to forego transitions in places where they would be helpful. Fashion provides some new syntactic sugar to combat this.

@@ -114,6 +114,34 @@ describe "Parser", ()->
 			expect(result.selectors['.outer .middle']['height']).toBe("50px")
 
 
+		it "should allow selectors to be variables", ()->
+			result = parse(	"""
+							$contentDiv: content;
+							.$contentDiv {
+								background: black;
+							}
+							""")
+
+			expect(result.selectors['.$contentDiv']['background']).toBe("black")
+			expect(result.variables.contentDiv.dependants).toEqual({".$contentDiv": [" "]})
+
+
+		it "should allow variables to be part of selectors", ()->
+			result = parse(	"""
+							$contentDiv: .content;
+							$contentSub: p;
+							$contentDiv h3 $contentSub {
+								color: black;
+							}
+							""")
+
+			expect(result.selectors['$contentDiv h3 $contentSub']['color']).toBe("black")
+			expect(result.variables.contentDiv.dependants).toEqual(
+				{"$contentDiv h3 $contentSub": [" "]})
+			expect(result.variables.contentSub.dependants).toEqual(
+				{"$contentDiv h3 $contentSub": [" "]})
+
+
 	# Test the nested selector parser
 	describe "Properties", () ->
 

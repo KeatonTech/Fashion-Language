@@ -61,16 +61,26 @@ window.fashion.$run =
 	# Generate a selector from its dynamic properties
 	regenerateSelector: (selector, properties, variables = FASHION.variables) ->
 		# Separate styles based on whether or not they'll actually change
-		dynamicProps = "#{selector} {"
+		expandedSelector = @expandVariables selector
+		dynamicSelector = expandedSelector isnt selector
+		dynamicProps = "#{expandedSelector} {"
 
 		# Loop over every property in the selector
-		for property, valueObject of properties when valueObject.dynamic is true
+		for property, valueObject of properties
+			if dynamicSelector or valueObject.dynamic is true
 
-			# Evaluate the current string value
-			val = @evaluate valueObject, undefined, variables
-			dynamicProps += "#{property}: #{val};"
+				# Evaluate the current string value
+				val = @evaluate valueObject, undefined, variables
+				dynamicProps += "#{property}: #{val};"
 
 		return dynamicProps + "}"
+
+	# Make sure any variables in a selector's name are expanded
+	expandVariables: (dynamicString,  variables = FASHION.variables) ->
+		dynamicString.replace /\$([\w\-]+)/g, (match, varName) ->
+			if variables[varName]
+				return variables[varName].value
+			else return ""
 
 # Includes
 # @prepros-append "./evaluation.coffee"

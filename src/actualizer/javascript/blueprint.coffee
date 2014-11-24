@@ -36,7 +36,8 @@ window.fashion.$blueprint =
 			getUnit: #{window.fashion.$run.getUnit.toString()},
 			defineProperties: #{window.fashion.$run.defineProperties.toString()},
 			updateSelector: #{window.fashion.$run.updateSelector.toString()},
-			regenerateSelector: #{window.fashion.$run.regenerateSelector.toString()}
+			regenerateSelector: #{window.fashion.$run.regenerateSelector.toString()},
+			expandVariables: #{window.fashion.$run.expandVariables.toString()}
 		}
 		"""
 

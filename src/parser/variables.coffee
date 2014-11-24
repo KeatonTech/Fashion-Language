@@ -31,7 +31,7 @@ window.fashion.$parser.backlinkDependencies = (selector, properties, variables) 
 			if varName[0] is "$" then varName = varName.substr(1)
 
 			# Make sure the variable exists
-			depVar = variables[varName];
+			depVar = variables[varName]
 			if depVar isnt undefined # Make sure the variable exists
 
 				if !depVar['dependants'][selector]
@@ -48,4 +48,15 @@ window.fashion.$parser.backlinkDependencies = (selector, properties, variables) 
 				key = "transition." + k
 				if tp['dependencies'] then linkDependenciesList(tp['dependencies'], key)
 
-		
+
+	# Link any variables contained in the selector itself
+	regex = /\$([\w\-]+)/g
+	while vObj = regex.exec selector
+		varName = vObj[1]
+		depVar = variables[varName]
+		if depVar isnt undefined
+
+			# Add the dependancy
+			if !depVar['dependants'][selector]
+					depVar['dependants'][selector] = []
+			depVar['dependants'][selector].push " "
