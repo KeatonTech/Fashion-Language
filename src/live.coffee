@@ -10,10 +10,25 @@ into CSS and Javascript. It is not reccommended for production apps.
 ------------------------------------------------------------------------------
 ###
 
+# More constants
+window.fashion.live = {
+	loadedEvent: "fashion-loaded"
+}
+
 # Load and parse style and link tags
 document.onreadystatechange = ()->
 	if document.readyState is "complete"
 		scriptIndex = 0
+		fileCount = 0
+
+		# Run this when all scripts are loaded
+		allLoaded = ()->
+			event = new Event(window.fashion.live.loadedEvent)
+			event.variableObject = window[window.fashion.variableObject]
+			document.dispatchEvent event
+
+		# Count the files to load
+		fileCount = window.fashion.$loader.countScripts()
 
 		# Load Fashion scripts on the page
 		window.fashion.$loader.loadScriptsFromTags (scriptText)->
@@ -30,6 +45,8 @@ document.onreadystatechange = ()->
 			# Print the runtime
 			console.log "[FASHION] Compile finished in #{new Date().getTime() - start}ms"
 
+			# If there are no more files to run, trigger the event
+			if --fileCount <= 0 then allLoaded()
 
 # Include helper files, used by everything
 # @prepros-append ./helpers/dom.coffee

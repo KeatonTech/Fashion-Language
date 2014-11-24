@@ -46,16 +46,31 @@ into CSS and Javascript. It is not reccommended for production apps.
 
 ------------------------------------------------------------------------------
  */
+window.fashion.live = {
+  loadedEvent: "fashion-loaded"
+};
+
 document.onreadystatechange = function() {
-  var scriptIndex;
+  var allLoaded, fileCount, scriptIndex;
   if (document.readyState === "complete") {
     scriptIndex = 0;
+    fileCount = 0;
+    allLoaded = function() {
+      var event;
+      event = new Event(window.fashion.live.loadedEvent);
+      event.variableObject = window[window.fashion.variableObject];
+      return document.dispatchEvent(event);
+    };
+    fileCount = window.fashion.$loader.countScripts();
     return window.fashion.$loader.loadScriptsFromTags(function(scriptText) {
       var parseTree, start;
       start = new Date().getTime();
       parseTree = window.fashion.$parser.parse(scriptText);
       window.fashion.$actualizer.actualizeFullSheet(parseTree, scriptIndex++);
-      return console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
+      console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
+      if (--fileCount <= 0) {
+        return allLoaded();
+      }
     });
   }
 };
@@ -165,6 +180,19 @@ window.fashion.$loader = {
   },
   loadScriptsFromTags: function(scriptCallback) {
     return window.fashion.$loader.loadStyleTags(scriptCallback);
+  },
+  countScripts: function() {
+    var fileCount, i, scriptTags, tagType, _i, _ref;
+    fileCount = 0;
+    scriptTags = document.getElementsByTagName("style");
+    for (i = _i = 0, _ref = scriptTags.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
+      tagType = scriptTags[i].getAttribute("type");
+      if (tagType !== window.fashion.mimeType) {
+        continue;
+      }
+      fileCount++;
+    }
+    return fileCount;
   }
 };
 window.fashion.$parser = {

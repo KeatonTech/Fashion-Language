@@ -1,7 +1,7 @@
 # Loads in Fashion code from <style> tags, <link> tags or direct command
 window.fashion.$loader = 
 
-	# Loads fashion code from <style> tags
+	# Loads fashion code from <style> tags, return a count of files
 	loadStyleTags: (scriptCallback) ->
 		scriptTags = document.getElementsByTagName "style"
 		for i in [0...scriptTags.length]
@@ -15,8 +15,22 @@ window.fashion.$loader =
 				scriptCallback scriptTags[i].textContent
 
 
+
 	# Loads in Fashion code from <style> tags and <link> tags
 	loadScriptsFromTags: (scriptCallback) ->
 
 		# Run everything we need
 		window.fashion.$loader.loadStyleTags(scriptCallback)
+
+
+	# Count the number of scripts to be loaded
+	countScripts: ()->
+		fileCount = 0
+
+		scriptTags = document.getElementsByTagName "style"
+		for i in [0...scriptTags.length]
+			tagType = scriptTags[i].getAttribute("type")
+			if tagType isnt window.fashion.mimeType then continue
+			fileCount++
+
+		return fileCount
