@@ -98,6 +98,33 @@
         result = parse("p {height: 120px;}");
         return expect(result.selectors.p.height).toBe("120px");
       });
+      it("should allow multipart properties", function() {
+        var expectedProperty, result, sels;
+        result = parse("p {\n	border: 2px solid black;\n}");
+        sels = result.selectors.p;
+        expectedProperty = ['2px', 'solid', 'black'];
+        return expect(sels.border).toEqual(expectedProperty);
+      });
+      it("should allow comma-separated properties", function() {
+        var expectedProperty, result, sels;
+        result = parse("p {\n	property: 1px, 2px;\n}");
+        sels = result.selectors.p;
+        expectedProperty = [['1px'], ['2px']];
+        return expect(sels.property).toEqual(expectedProperty);
+      });
+      it("should allow multipart comma-separated properties", function() {
+        var expectedProperty, result, sels;
+        result = parse("p {\n	border: 2px solid black, 1px solid white;\n}");
+        sels = result.selectors.p;
+        expectedProperty = [['2px', 'solid', 'black'], ['1px', 'solid', 'white']];
+        return expect(sels.border).toEqual(expectedProperty);
+      });
+      it("should acknowledge !important on string properties", function() {
+        var result, sels;
+        result = parse("p {\n	height: 100px !important\n}");
+        sels = result.selectors.p;
+        return expect(sels.height).toBe("100px !important");
+      });
       it("should link variables", function() {
         var result, sels;
         result = parse("$height: 100px;\np {\n	height: $height;\n}");
@@ -111,6 +138,13 @@
         result = parse("div {\n	height: @height;\n}");
         expect(result.selectors.div.height.dynamic).toBe(true);
         return expect(result.selectors.div.height.link).toBe("@height");
+      });
+      it("should acknowledge !important on linked properties", function() {
+        var result, sels;
+        result = parse("$height: 100px;\np {\n	height: $height !important\n}");
+        sels = result.selectors.p;
+        expect(sels.height.link).toBe("$height");
+        return expect(sels.height.important).toBe(true);
       });
       return it("should parse transitions", function() {
         var result, sels;
@@ -145,7 +179,7 @@
         })).toBe("20px");
         return expect(result.variables.fullHeight.dependants.div).toEqual(["height"]);
       });
-      return it("should allow untyped variables in expressions", function() {
+      it("should allow untyped variables in expressions", function() {
         var expression, result;
         result = parse("$heightDivisor: 3;\ndiv {\n	height: 30px/$heightDivisor;\n}");
         expression = result.selectors.div.height;
@@ -161,6 +195,17 @@
           }
         })).toBe("3px");
         return expect(result.variables.heightDivisor.dependants.div).toEqual(["height"]);
+      });
+      return it("should allow !important on expressions", function() {
+        var expression, result;
+        result = parse("$fullHeight: 30px;\ndiv {\n	height: $fullHeight / 3 !important;\n}");
+        expression = result.selectors.div.height;
+        expect(expression.evaluate({
+          fullHeight: {
+            value: 30
+          }
+        })).toBe("10px");
+        return expect(expression.important).toBe(true);
       });
     });
   });

@@ -7,7 +7,9 @@ window.fashion.$parser.parseSelectorBody = (bodyString, vars) ->
 			[\s]*(\[([\w\-\$\@]*)		# Transition Name
 			[\s]*([\w\-\$\@]*)[\s]*		# Transition Duration (optional)
 			([\w\-\$\@]*)\]){0,1}		# Transition Delay (optional)
-			[\s]*(.*?)[;}\n]			# Property Value or Expression
+			[\s]*(.*?)					# Property Value or Expression
+			[\s]*(!important)?			# Important flag
+			[;}\n]						# Ending
 			///g
 
 	while property = regex.exec bodyString
@@ -17,8 +19,9 @@ window.fashion.$parser.parseSelectorBody = (bodyString, vars) ->
 		# Split it into multiple values if necessary
 		if value.indexOf(',') isnt -1
 			value = value.split(",");
-			item = item.trim() for item in value
-			item = window.fashion.$parser.parsePropertyValue(item, vars) for item in value
+			value[i] = item.trim() for i,item of value
+			for i,item of value
+				value[i] = window.fashion.$parser.parsePropertyValue(item, vars, true, true)
 
 		# Just process the one value
 		else value = window.fashion.$parser.parsePropertyValue(value, vars)
@@ -31,6 +34,11 @@ window.fashion.$parser.parseSelectorBody = (bodyString, vars) ->
 				duration: window.fashion.$parser.parsePropertyValue(property[4], vars,false)
 				delay: window.fashion.$parser.parsePropertyValue(property[5], vars,false)
 
+		# Note the important flag
+		if property[7] is "!important"
+			if typeof value is "string" then value += " !important"
+			if typeof value is "object" then value.important = true
+
 		# Add the property to the properties object
 		properties[property[1]] = value;
 
@@ -39,7 +47,24 @@ window.fashion.$parser.parseSelectorBody = (bodyString, vars) ->
 
 
 # Convert a property value into a linked object or expression, if necessary
-window.fashion.$parser.parsePropertyValue = (value, variables, allowExpression = true) ->
+window.fashion.$parser.parsePropertyValue = 
+	(value, variables, allowExpression = true, forceArray = false) ->
+
+		# Pass expressions through
+		if allowExpression and value.match /[\+\-\/\*\(\)\=]/g
+			return window.fashion.$parser.parseSingleValue value, variables, true
+
+		# Check to see if we have a multi-piece property
+		if forceArray or (typeof value is "string" and value.indexOf(" ") isnt -1)
+			return (for piece in value.split(" ")
+				window.fashion.$parser.parseSingleValue piece, variables, allowExpression
+			)
+
+		# We have a single-piece property
+		else window.fashion.$parser.parseSingleValue value, variables, allowExpression
+
+# Convert a property value into a linked object or expression, if necessary
+window.fashion.$parser.parseSingleValue = (value, variables, allowExpression = true) ->
 	valueObject = {dynamic: false}
 	hasVariable = false
 
@@ -58,7 +83,7 @@ window.fashion.$parser.parsePropertyValue = (value, variables, allowExpression =
 			return valueObject;
 
 	# Check to see if it's an expression
-	if allowExpression and value.match /[\+\-\/\*\(\)]/g
+	if allowExpression and value.match /[\+\-\/\*\(\)\=]/g
 		return window.fashion.$parser.parseExpression(
 			value, variables, window.fashion.$functions, window.fashion.$globals)
 

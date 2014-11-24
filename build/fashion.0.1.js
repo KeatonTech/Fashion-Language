@@ -426,9 +426,9 @@ window.fashion.$parser.backlinkGlobals = function(parseTree, selector, propertie
   return _results;
 };
 window.fashion.$parser.parseSelectorBody = function(bodyString, vars) {
-  var item, properties, property, regex, value, _i, _j, _len, _len1;
+  var i, item, properties, property, regex, value;
   properties = {};
-  regex = /[\s]*([\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@]*)[\s]*([\w\-\$\@]*)\]){0,1}[\s]*(.*?)[;}\n]/g;
+  regex = /[\s]*([\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@]*)[\s]*([\w\-\$\@]*)\]){0,1}[\s]*(.*?)[\s]*(!important)?[;}\n]/g;
   while (property = regex.exec(bodyString)) {
     if (property.length < 7) {
       continue;
@@ -436,13 +436,13 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, vars) {
     value = property[6];
     if (value.indexOf(',') !== -1) {
       value = value.split(",");
-      for (_i = 0, _len = value.length; _i < _len; _i++) {
-        item = value[_i];
-        item = item.trim();
+      for (i in value) {
+        item = value[i];
+        value[i] = item.trim();
       }
-      for (_j = 0, _len1 = value.length; _j < _len1; _j++) {
-        item = value[_j];
-        item = window.fashion.$parser.parsePropertyValue(item, vars);
+      for (i in value) {
+        item = value[i];
+        value[i] = window.fashion.$parser.parsePropertyValue(item, vars, true, true);
       }
     } else {
       value = window.fashion.$parser.parsePropertyValue(value, vars);
@@ -459,12 +459,47 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, vars) {
         delay: window.fashion.$parser.parsePropertyValue(property[5], vars, false)
       };
     }
+    if (property[7] === "!important") {
+      if (typeof value === "string") {
+        value += " !important";
+      }
+      if (typeof value === "object") {
+        value.important = true;
+      }
+    }
     properties[property[1]] = value;
   }
   return properties;
 };
 
-window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpression) {
+window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpression, forceArray) {
+  var piece;
+  if (allowExpression == null) {
+    allowExpression = true;
+  }
+  if (forceArray == null) {
+    forceArray = false;
+  }
+  if (allowExpression && value.match(/[\+\-\/\*\(\)\=]/g)) {
+    return window.fashion.$parser.parseSingleValue(value, variables, true);
+  }
+  if (forceArray || (typeof value === "string" && value.indexOf(" ") !== -1)) {
+    return (function() {
+      var _i, _len, _ref, _results;
+      _ref = value.split(" ");
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        piece = _ref[_i];
+        _results.push(window.fashion.$parser.parseSingleValue(piece, variables, allowExpression));
+      }
+      return _results;
+    })();
+  } else {
+    return window.fashion.$parser.parseSingleValue(value, variables, allowExpression);
+  }
+};
+
+window.fashion.$parser.parseSingleValue = function(value, variables, allowExpression) {
   var hasVariable, valueObject, vars;
   if (allowExpression == null) {
     allowExpression = true;
@@ -485,7 +520,7 @@ window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpr
       return valueObject;
     }
   }
-  if (allowExpression && value.match(/[\+\-\/\*\(\)]/g)) {
+  if (allowExpression && value.match(/[\+\-\/\*\(\)\=]/g)) {
     return window.fashion.$parser.parseExpression(value, variables, window.fashion.$functions, window.fashion.$globals);
   } else if (hasVariable) {
     valueObject.link = vars[0];

@@ -162,6 +162,53 @@ describe "Parser", ()->
 			expect(result.selectors.p.height).toBe("120px")
 
 
+		it "should allow multipart properties", ()->
+			result = parse(	"""
+							p {
+								border: 2px solid black;
+							}
+							""")
+
+			sels = result.selectors.p
+			expectedProperty = ['2px','solid','black']
+			expect(sels.border).toEqual(expectedProperty)
+
+
+		it "should allow comma-separated properties", ()->
+			result = parse(	"""
+							p {
+								property: 1px, 2px;
+							}
+							""")
+
+			sels = result.selectors.p
+			expectedProperty = [['1px'], ['2px']]
+			expect(sels.property).toEqual(expectedProperty)
+
+
+		it "should allow multipart comma-separated properties", ()->
+			result = parse(	"""
+							p {
+								border: 2px solid black, 1px solid white;
+							}
+							""")
+
+			sels = result.selectors.p
+			expectedProperty = [['2px','solid','black'], ['1px','solid','white']]
+			expect(sels.border).toEqual(expectedProperty)
+
+
+		it "should acknowledge !important on string properties", ()->
+			result = parse(	"""
+							p {
+								height: 100px !important
+							}
+							""")
+
+			sels = result.selectors.p
+			expect(sels.height).toBe("100px !important")
+
+
 		it "should link variables", ()->
 			result = parse(	"""
 							$height: 100px;
@@ -189,6 +236,19 @@ describe "Parser", ()->
 
 			expect(result.selectors.div.height.dynamic).toBe(true)
 			expect(result.selectors.div.height.link).toBe("@height")
+
+
+		it "should acknowledge !important on linked properties", ()->
+			result = parse(	"""
+							$height: 100px;
+							p {
+								height: $height !important
+							}
+							""")
+
+			sels = result.selectors.p
+			expect(sels.height.link).toBe("$height")
+			expect(sels.height.important).toBe(true)
 
 
 		it "should parse transitions", ()->
@@ -240,6 +300,7 @@ describe "Parser", ()->
 			# Test the backlink
 			expect(result.variables.fullHeight.dependants.div).toEqual(["height"])
 
+
 		it "should allow untyped variables in expressions", ()->
 			result = parse(	"""
 							$heightDivisor: 3;
@@ -255,4 +316,17 @@ describe "Parser", ()->
 
 			# Test the backlink
 			expect(result.variables.heightDivisor.dependants.div).toEqual(["height"])
+
+
+		it "should allow !important on expressions", ()->
+			result = parse(	"""
+							$fullHeight: 30px;
+							div {
+								height: $fullHeight / 3 !important;
+							}
+							""")
+
+			expression = result.selectors.div.height
+			expect(expression.evaluate({fullHeight: {value: 30}})).toBe("10px")
+			expect(expression.important).toBe(true)
 
