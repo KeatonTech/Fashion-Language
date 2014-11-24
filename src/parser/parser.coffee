@@ -19,6 +19,9 @@ window.fashion.$parser =
 			# Take the dependancies field and link it back to the variables
 			window.fashion.$parser.backlinkDependencies(key, nb, parsed.variables)
 
+			# Add and link any globals
+			window.fashion.$parser.backlinkGlobals(parsed, key, nb, $wf.$globals)
+
 		# Return parse object
 		return parsed
 

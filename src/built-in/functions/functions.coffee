@@ -1,5 +1,6 @@
 window.fashion.$functions =
 
 	round:
-		output: window.fashion.$type.Number
+		output: $wf.$type.Number
+		unitFrom: 0
 		evaluate: (n) -> Math.round n.value

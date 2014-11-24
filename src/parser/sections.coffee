@@ -3,9 +3,7 @@
 window.fashion.$parser.parseSections = (fashionText) ->
 
 	# Everything needs to get put somewhere
-	variables = {}
-	selectors = {}
-	blocks = []
+	variables = {}; selectors = {}; blocks = []
 
 	# Regex parses out the important bits, but doesn't count brackets
 	regex = ///(
@@ -47,7 +45,7 @@ window.fashion.$parser.parseSections = (fashionText) ->
 		else console.log "There's a problem somewhere in your file. Sorry."
 
 	# Return something nice
-	return {variables: variables, selectors: selectors, blocks: blocks}
+	return {variables: variables, selectors: selectors, blocks: blocks, globals: {}}
 
 
 # Separate nested selectors into a flat list of selectors

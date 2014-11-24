@@ -44,7 +44,7 @@ window.fashion.$parser.parsePropertyValue = (value, variables, allowExpression =
 	hasVariable = false
 
 	# Check if there's a variable involved
-	if value.indexOf("$") isnt -1
+	if value.indexOf("$") isnt -1 or value.indexOf("@") isnt -1
 
 		# Get the list of variables involved
 		vars = valueObject.dependencies = value.match /(\$([\w\-\$]*)|\@([\w\-\$]*))/g
@@ -53,13 +53,14 @@ window.fashion.$parser.parsePropertyValue = (value, variables, allowExpression =
 
 		# This is a pure link, no expression necessary
 		if vars.length is 1 and vars[0] is value
+			if vars[0][0] is "@" then vars[0] = vars[0].toLowerCase()
 			valueObject.link = vars[0];
 			return valueObject;
 
 	# Check to see if it's an expression
 	if allowExpression and value.match /[\+\-\/\*\(\)]/g
 		return window.fashion.$parser.parseExpression(
-			value, variables, window.fashion.$functions)
+			value, variables, window.fashion.$functions, window.fashion.$globals)
 
 	# Back up plan, in case we missed some spaces or something
 	else if hasVariable

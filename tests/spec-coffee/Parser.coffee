@@ -180,6 +180,17 @@ describe "Parser", ()->
 			expect(result.variables.height.dependants.p).toEqual(["height"])
 
 
+		it "should link globals", ()->
+			result = parse(	"""
+							div {
+								height: @height;
+							}
+							""")
+
+			expect(result.selectors.div.height.dynamic).toBe(true)
+			expect(result.selectors.div.height.link).toBe("@height")
+
+
 		it "should parse transitions", ()->
 			result = parse(	"""
 							$height: 100px;
@@ -226,6 +237,9 @@ describe "Parser", ()->
 			expect(expression.evaluate({fullHeight: {value: 30}})).toBe("10px")
 			expect(expression.evaluate({fullHeight: {value: 60}})).toBe("20px")
 
+			# Test the backlink
+			expect(result.variables.fullHeight.dependants.div).toEqual(["height"])
+
 		it "should allow untyped variables in expressions", ()->
 			result = parse(	"""
 							$heightDivisor: 3;
@@ -238,4 +252,7 @@ describe "Parser", ()->
 			expect(expression.dynamic).toBe(true)
 			expect(expression.evaluate({heightDivisor: {value: 3}})).toBe("10px")
 			expect(expression.evaluate({heightDivisor: {value: 10}})).toBe("3px")
+
+			# Test the backlink
+			expect(result.variables.heightDivisor.dependants.div).toEqual(["height"])
 

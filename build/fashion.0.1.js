@@ -25,9 +25,9 @@ THE SOFTWARE.
 
 ------------------------------------------------------------------------------
  */
-var wait;
+var $wf, wait;
 
-window.fashion = {
+$wf = window.fashion = {
   mimeType: "text/x-fashion",
   fileHeader: "// Generated with Fashion - http://keaton.ws/fashion\n",
   variableObject: "style",
@@ -210,6 +210,7 @@ window.fashion.$parser = {
       nb = window.fashion.$parser.parseSelectorBody(body, parsed.variables);
       parsed.selectors[key] = nb;
       window.fashion.$parser.backlinkDependencies(key, nb, parsed.variables);
+      window.fashion.$parser.backlinkGlobals(parsed, key, nb, $wf.$globals);
     }
     return parsed;
   }
@@ -252,7 +253,8 @@ window.fashion.$parser.parseSections = function(fashionText) {
   return {
     variables: variables,
     selectors: selectors,
-    blocks: blocks
+    blocks: blocks,
+    globals: {}
   };
 };
 
@@ -318,6 +320,8 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
   }
   return fashionText.substring(startIndex, endIndex);
 };
+var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
 window.fashion.$parser.parseVariable = function(variableObject) {
   var typ, unittedValue, val;
   val = variableObject.raw || variableObject.value;
@@ -341,15 +345,17 @@ window.fashion.$parser.backlinkDependencies = function(selector, properties, var
       varName = list[_i];
       if (varName[0] === "$") {
         varName = varName.substr(1);
-      }
-      depVar = variables[varName];
-      if (depVar !== void 0) {
-        if (!depVar['dependants'][selector]) {
-          depVar['dependants'][selector] = [];
-        }
-        _results.push(depVar['dependants'][selector].push(propertyName));
-      } else {
+        depVar = variables[varName];
+        if (depVar !== void 0) {
+          if (!depVar['dependants'][selector]) {
+            depVar['dependants'][selector] = [];
+          }
+          _results.push(depVar['dependants'][selector].push(propertyName));
+        } else {
 
+        }
+      } else {
+        _results.push(void 0);
       }
     }
     return _results;
@@ -382,6 +388,39 @@ window.fashion.$parser.backlinkDependencies = function(selector, properties, var
       _results.push(depVar['dependants'][selector].push(" "));
     } else {
       _results.push(void 0);
+    }
+  }
+  return _results;
+};
+
+window.fashion.$parser.backlinkGlobals = function(parseTree, selector, properties, globals) {
+  var k, p, varName, _results;
+  _results = [];
+  for (k in properties) {
+    p = properties[k];
+    if (p['dependencies']) {
+      _results.push((function() {
+        var _i, _len, _ref, _results1;
+        _ref = p['dependencies'];
+        _results1 = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          varName = _ref[_i];
+          if (!(varName[0] === "@")) {
+            continue;
+          }
+          varName = varName.substr(1);
+          if (!(__indexOf.call(parseTree.globals, varName) >= 0)) {
+            parseTree.globals[varName] = {
+              dependants: {}
+            };
+          }
+          if (!parseTree.globals[varName].dependants[selector]) {
+            parseTree.globals[varName].dependants[selector] = [];
+          }
+          _results1.push(parseTree.globals[varName].dependants[selector].push(k));
+        }
+        return _results1;
+      })());
     }
   }
   return _results;
@@ -434,17 +473,20 @@ window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpr
     dynamic: false
   };
   hasVariable = false;
-  if (value.indexOf("$") !== -1) {
+  if (value.indexOf("$") !== -1 || value.indexOf("@") !== -1) {
     vars = valueObject.dependencies = value.match(/(\$([\w\-\$]*)|\@([\w\-\$]*))/g);
     valueObject.dynamic = true;
     hasVariable = vars.length > 0;
     if (vars.length === 1 && vars[0] === value) {
+      if (vars[0][0] === "@") {
+        vars[0] = vars[0].toLowerCase();
+      }
       valueObject.link = vars[0];
       return valueObject;
     }
   }
   if (allowExpression && value.match(/[\+\-\/\*\(\)]/g)) {
-    return window.fashion.$parser.parseExpression(value, variables, window.fashion.$functions);
+    return window.fashion.$parser.parseExpression(value, variables, window.fashion.$functions, window.fashion.$globals);
   } else if (hasVariable) {
     valueObject.link = vars[0];
     return valueObject;
@@ -455,8 +497,8 @@ window.fashion.$parser.spliceString = function(string, start, length, replacemen
   return string.substr(0, start) + replacement + string.substr(start + length);
 };
 
-window.fashion.$parser.parseExpression = function(expressionString, vars, funcs) {
-  var dependencies, depth, evaluate, fObj, functions, numberType, regex, script, section, si, strSplice, string, stringOffset, topLevelTypeUnit, typeUnit, unit, unittedValue, vObj, _i, _len;
+window.fashion.$parser.parseExpression = function(expressionString, vars, funcs, globals) {
+  var dependencies, depth, evaluate, fObj, functions, gObj, numberType, regex, script, section, si, strSplice, string, stringOffset, topLevelTypeUnit, typeUnit, unit, unittedValue, vObj, _i, _len;
   strSplice = window.fashion.$parser.spliceString;
   string = expressionString;
   dependencies = [];
@@ -473,12 +515,26 @@ window.fashion.$parser.parseExpression = function(expressionString, vars, funcs)
       if (!vObj) {
         console.log("[FASHION] Variable $" + section[2] + " does not exist.");
       } else {
-        dependencies.push(section[2]);
+        dependencies.push("$" + section[2]);
         if (depth === 0) {
           topLevelTypeUnit.push([vObj.type, vObj.unit]);
         }
         stringOffset += ("v." + section[2] + ".value").length - section[0].length;
         string = strSplice(string, si, section[0].length, "v." + section[2] + ".value");
+      }
+    }
+    if (section[3]) {
+      section[3] = section[3].toLowerCase();
+      gObj = globals[section[3]];
+      if (!gObj) {
+        console.log("[FASHION] Global @" + section[3] + " does not exist.");
+      } else {
+        dependencies.push("@" + section[3]);
+        if (depth === 0) {
+          topLevelTypeUnit.push([gObj.type, gObj.unit]);
+        }
+        stringOffset += ("g." + section[3] + ".get()").length - section[0].length;
+        string = strSplice(string, si, section[0].length, "g." + section[3] + ".get()");
       }
     } else if (section[4]) {
       numberType = window.fashion.$type.Number;
@@ -521,7 +577,7 @@ window.fashion.$parser.parseExpression = function(expressionString, vars, funcs)
     }
   }
   script = "return (" + string + ") + '" + (unit || '') + "'";
-  evaluate = Function("v", "f", script);
+  evaluate = Function("v", "g", "f", script);
   return {
     dependencies: dependencies,
     functions: functions,
@@ -548,7 +604,7 @@ window.fashion.$run = {
         for (key in properties) {
           pVal = properties[key];
           if (typeof pVal === "object" && pVal["script"]) {
-            _results1.push(pVal["evaluate"] = Function("v", "f", pVal["script"]));
+            _results1.push(pVal["evaluate"] = Function("v", "g", "f", pVal["script"]));
           } else {
             _results1.push(void 0);
           }
@@ -660,7 +716,7 @@ window.fashion.$run.getVariable = function(variables, varName, type) {
   }
 };
 
-window.fashion.$run.evaluate = function(valueObject, domElement, variables, types, funcs) {
+window.fashion.$run.evaluate = function(valueObject, element, variables, types, funcs, globals) {
   var evaluateSingleValue, joinArray, value;
   if (!variables) {
     variables = FASHION.variables;
@@ -671,8 +727,11 @@ window.fashion.$run.evaluate = function(valueObject, domElement, variables, type
   if (!funcs) {
     funcs = window.fashion.$functions;
   }
+  if (!globals) {
+    globals = FASHION.globals;
+  }
   evaluateSingleValue = function(valueObject) {
-    var varName;
+    var globObject, varName;
     if (typeof valueObject === "string") {
       return valueObject;
     }
@@ -684,10 +743,18 @@ window.fashion.$run.evaluate = function(valueObject, domElement, variables, type
         varName = valueObject.link.substr(1);
         return window.fashion.$run.getVariable(variables, varName, types);
       } else if (valueObject.link[0] === "@") {
-        return console.log("Global variables are not yet supported");
+        globObject = globals[valueObject.link.substr(1)];
+        if (!globObject) {
+          return "";
+        }
+        if (globObject.type === types.Number) {
+          return globObject.get() + (globObject.unit || "");
+        } else {
+          return globObject.get();
+        }
       }
     } else if (valueObject.evaluate) {
-      return valueObject.evaluate(variables, funcs);
+      return valueObject.evaluate(variables, globals, funcs);
     }
   };
   if (typeof valueObject === "array") {
@@ -738,6 +805,32 @@ window.fashion.$run.defineProperties = function(variables, objectName) {
     };
     Object.defineProperty(container, varName, propObject);
     _results.push(Object.defineProperty(container, "$" + varName, propObject));
+  }
+  return _results;
+};
+
+window.fashion.$run.watchGlobals = function(globals) {
+  var gObj, name, _results;
+  if (globals == null) {
+    globals = FASHION.globals;
+  }
+  _results = [];
+  for (name in globals) {
+    gObj = globals[name];
+    _results.push(gObj.watch(((function(_this) {
+      return function(gObj) {
+        return function() {
+          var properties, selector, _ref, _results1;
+          _ref = gObj.dependants;
+          _results1 = [];
+          for (selector in _ref) {
+            properties = _ref[selector];
+            _results1.push(_this.updateSelector(selector));
+          }
+          return _results1;
+        };
+      };
+    })(this))(gObj)));
   }
   return _results;
 };
@@ -871,8 +964,8 @@ window.fashion.$actualizer.makeDomStyleFromTree = function(parseTree, index) {
   var dynamicMap, dynamicSheet, row, rule, rules, staticMap, staticSheet, _ref, _ref1;
   dynamicSheet = window.fashion.$dom.makeStylesheet("fashionDynamic", index, true);
   staticSheet = window.fashion.$dom.makeStylesheet("fashionStatic", index, false);
-  window.fashion.$dom.addElementToHead(dynamicSheet);
   window.fashion.$dom.addElementToHead(staticSheet);
+  window.fashion.$dom.addElementToHead(dynamicSheet);
   rules = window.fashion.$actualizer.generateStyleProperties(parseTree.selectors, parseTree.variables);
   console.table(rules["static"]);
   console.table(rules.dynamic);
@@ -915,7 +1008,7 @@ window.fashion.$actualizer.generateStyleProperties = function(selectors, variabl
     hasTransition = false;
     for (property in properties) {
       valueObject = properties[property];
-      val = window.fashion.$run.evaluate(valueObject, void 0, variables, window.fashion.$type);
+      val = window.fashion.$run.evaluate(valueObject, void 0, variables, $wf.$type, {}, $wf.$globals);
       if (typeof valueObject === 'object' && valueObject['transition']) {
         hasTransition = true;
         transitions[property] = valueObject.transition;
@@ -1041,25 +1134,121 @@ window.fashion.$actualizer.createScriptFromTree = function(tree, selMap) {
   var jsText;
   jsText = window.fashion.$blueprint.initialize(tree, selMap);
   jsText += window.fashion.$blueprint.basicRuntime() + "\n";
+  jsText += window.fashion.$actualizer.addGlobals(tree) + "\n";
   jsText += window.fashion.$blueprint.startRuntime();
   return jsText;
+};
+
+window.fashion.$actualizer.addGlobals = function(tree, globals) {
+  var acc, k, name, obj, objString, v, _ref, _ref1;
+  if (globals == null) {
+    globals = $wf.$globals;
+  }
+  if (JSON.stringify(tree.globals) === "{}") {
+    return "";
+  }
+  acc = "w.FASHION.globals = {\n";
+  _ref = tree.globals;
+  for (name in _ref) {
+    obj = _ref[name];
+    if (!globals[name]) {
+      continue;
+    }
+    _ref1 = globals[name];
+    for (k in _ref1) {
+      v = _ref1[k];
+      obj[k] = v;
+    }
+    objString = "{type: " + obj.type + ", unit: '" + obj.unit + "', dependants: " + (JSON.stringify(obj.dependants)) + ", \nget: " + (obj.get.toString()) + ", watch: " + (obj.watch.toString()) + "}";
+    acc += "" + name + ": " + (objString.replace('\n', '')) + ",\n";
+  }
+  return acc.substr(0, acc.length - 2) + "};";
 };
 window.fashion.$blueprint = {
   initialize: function(parseTree, selMap) {
     return "" + window.fashion.fileHeader + "\nw = window;\nw.FASHION = {\n	variables: " + (JSON.stringify(parseTree.variables)) + ",\n	selectors:  " + (JSON.stringify(parseTree.selectors)) + ",\n	cssMap: " + (JSON.stringify(selMap)) + ",\n	type: " + (JSON.stringify(window.fashion.$type)) + ",\n	unit: " + (JSON.stringify(window.fashion.$unit)) + ",\n	constants: " + (JSON.stringify(window.fashion.$typeConstants)) + ",\n	config: {\n		variableObject: '" + window.fashion.variableObject + "',\n		cssId: '" + window.fashion.cssId + "'\n	}\n};\n";
   },
   basicRuntime: function() {
-    return "var __indexOf = " + ('[].indexOf' || __indexOf.toString()) + ";\nw.FASHION.runtime = {\n	throwError: " + (window.fashion.$run.throwError.toString()) + ",\n	initializeSelector: " + (window.fashion.$run.initializeSelector.toString()) + ",\n	updateVariable: " + (window.fashion.$run.updateVariable.toString()) + ",\n	getVariable: " + (window.fashion.$run.getVariable.toString()) + ",\n	evaluate: " + (window.fashion.$run.evaluate.toString()) + ",\n	determineType: " + (window.fashion.$run.determineType.toString()) + ",\n	getUnit: " + (window.fashion.$run.getUnit.toString()) + ",\n	defineProperties: " + (window.fashion.$run.defineProperties.toString()) + ",\n	updateSelector: " + (window.fashion.$run.updateSelector.toString()) + ",\n	regenerateSelector: " + (window.fashion.$run.regenerateSelector.toString()) + ",\n	expandVariables: " + (window.fashion.$run.expandVariables.toString()) + "\n}";
+    return "var __indexOf = " + ('[].indexOf' || __indexOf.toString()) + ";\nw.FASHION.runtime = {\n	throwError: " + (window.fashion.$run.throwError.toString()) + ",\n	initializeSelector: " + (window.fashion.$run.initializeSelector.toString()) + ",\n	updateVariable: " + (window.fashion.$run.updateVariable.toString()) + ",\n	getVariable: " + (window.fashion.$run.getVariable.toString()) + ",\n	evaluate: " + (window.fashion.$run.evaluate.toString()) + ",\n	determineType: " + (window.fashion.$run.determineType.toString()) + ",\n	getUnit: " + (window.fashion.$run.getUnit.toString()) + ",\n	defineProperties: " + (window.fashion.$run.defineProperties.toString()) + ",\n	watchGlobals: " + (window.fashion.$run.watchGlobals.toString()) + ",\n	updateSelector: " + (window.fashion.$run.updateSelector.toString()) + ",\n	regenerateSelector: " + (window.fashion.$run.regenerateSelector.toString()) + ",\n	expandVariables: " + (window.fashion.$run.expandVariables.toString()) + "\n}";
   },
   startRuntime: function() {
-    return "w.FASHION.runtime.initializeSelector()\nw.FASHION.runtime.defineProperties.call(w.FASHION.runtime)";
+    return "w.FASHION.runtime.initializeSelector()\nw.FASHION.runtime.defineProperties.call(w.FASHION.runtime)\nw.FASHION.runtime.watchGlobals.call(w.FASHION.runtime)";
   }
 };
 window.fashion.$functions = {
   round: {
-    output: window.fashion.$type.Number,
+    output: $wf.$type.Number,
+    unitFrom: 0,
     evaluate: function(n) {
       return Math.round(n.value);
+    }
+  }
+};
+window.fashion.$globals = {
+  width: {
+    type: $wf.$type.Number,
+    unit: "px",
+    get: function() {
+      return window.innerWidth;
+    },
+    watch: function(onchange) {
+      return window.addEventListener("resize", onchange, false);
+    }
+  },
+  height: {
+    type: $wf.$type.Number,
+    unit: "px",
+    get: function() {
+      return window.innerHeight;
+    },
+    watch: function(onchange) {
+      return window.addEventListener("resize", onchange, false);
+    }
+  },
+  scrolly: {
+    type: $wf.$type.Number,
+    unit: "px",
+    get: function() {
+      return window.scrollY;
+    },
+    watch: function(onchange) {
+      return window.addEventListener("onscroll", onchange);
+    }
+  },
+  scrollx: {
+    type: $wf.$type.Number,
+    unit: "px",
+    get: function() {
+      return window.scrollX;
+    },
+    watch: function(onchange) {
+      return window.addEventListener("onscroll", onchange);
+    }
+  },
+  mousey: {
+    type: $wf.$type.Number,
+    unit: "px",
+    get: function() {
+      return window.mouseY || 0;
+    },
+    watch: function(onchange) {
+      return window.addEventListener("mousemove", function(e) {
+        window.mouseY = e.pageY;
+        return onchange();
+      });
+    }
+  },
+  mousex: {
+    type: $wf.$type.Number,
+    unit: "px",
+    get: function() {
+      return window.mouseX || 0;
+    },
+    watch: function(onchange) {
+      return window.addEventListener("mousemove", function(e) {
+        window.mouseX = e.pageX;
+        return onchange();
+      });
     }
   }
 };

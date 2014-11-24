@@ -4,6 +4,8 @@
 
 ## Syntax
 
+### Variables
+
 In many ways, Fashion is similar to other languages like LESS or SASS. It has variables and expressions, selectors can be nested, and you can do math inline. The most immidiate difference is that Fashion code is dynamic, the compiler produces both CSS and Javascript for your site. So while this may look familiar:
 	
 	$backgroundColor: #DC493C;
@@ -25,26 +27,43 @@ Obviously changing page styles from Javascript is nothing new, so this may not s
 
 Variables aren't just useful for changing things like colors and sizes, they can be used to select elements too. So, if you wanted to build a simple sidebar menu and control which item was selected, you could do it without any DOM hassle.
 
-	<head>
-		<script src="../../build/fashion.0.1.js"></script>
-		<style type="text/x-fashion">
+	$item: awesome;
+	#select #$item {
+		background-color: red;
+	}
 
-		$item: awesome;
-		#$item {
-			background-color: red;
-		}
+Paired with HTML like this
 
-		</style>
-	</head>
-	<body>
-		<ul>
-			<li id="awesome">Awesome Item!</li>
-			<li id="cool">Cool Item!</li>
-			<li id="sweet">Sweet Item!</li>
-		</ul>
-	</body>
+	<ul id="select">
+		<li id="awesome">Awesome Item!</li>
+		<li id="cool">Cool Item!</li>
+		<li id="sweet">Sweet Item!</li>
+	</ul>
 
 Then selecting the 'cool' item would be as simple as running style.item = 'cool'
+
+### Globals
+
+You don't have to set every variable, Fashion actually has a bunch that it will set for you. For example, the window height. This snippet here makes a div square div and centers it in the page, with an appropriate amount of padding on the top and bottom.  
+
+	$padding: 50px;
+	div#centeredSquare {
+		width: @height - $padding * 2;
+		height: @height - $padding * 2;
+		background-color: black;
+		color: white;
+		margin: 0 auto;
+		margin-top: $padding;
+	}
+
+Here, the @height variable is the total height of the window. Fashion intelligently watches this value, so whenever you resize the window your centeredSquare div will get resized, automatically. Here is a list of available globals, with more coming soon.
+
+	* *Width:* Current width of the user's browser window, in pixels
+	* *Height:* Current height of the user's browser window, in pixels
+	* *ScrollX:* The user's current scroll position, in pixels from the left of the page
+	* *ScrollY:* The user's current scroll position, in pixels from the top of the page
+	* *MouseX:* The user's current mouse position, in pixes from the left of the page
+	* *MouseY:* The user's current moust position, in pixels from the top of the page
 
 ### Transitions & Animations
 
@@ -83,7 +102,7 @@ The third property for transitions is the delay, so in this case the box's conte
 Fashion is designed to run either in-browser or as a compiler. Currently only the in-browser implementation is in a working state, although it is architected to act essentially as a compiler, generating CSS and Javascript for the page and then handing off to that. Fashion code can be inserted into your page like this.
 
 	<head>
-		<script src="../lib/fashion.0.1.min.js"></script>
+		<script src="build/fashion.0.1.min.js"></script>
 		<style type="text/x-fashion">
 
 			$color: red;

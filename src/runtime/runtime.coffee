@@ -11,7 +11,7 @@ window.fashion.$run =
 		for sel, properties of selectors
 			for key, pVal of properties
 				if typeof pVal is "object" and pVal["script"]
-					pVal["evaluate"] = Function("v","f",pVal["script"])
+					pVal["evaluate"] = Function("v","g","f",pVal["script"])
 
 	# Updates a variable's value and name, if possible
 	# Errors out of the variable's type would change

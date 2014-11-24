@@ -7,8 +7,8 @@ window.fashion.$actualizer.makeDomStyleFromTree = (parseTree, index) ->
 	staticSheet = window.fashion.$dom.makeStylesheet("fashionStatic", index, false)
 
 	# Add everything to the document head (otherwise it won't work)
-	window.fashion.$dom.addElementToHead dynamicSheet
 	window.fashion.$dom.addElementToHead staticSheet
+	window.fashion.$dom.addElementToHead dynamicSheet
 
 	# Add style properties to the sheets
 	rules = window.fashion.$actualizer.generateStyleProperties(
@@ -63,7 +63,7 @@ window.fashion.$actualizer.generateStyleProperties = (selectors, variables) ->
 
 				# Evaluate the current string value
 				val = window.fashion.$run.evaluate(valueObject, undefined, 
-					variables, window.fashion.$type)
+					variables, $wf.$type, {}, $wf.$globals)
 
 				# Check to see if the value has a transition
 				if typeof valueObject is 'object' and valueObject['transition']

@@ -4,7 +4,7 @@ window.fashion.$parser.spliceString = (string, start, length, replacement) ->
 
 # Convert an expression string into an object containing a javascript function
 # TODO(keatontech): Break this up into multiple sub-40-line functions
-window.fashion.$parser.parseExpression = (expressionString, vars, funcs) ->
+window.fashion.$parser.parseExpression = (expressionString, vars, funcs, globals) ->
 	strSplice = window.fashion.$parser.spliceString
 	string = expressionString
 
@@ -39,10 +39,21 @@ window.fashion.$parser.parseExpression = (expressionString, vars, funcs) ->
 			vObj = vars[section[2]]
 			if !vObj then console.log "[FASHION] Variable $#{section[2]} does not exist."
 			else
-				dependencies.push section[2]
+				dependencies.push "$" + section[2]
 				if depth is 0 then topLevelTypeUnit.push [vObj.type, vObj.unit]
 				stringOffset += "v.#{section[2]}.value".length - section[0].length
 				string = strSplice string, si, section[0].length, "v.#{section[2]}.value"
+
+		# Global variable
+		if section[3]
+			section[3] = section[3].toLowerCase()
+			gObj = globals[section[3]]
+			if !gObj then console.log "[FASHION] Global @#{section[3]} does not exist."
+			else
+				dependencies.push "@" + section[3]
+				if depth is 0 then topLevelTypeUnit.push [gObj.type, gObj.unit]
+				stringOffset += "g.#{section[3]}.get()".length - section[0].length
+				string = strSplice string, si, section[0].length, "g.#{section[3]}.get()"
 
 		# Number with unit
 		else if section[4]
@@ -79,7 +90,7 @@ window.fashion.$parser.parseExpression = (expressionString, vars, funcs) ->
 
 	# Create the function
 	script = "return (#{string}) + '#{unit || ''}'"
-	evaluate = Function("v", "f", script)
+	evaluate = Function("v", "g", "f", script)
 
 	# Return the expression object
 	return {

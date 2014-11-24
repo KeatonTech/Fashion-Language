@@ -106,6 +106,12 @@
         expect(sels.height.dynamic).toBe(true);
         return expect(result.variables.height.dependants.p).toEqual(["height"]);
       });
+      it("should link globals", function() {
+        var result;
+        result = parse("div {\n	height: @height;\n}");
+        expect(result.selectors.div.height.dynamic).toBe(true);
+        return expect(result.selectors.div.height.link).toBe("@height");
+      });
       return it("should parse transitions", function() {
         var result, sels;
         result = parse("$height: 100px;\n$width: 100px;\n$duration: 200ms;\n$delay: 100ms;\np {\n	height: [ease-out 1s] $height;\n	width: [ease-in-out $duration $delay] $width;\n}");
@@ -132,11 +138,12 @@
             value: 30
           }
         })).toBe("10px");
-        return expect(expression.evaluate({
+        expect(expression.evaluate({
           fullHeight: {
             value: 60
           }
         })).toBe("20px");
+        return expect(result.variables.fullHeight.dependants.div).toEqual(["height"]);
       });
       return it("should allow untyped variables in expressions", function() {
         var expression, result;
@@ -148,11 +155,12 @@
             value: 3
           }
         })).toBe("10px");
-        return expect(expression.evaluate({
+        expect(expression.evaluate({
           heightDivisor: {
             value: 10
           }
         })).toBe("3px");
+        return expect(result.variables.heightDivisor.dependants.div).toEqual(["height"]);
       });
     });
   });

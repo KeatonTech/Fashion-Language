@@ -26,7 +26,7 @@ THE SOFTWARE.
 ###
 
 # Get a place to put everything
-window.fashion = {
+$wf = window.fashion = {
 	mimeType: "text/x-fashion",
 	fileHeader: "// Generated with Fashion - http://keaton.ws/fashion\n",
 	variableObject: "style",

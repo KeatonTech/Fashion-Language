@@ -11,10 +11,11 @@ window.fashion.$run.getVariable = (variables, varName, type = FASHION.type) ->
 	else return vobj.value
 
 # Turn a value object into an actual string value for the sheet
-window.fashion.$run.evaluate = (valueObject, domElement, variables, types, funcs) ->
+window.fashion.$run.evaluate = (valueObject, element, variables, types, funcs, globals) ->
 	if !variables then variables = FASHION.variables
 	if !types then types = FASHION.type
 	if !funcs then funcs = window.fashion.$functions
+	if !globals then globals = FASHION.globals
 
 	# Evaluates a single value, not an array
 	evaluateSingleValue = (valueObject) ->
@@ -33,11 +34,15 @@ window.fashion.$run.evaluate = (valueObject, domElement, variables, types, funcs
 
 			# Global variable
 			else if valueObject.link[0] is "@"
-				console.log "Global variables are not yet supported"
+				globObject = globals[valueObject.link.substr(1)]
+				if !globObject then return ""
+				if globObject.type is types.Number
+					return globObject.get() + (globObject.unit || "")
+				else return globObject.get()
 
 		# Handle expressions
 		else if valueObject.evaluate
-			return valueObject.evaluate variables, funcs
+			return valueObject.evaluate variables, globals, funcs
 
 
 	# Check to see if this is an array of values

@@ -22,3 +22,12 @@ window.fashion.$run.defineProperties =
    		# Add it as a property to the container
    		Object.defineProperty container, varName, propObject
    		Object.defineProperty container, "$" + varName, propObject
+
+
+# Wait for a change in the style object
+window.fashion.$run.watchGlobals = (globals = FASHION.globals) ->
+	for name,gObj of globals
+		gObj.watch ((gObj)=> ()=>
+			for selector, properties of gObj.dependants
+				@updateSelector selector
+		)(gObj)
