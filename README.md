@@ -58,12 +58,12 @@ You don't have to set every variable, Fashion actually has a bunch that it will 
 
 Here, the @height variable is the total height of the window. Fashion intelligently watches this value, so whenever you resize the window your centeredSquare div will get resized, automatically. Here is a list of available globals, with more coming soon.
 
-	* *Width:* Current width of the user's browser window, in pixels
-	* *Height:* Current height of the user's browser window, in pixels
-	* *ScrollX:* The user's current scroll position, in pixels from the left of the page
-	* *ScrollY:* The user's current scroll position, in pixels from the top of the page
-	* *MouseX:* The user's current mouse position, in pixes from the left of the page
-	* *MouseY:* The user's current moust position, in pixels from the top of the page
+* *Width:* Current width of the user's browser window, in pixels
+* *Height:* Current height of the user's browser window, in pixels
+* *ScrollX:* The user's current scroll position, in pixels from the left of the page
+* *ScrollY:* The user's current scroll position, in pixels from the top of the page
+* *MouseX:* The user's current mouse position, in pixes from the left of the page
+* *MouseY:* The user's current moust position, in pixels from the top of the page
 
 ### Transitions & Animations
 
