@@ -752,7 +752,7 @@ window.fashion.$run.getVariable = function(variables, varName, type) {
 };
 
 window.fashion.$run.evaluate = function(valueObject, element, variables, types, funcs, globals) {
-  var evaluateSingleValue, joinArray, value;
+  var evaluateSingleValue, value, vi, vo;
   if (!variables) {
     variables = FASHION.variables;
   }
@@ -792,17 +792,39 @@ window.fashion.$run.evaluate = function(valueObject, element, variables, types, 
       return valueObject.evaluate(variables, globals, funcs);
     }
   };
-  if (typeof valueObject === "array") {
-    joinArray = (function() {
-      var _i, _len, _results;
-      _results = [];
-      for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
-        value = valueObject[_i];
-        _results.push(evaluateSingleValue(valueObject));
-      }
-      return _results;
-    })();
-    return joinArray.join(' ');
+  if (valueObject instanceof Array) {
+    if (valueObject.length === 0) {
+      return '';
+    }
+    if (valueObject[0] instanceof Array) {
+      return ((function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
+          vo = valueObject[_i];
+          _results.push(((function() {
+            var _j, _len1, _results1;
+            _results1 = [];
+            for (_j = 0, _len1 = vo.length; _j < _len1; _j++) {
+              vi = vo[_j];
+              _results1.push(evaluateSingleValue(vi));
+            }
+            return _results1;
+          })()).join(' '));
+        }
+        return _results;
+      })()).join(', ');
+    } else {
+      return ((function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
+          value = valueObject[_i];
+          _results.push(evaluateSingleValue(value));
+        }
+        return _results;
+      })()).join(' ');
+    }
   } else {
     return evaluateSingleValue(valueObject);
   }

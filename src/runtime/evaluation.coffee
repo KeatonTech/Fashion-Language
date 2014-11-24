@@ -46,10 +46,18 @@ window.fashion.$run.evaluate = (valueObject, element, variables, types, funcs, g
 
 
 	# Check to see if this is an array of values
-	if typeof valueObject is "array"
-		joinArray = for value in valueObject
-			evaluateSingleValue(valueObject)
-		return joinArray.join(' ')
+	if valueObject instanceof Array
+		if valueObject.length is 0 then return ''
+
+		# We have a comma-separated multi-part property 
+		if valueObject[0] instanceof Array
+			return (
+				(evaluateSingleValue(vi) for vi in vo).join(' ') for vo in valueObject
+			).join(', ')
+
+		# We have a multi-value property
+		else
+			return (evaluateSingleValue(value) for value in valueObject).join(' ')
 
 	# Nope, just one value
 	else return evaluateSingleValue(valueObject);
