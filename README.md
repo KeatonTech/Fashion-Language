@@ -9,15 +9,12 @@
 In many ways, Fashion is similar to other languages like LESS or SASS. It has variables and expressions, selectors can be nested, and you can do math inline. The most immidiate difference is that Fashion code is dynamic, the compiler produces both CSS and Javascript for your site. So while this may look familiar:
 	
 ```Less
-$backgroundColor: #DC493C;
-$pageColor: white;
+$background: #DC493C;
 
 body, html {
-	background-color: $backgroundColor;
+	background-color: $background;
 }
 ```
-
-article {background-color: $pageColor;}
 
 This part may look a little new:
 
