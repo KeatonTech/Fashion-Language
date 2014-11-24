@@ -20,7 +20,7 @@ This part may look a little new:
 
 ```Javascript
 setTimeout(function(){
-	style.backgroundColor = "#27B9AB";
+	style.background = "#27B9AB";
 }, 1000);
 ```
 
