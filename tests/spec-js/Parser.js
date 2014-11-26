@@ -105,6 +105,15 @@
         expectedProperty = ['2px', 'solid', 'black'];
         return expect(sels.border).toEqual(expectedProperty);
       });
+      it("should account for strings in multipart properties", function() {
+        var expectedProperty, result, sels;
+        result = parse("p {\n	text-style: \"Times New Roman\" italic;\n	another: 'Times New Roman' italic;\n}");
+        sels = result.selectors.p;
+        expectedProperty = ['"Times New Roman"', 'italic'];
+        expect(sels["text-style"]).toEqual(expectedProperty);
+        expectedProperty = ["'Times New Roman'", 'italic'];
+        return expect(sels["another"]).toEqual(expectedProperty);
+      });
       it("should allow comma-separated properties", function() {
         var expectedProperty, result, sels;
         result = parse("p {\n	property: 1px, 2px;\n}");

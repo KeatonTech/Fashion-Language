@@ -56,7 +56,15 @@ window.fashion.$parser.parsePropertyValue =
 
 		# Check to see if we have a multi-piece property
 		if forceArray or (typeof value is "string" and value.indexOf(" ") isnt -1)
-			return (for piece in value.split(" ")
+			parts = value.match /(["'][^'"]*["']|[\S]+)/g
+			console.log parts
+
+			# False alarm!
+			if !forceArray and parts.length is 1 then return (
+				window.fashion.$parser.parseSingleValue value, variables, allowExpression)
+
+			# Accumulate all of the single values into an array.
+			return (for piece in parts
 				window.fashion.$parser.parseSingleValue piece, variables, allowExpression
 			)
 

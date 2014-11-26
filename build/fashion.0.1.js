@@ -531,7 +531,7 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, vars) {
 };
 
 window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpression, forceArray) {
-  var piece;
+  var parts, piece;
   if (allowExpression == null) {
     allowExpression = true;
   }
@@ -542,12 +542,16 @@ window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpr
     return window.fashion.$parser.parseSingleValue(value, variables, true);
   }
   if (forceArray || (typeof value === "string" && value.indexOf(" ") !== -1)) {
+    parts = value.match(/(["'][^'"]*["']|[\S]+)/g);
+    console.log(parts);
+    if (!forceArray && parts.length === 1) {
+      return window.fashion.$parser.parseSingleValue(value, variables, allowExpression);
+    }
     return (function() {
-      var _i, _len, _ref, _results;
-      _ref = value.split(" ");
+      var _i, _len, _results;
       _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        piece = _ref[_i];
+      for (_i = 0, _len = parts.length; _i < _len; _i++) {
+        piece = parts[_i];
         _results.push(window.fashion.$parser.parseSingleValue(piece, variables, allowExpression));
       }
       return _results;

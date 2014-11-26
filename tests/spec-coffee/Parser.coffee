@@ -174,6 +174,22 @@ describe "Parser", ()->
 			expect(sels.border).toEqual(expectedProperty)
 
 
+		it "should account for strings in multipart properties", ()->
+			result = parse(	"""
+							p {
+								text-style: "Times New Roman" italic;
+								another: 'Times New Roman' italic;
+							}
+							""")
+
+			sels = result.selectors.p
+			expectedProperty = ['"Times New Roman"','italic']
+			expect(sels["text-style"]).toEqual(expectedProperty)
+
+			expectedProperty = ["'Times New Roman'",'italic']
+			expect(sels["another"]).toEqual(expectedProperty)
+
+
 		it "should allow comma-separated properties", ()->
 			result = parse(	"""
 							p {
