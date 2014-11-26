@@ -538,7 +538,7 @@ window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpr
   if (forceArray == null) {
     forceArray = false;
   }
-  if (allowExpression && value.match(/[\+\-\/\*\(\)\=]/g)) {
+  if (allowExpression && value.match(/[\+\/\*\(\)\=]/g)) {
     return window.fashion.$parser.parseSingleValue(value, variables, true);
   }
   if (forceArray || (typeof value === "string" && value.indexOf(" ") !== -1)) {
@@ -582,7 +582,7 @@ window.fashion.$parser.parseSingleValue = function(value, variables, allowExpres
       return valueObject;
     }
   }
-  if (allowExpression && value.match(/[\+\-\/\*\(\)\=]/g)) {
+  if (allowExpression && value.match(/[\+\/\*\(\)\=]/g)) {
     return window.fashion.$parser.parseExpression(value, variables, window.fashion.$functions, window.fashion.$globals);
   } else if (hasVariable) {
     valueObject.link = vars[0];
@@ -1355,16 +1355,23 @@ window.fashion.$functions = {
 window.fashion.$properties = {
   "text-style": {
     compile: function(values) {
-      var compileSingleValue, v, _i, _len, _results;
+      var compileSingleValue, families, v, _i, _len;
+      families = [];
       compileSingleValue = (function(_this) {
         return function(value) {
           if (!(typeof value === 'string')) {
             return;
           }
           if (value[0] === "'" || value[0] === '"') {
-            return _this.setProperty("font-family", value);
+            return families.push(value);
           }
           switch (value) {
+            case "serif":
+              return families.push("serif");
+            case "sans-serif":
+              return families.push("sans-serif");
+            case "monospace":
+              return families.push("monospace");
             case "italic":
               return _this.setProperty("font-style", "italic");
             case "oblique":
@@ -1385,15 +1392,14 @@ window.fashion.$properties = {
         };
       })(this);
       if (values instanceof Array) {
-        _results = [];
         for (_i = 0, _len = values.length; _i < _len; _i++) {
           v = values[_i];
-          _results.push(compileSingleValue(v));
+          compileSingleValue(v);
         }
-        return _results;
       } else {
-        return compileSingleValue(values);
+        compileSingleValue(values);
       }
+      return this.setProperty("font-family", families.join(", "));
     }
   }
 };

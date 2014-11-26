@@ -51,7 +51,7 @@ window.fashion.$parser.parsePropertyValue =
 	(value, variables, allowExpression = true, forceArray = false) ->
 
 		# Pass expressions through
-		if allowExpression and value.match /[\+\-\/\*\(\)\=]/g
+		if allowExpression and value.match /[\+\/\*\(\)\=]/g
 			return window.fashion.$parser.parseSingleValue value, variables, true
 
 		# Check to see if we have a multi-piece property
@@ -91,7 +91,7 @@ window.fashion.$parser.parseSingleValue = (value, variables, allowExpression = t
 			return valueObject;
 
 	# Check to see if it's an expression
-	if allowExpression and value.match /[\+\-\/\*\(\)\=]/g
+	if allowExpression and value.match /[\+\/\*\(\)\=]/g
 		return window.fashion.$parser.parseExpression(
 			value, variables, window.fashion.$functions, window.fashion.$globals)
 
