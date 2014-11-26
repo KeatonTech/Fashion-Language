@@ -37,6 +37,63 @@ $wf = window.fashion = {
 wait = function(d, f) {
   return setTimeout(f, d);
 };
+window.fashion.addProperty = function(name, propertyObject, force) {
+  if (force == null) {
+    force = false;
+  }
+  if (!globalObject.compile && !globalObject.apply) {
+    return new Error("Property objects must have either a 'compile' or 'apply' function");
+  }
+  if (!force && window.fashion.$properties[name]) {
+    return new Error("There is already a property named " + name);
+  }
+  return window.fashion.$properties[name] = globalObject;
+};
+
+window.fashion.addProperties = function(obj, force) {
+  var k, v, _i, _len, _results;
+  if (force == null) {
+    force = false;
+  }
+  _results = [];
+  for (v = _i = 0, _len = obj.length; _i < _len; v = ++_i) {
+    k = obj[v];
+    _results.push(window.fashion.addProperty(k, v, force));
+  }
+  return _results;
+};
+
+window.fashion.addGlobal = function(name, globalObject, force) {
+  if (force == null) {
+    force = false;
+  }
+  if (!globalObject.type || !globalObject.unit) {
+    return new Error("Global objects must specify type and unit properties");
+  }
+  if (!globalObject.get) {
+    return new Error("Global objects must have a 'get' function");
+  }
+  if (!globalObject.watch) {
+    return new Error("Global objects must have a 'watch' function");
+  }
+  if (!force && window.fashion.$globals[name]) {
+    return new Error("There is already a global named " + name);
+  }
+  return window.fashion.$globals[name] = globalObject;
+};
+
+window.fashion.addGlobals = function(obj, force) {
+  var k, v, _i, _len, _results;
+  if (force == null) {
+    force = false;
+  }
+  _results = [];
+  for (v = _i = 0, _len = obj.length; _i < _len; v = ++_i) {
+    k = obj[v];
+    _results.push(window.fashion.addGlobal(k, v, force));
+  }
+  return _results;
+};
 
 /*
 ------------------------------------------------------------------------------
@@ -66,6 +123,7 @@ document.onreadystatechange = function() {
       var parseTree, start;
       start = new Date().getTime();
       parseTree = window.fashion.$parser.parse(scriptText);
+      parseTree = window.fashion.$processor.process(parseTree);
       window.fashion.$actualizer.actualizeFullSheet(parseTree, scriptIndex++);
       console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
       if (--fileCount <= 0) {
@@ -620,6 +678,55 @@ window.fashion.$parser.parseExpression = function(expressionString, vars, funcs,
     evaluate: evaluate,
     script: script
   };
+};
+window.fashion.$processor = {
+  process: function(parseTree) {
+    parseTree["javascript"] = [];
+    parseTree = window.fashion.$processor.properties(parseTree, $wf.$properties);
+    return parseTree;
+  }
+};
+window.fashion.$processor.properties = function(parseTree, properties) {
+  var API, funcs, index, property, selector, selectorProperties, value, _ref;
+  funcs = window.fashion.$processor.propertiesApi;
+  _ref = parseTree.selectors;
+  for (selector in _ref) {
+    selectorProperties = _ref[selector];
+    index = -1;
+    for (property in selectorProperties) {
+      value = selectorProperties[property];
+      index++;
+      if (properties[property]) {
+        API = {
+          setProperty: funcs.setProperty.bind(0, parseTree, selector, index)
+        };
+        properties[property].compile.call(API, value);
+      }
+    }
+  }
+  return parseTree;
+};
+
+window.fashion.$processor.propertiesApi = {
+  setProperty: function(parseTree, selector, insertIndex, name, value) {
+    var index, k, properties, v, _i, _len;
+    properties = parseTree.selectors[selector];
+    if (!properties) {
+      return false;
+    }
+    index = 0;
+    for (v = _i = 0, _len = properties.length; _i < _len; v = ++_i) {
+      k = properties[v];
+      index++;
+      if (index < insertIndex) {
+        continue;
+      }
+      if (k === name) {
+        return false;
+      }
+    }
+    return properties[name] = value;
+  }
 };
 window.fashion.$run = {
   throwError: function(message) {
@@ -1238,6 +1345,51 @@ window.fashion.$functions = {
     unitFrom: 0,
     evaluate: function(n) {
       return Math.round(n.value);
+    }
+  }
+};
+window.fashion.$properties = {
+  "text-style": {
+    compile: function(values) {
+      var compileSingleValue, v, _i, _len, _results;
+      compileSingleValue = (function(_this) {
+        return function(value) {
+          if (!(typeof value === 'string')) {
+            return;
+          }
+          if (value[0] === "'" || value[0] === '"') {
+            return _this.setProperty("font-family", value);
+          }
+          switch (value) {
+            case "italic":
+              return _this.setProperty("font-style", "italic");
+            case "oblique":
+              return _this.setProperty("font-style", "oblique");
+            case "bold":
+              return _this.setProperty("font-weight", "bolder");
+            case "light":
+              return _this.setProperty("font-weight", "lighter");
+            case "underline":
+              return _this.setProperty("text-decoration", "underline");
+            case "overline":
+              return _this.setProperty("text-decoration", "overline");
+            case "line-through":
+              return _this.setProperty("text-decoration", "line-through");
+            case "strikethrough":
+              return _this.setProperty("text-decoration", "line-through");
+          }
+        };
+      })(this);
+      if (values instanceof Array) {
+        _results = [];
+        for (_i = 0, _len = values.length; _i < _len; _i++) {
+          v = values[_i];
+          _results.push(compileSingleValue(v));
+        }
+        return _results;
+      } else {
+        return compileSingleValue(values);
+      }
     }
   }
 };

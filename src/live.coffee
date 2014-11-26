@@ -39,6 +39,9 @@ document.onreadystatechange = ()->
 			# Parse the scripts into a nice little tree
 			parseTree = window.fashion.$parser.parse scriptText
 
+			# Process that nice little tree to expand out things like properties
+			parseTree = window.fashion.$processor.process parseTree
+
 			# Convert the tree into JS and CSS elements
 			window.fashion.$actualizer.actualizeFullSheet parseTree, scriptIndex++
 
@@ -48,6 +51,7 @@ document.onreadystatechange = ()->
 			# If there are no more files to run, trigger the event
 			if --fileCount <= 0 then allLoaded()
 
+
 # Include helper files, used by everything
 # @prepros-append ./helpers/dom.coffee
 # @prepros-append ./types/types.coffee
@@ -55,9 +59,11 @@ document.onreadystatechange = ()->
 # Include the actual functional JS files
 # @prepros-append ./loader/live.coffee
 # @prepros-append ./parser/parser.coffee
+# @prepros-append ./processor/processor.coffee
 # @prepros-append ./runtime/runtime.coffee
 # @prepros-append ./actualizer/actualizer.coffee
 
 # Include all of the built-in Fashion modules
 # @prepros-append ./built-in/functions/functions.coffee
+# @prepros-append ./built-in/properties/properties.coffee
 # @prepros-append ./built-in/globals.coffee

@@ -9,6 +9,14 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 
 * ***fashion.coffee:*** Shared code between the Precompiler and In-browser (live) implementations
 * ***live.coffee:*** Compiles Fashion code in the browser, allowing for easier development and some more flexibility.
+* ***api.coffee:*** Defines functions that allow third party code to extend the Fashion compiler.
+
+***
+
+### ./loader
+##### Code to load in Fashion files
+
+* ***live.coffee:*** Loads Fashion files from style and link tags
 
 ### ./parser
 ##### Code to turn a text/x-fashion document into a useful parse tree
@@ -19,8 +27,14 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***variables.coffee:*** Parses variable values and determines their type and units. Creates a dependants list of selectors that use each variable.
 * ***expressions.coffee:*** Validates inline fashion expressions and converts them to Javascript functions.
 
+### ./processor
+##### Code to expand Fashion properties, blocks and selectors into a format closer to raw CSS and Javascript.
+
+* ***processor.coffee:*** Sets the parse tree up for processing and runs the functions for properties, blocks and selectors
+* ***properties.coffee:*** Goes through each selector in the parse tree to find properties associated with Fashion modules, and expand them.
+
 ### ./actualizer
-##### Code to turn the parse tree into standard CSS and Javascript
+##### Code to turn the processed parse tree into standard CSS and Javascript text
 
 * ***actualizer.coffee:*** Imports everything else, orchestrate the process on a high level.
 * ***css.coffee:*** Generates two stylesheets from the parse tree, one for static properties and one for dynamic properties. Returns a map describing where different selectors are located on the dynamic sheet.
@@ -36,15 +50,14 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***types.coffee:*** Functions dealing with data types, including determining the type of a value.
 * ***units.coffee:*** Functions to deal with units, including determining numerical & color units and conversion infrastructure.
 
+***
+
 ### ./built-in
 ##### Fashion is designed in a modular manner to allow developers to extend its functionality. This folder contains all of the built in modules.
 
 * ***functions/functions.coffee:*** Basic functions available to expressions, also includes all of the other functions
-
-### ./loader
-##### Code to load in Fashion files
-
-* ***live.coffee:*** Loads Fashion files from style and link tags
+* ***properties/properties.coffee:*** Basic properties, mostly syntactic sugar. Also includes the other properties files
+* ***globals.coffee:*** Definitions of built in global variables like width, scrollX and mouseX
 
 ### ./types
 ##### Equivalent to C++ typedefs, useful standardizations

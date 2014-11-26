@@ -35,3 +35,5 @@ $wf = window.fashion = {
 
 # Coffeescript helpers
 wait = (d,f)-> setTimeout(f,d)
+
+#@prepros-append ./api.coffee

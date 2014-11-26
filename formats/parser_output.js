@@ -50,5 +50,13 @@
 			"arguments": "slide-in-section",
 			"body": "bunch_of_text"
 		}
+	],
+	"globals": {
+		"width": {
+			"dependants": []
+		}
+	},
+	"javascript": [
+		"w.FASHION.transitions.push(/* transition object */)"
 	]
 }

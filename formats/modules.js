@@ -26,3 +26,54 @@ globalName: {
 		})
 	}
 }
+
+// Properties
+"property-name": {
+
+	// Occurs during the compile process
+	// This function is run on a 'this' scope with the following properties
+	// These properties are also passed in a second argument, for the 'this'-averse
+	// {
+	// 		setProperty(name, value): Sets a property while respecting inheritance
+	//		getProperty(name): Gets the value of another property in the selector
+	//		getType(value): Returns the data type of a value, in terms of FASHION.type
+	//		getUnit(value): Returns the unit of a numerical value
+	//		addScript(javascript): Injects javascript into the compiled results
+	//		getSelector(): Returns the name of the current selector
+	// }
+	// Returns an error if the property could not be added
+
+	"compile": function(value, self) {},
+
+	// Occurs during runtime for each matched element
+	"apply": function(value, element) {},
+
+	// Optionally add functions to the compiled fashion runtime
+	"runtimeKey": "propertyName",
+	"runtimeObject": {
+		"usefulFunction": function() {console.log("I'm useful");}
+	}
+}
+
+// Blocks
+blockName: {
+
+	// Occurs during the compile process
+	// This function is run on a this scope with the following properties
+	// These properties are also passed in a second argument, for the 'this'-averse
+	// {
+	// 		addSheet(): Creates a new CSS stylesheet and returns a reference to it
+	//		addRule(sheet, selector, rule): Adds a CSS rule to the stylesheet
+	//		getProperty(selector, name): Gets the value of a property in any sheet
+	//		addScript(javascript): Injects javascript into the compiled results
+	// }
+	// Returns an error if the block could not be added
+
+	"compile": function(value) {},
+
+	// Optionally add functions to the compiled fashion runtime
+	"runtimeKey": "propertyName",
+	"runtimeObject": {
+		"usefulFunction": function() {console.log("I'm useful");}
+	}
+}
