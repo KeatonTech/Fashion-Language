@@ -176,6 +176,8 @@
         result = parse("$fullHeight: 30px;\ndiv {\n	height: $fullHeight / 3;\n}");
         expression = result.selectors.div.height;
         expect(expression.dynamic).toBe(true);
+        expect(expression.individualized).toBe(false);
+        expect(expression.unit).toBe("px");
         expect(expression.evaluate({
           fullHeight: {
             value: 30
@@ -193,6 +195,8 @@
         result = parse("$heightDivisor: 3;\ndiv {\n	height: 30px/$heightDivisor;\n}");
         expression = result.selectors.div.height;
         expect(expression.dynamic).toBe(true);
+        expect(expression.individualized).toBe(false);
+        expect(expression.unit).toBe("px");
         expect(expression.evaluate({
           heightDivisor: {
             value: 3
@@ -205,7 +209,7 @@
         })).toBe("3px");
         return expect(result.variables.heightDivisor.dependants.div).toEqual(["height"]);
       });
-      return it("should allow !important on expressions", function() {
+      it("should allow !important on expressions", function() {
         var expression, result;
         result = parse("$fullHeight: 30px;\ndiv {\n	height: $fullHeight / 3 !important;\n}");
         expression = result.selectors.div.height;
@@ -214,7 +218,16 @@
             value: 30
           }
         })).toBe("10px");
-        return expect(expression.important).toBe(true);
+        expect(expression.important).toBe(true);
+        expect(expression.individualized).toBe(false);
+        return expect(expression.unit).toBe("px");
+      });
+      return it("should recognize expressions that need to be individualized", function() {
+        var expression, result;
+        result = parse("div {\n	height: self.width / 1.5;\n}");
+        expression = result.selectors.div.height;
+        expect(expression.individualized).toBe(true);
+        return expect(expression.unit).toBe(void 0);
       });
     });
   });

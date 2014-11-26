@@ -2,6 +2,8 @@ window.fashion.$properties =
 
 	"text-style":
 		compile: (values)->
+
+			# Store a list of font families
 			families = []
 
 			# Each item in the property should be considered independantly

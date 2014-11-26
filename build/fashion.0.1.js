@@ -543,7 +543,6 @@ window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpr
   }
   if (forceArray || (typeof value === "string" && value.indexOf(" ") !== -1)) {
     parts = value.match(/(["'][^'"]*["']|[\S]+)/g);
-    console.log(parts);
     if (!forceArray && parts.length === 1) {
       return window.fashion.$parser.parseSingleValue(value, variables, allowExpression);
     }
@@ -595,16 +594,17 @@ window.fashion.$parser.spliceString = function(string, start, length, replacemen
 };
 
 window.fashion.$parser.parseExpression = function(expressionString, vars, funcs, globals) {
-  var dependencies, depth, evaluate, fObj, functions, gObj, numberType, regex, script, section, si, strSplice, string, stringOffset, topLevelTypeUnit, typeUnit, unit, unittedValue, vObj, _i, _len;
+  var dependencies, depth, evaluate, fObj, functions, gObj, individualized, numberType, regex, script, section, si, strSplice, string, stringOffset, topLevelTypeUnit, typeUnit, unit, unittedValue, vObj, _i, _len;
   strSplice = window.fashion.$parser.spliceString;
   string = expressionString;
   dependencies = [];
   functions = [];
   unit = void 0;
-  regex = /(\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]{0,1}\d+|\d+(\.\d*)?)[a-zA-Z]{1,4})|([\w\-]*)\(|\))/g;
+  regex = /(\$([\w\-]+)|\@([\w\-]+)|(this|self|parent)|([\-]{0,1}([\.]{0,1}\d+|\d+(\.\d*)?)[a-zA-Z]{1,4})|([\w\-]*)\(|\))/g;
   depth = 0;
   stringOffset = 0;
   topLevelTypeUnit = [];
+  individualized = false;
   while (section = regex.exec(expressionString)) {
     si = section.index + stringOffset;
     if (section[2]) {
@@ -619,8 +619,7 @@ window.fashion.$parser.parseExpression = function(expressionString, vars, funcs,
         stringOffset += ("v." + section[2] + ".value").length - section[0].length;
         string = strSplice(string, si, section[0].length, "v." + section[2] + ".value");
       }
-    }
-    if (section[3]) {
+    } else if (section[3]) {
       section[3] = section[3].toLowerCase();
       gObj = globals[section[3]];
       if (!gObj) {
@@ -634,8 +633,17 @@ window.fashion.$parser.parseExpression = function(expressionString, vars, funcs,
         string = strSplice(string, si, section[0].length, "g." + section[3] + ".get()");
       }
     } else if (section[4]) {
+      individualized = true;
+      if (section[4] === "parent") {
+        stringOffset += "this.parent".length - section[0].length;
+        string = strSplice(string, si, section[0].length, "this.parent");
+      } else {
+        stringOffset += "this".length - section[0].length;
+        string = strSplice(string, si, section[0].length, "this");
+      }
+    } else if (section[5]) {
       numberType = window.fashion.$type.Number;
-      unittedValue = window.fashion.$run.getUnit(section[4], numberType, window.fashion.$type, window.fashion.$unit);
+      unittedValue = window.fashion.$run.getUnit(section[5], numberType, window.fashion.$type, window.fashion.$unit);
       if (unittedValue.value === NaN) {
         unittedValue.value = 0;
       }
@@ -644,18 +652,18 @@ window.fashion.$parser.parseExpression = function(expressionString, vars, funcs,
       }
       stringOffset += unittedValue.value.toString().length - section[0].length;
       string = strSplice(string, si, section[0].length, unittedValue.value.toString());
-    } else if (section[6]) {
+    } else if (section[7]) {
       depth++;
-      fObj = funcs[section[6]];
+      fObj = funcs[section[7]];
       if (!fObj) {
-        console.log("[FASHION] Function '" + section[6] + "' does not exist.");
+        console.log("[FASHION] Function '" + section[7] + "' does not exist.");
       } else {
-        functions.push(section[6]);
+        functions.push(section[7]);
         if (depth === 1) {
           topLevelTypeUnit.push([fObj.output, false]);
         }
-        stringOffset += ("f." + section[6] + "(").length - section[0].length;
-        string = strSplice(string, si, section[0].length, "f." + section[6] + "(");
+        stringOffset += ("f." + section[7] + "(").length - section[0].length;
+        string = strSplice(string, si, section[0].length, "f." + section[7] + "(");
       }
     } else if (section[0] === ")") {
       depth--;
@@ -680,7 +688,9 @@ window.fashion.$parser.parseExpression = function(expressionString, vars, funcs,
     functions: functions,
     dynamic: dependencies.length > 0,
     evaluate: evaluate,
-    script: script
+    script: script,
+    individualized: individualized,
+    unit: unit
   };
 };
 window.fashion.$processor = {
@@ -1158,70 +1168,118 @@ window.fashion.$actualizer.makeDomStyleFromTree = function(parseTree, index) {
 };
 
 window.fashion.$actualizer.generateStyleProperties = function(selectors, variables) {
-  var dynamicProps, dynamicSelector, hasDynamicProps, hasStaticProps, hasTransition, newSelector, properties, property, rDynamic, rStatic, selector, staticProps, tCSS, tDynamic, tStatic, transitions, val, valueObject;
-  rStatic = [];
-  rDynamic = [];
-  tStatic = [];
-  tDynamic = [];
+  var attr, newSelector, properties, ps, rules, selector, selectorIsDynamic, tCSS, wrap;
+  rules = {
+    dynamic: [],
+    "static": [],
+    individual: [],
+    final: {
+      dynamic: [],
+      "static": []
+    }
+  };
   for (selector in selectors) {
     properties = selectors[selector];
     newSelector = window.fashion.$run.expandVariables(selector, variables);
-    dynamicProps = staticProps = "" + newSelector + " {";
-    dynamicSelector = newSelector !== selector;
-    hasDynamicProps = hasStaticProps = false;
-    if (dynamicSelector) {
-      hasDynamicProps = true;
+    selectorIsDynamic = newSelector !== selector;
+    attr = window.fashion.$actualizer.propertiesToCSS(properties, variables);
+    wrap = function(cssString) {
+      return {
+        name: newSelector,
+        value: cssString
+      };
+    };
+    ps = attr.props;
+    if (attr.props.dynamic.length > 0) {
+      rules.dynamic.push(wrap("" + newSelector + " {" + (ps.dynamic.join('')) + "}"));
     }
-    transitions = [];
-    hasTransition = false;
-    for (property in properties) {
-      valueObject = properties[property];
-      val = window.fashion.$run.evaluate(valueObject, void 0, variables, $wf.$type, {}, $wf.$globals);
-      if (typeof valueObject === 'object' && valueObject['transition']) {
-        hasTransition = true;
-        transitions[property] = valueObject.transition;
-      }
-      if (dynamicSelector || valueObject["dynamic"] === true) {
-        dynamicProps += "" + property + ": " + val + ";";
-        hasDynamicProps = true;
-      } else {
-        staticProps += "" + property + ": " + val + ";";
-        hasStaticProps = true;
-      }
+    if (attr.props["static"].length > 0) {
+      rules["static"].push(wrap("" + newSelector + " {" + (ps["static"].join('')) + "}"));
     }
-    tCSS = window.fashion.$actualizer.addTransitions(transitions);
+    if (attr.props.individual.length > 0) {
+      rules.individual.push(wrap("" + newSelector + " {" + (ps.individual.join('')) + "}"));
+    }
+    tCSS = window.fashion.$actualizer.addTransitions(attr.transitions);
     if (tCSS["static"]) {
-      tStatic.push({
-        name: selector,
-        value: staticProps + tCSS["static"] + "}"
-      });
+      rules.final["static"].push(wrap("" + newSelector + " {" + (ps["static"].join('')) + tCSS["static"] + "}"));
     }
     if (tCSS.dynamic) {
-      tDynamic.push({
-        name: selector,
-        value: dynamicProps + tCSS.dynamic + "}"
-      });
+      rules.final.dynamic.push(wrap("" + newSelector + " {" + (ps.dynamic.join('')) + tCSS.dynamic + "}"));
     }
-    if (hasStaticProps) {
-      rStatic.push({
-        name: selector,
-        value: staticProps + "}"
-      });
+  }
+  return rules;
+};
+
+window.fashion.$actualizer.propertiesToCSS = function(properties, variables, evalFunction) {
+  var css, property, str, transitions, val, valueObject, vi, _i, _len;
+  if (!evalFunction) {
+    evalFunction = window.fashion.$run.evaluate;
+  }
+  str = {
+    dynamic: [],
+    "static": [],
+    individual: []
+  };
+  transitions = [];
+  for (property in properties) {
+    valueObject = properties[property];
+    if (valueObject instanceof Array) {
+      val = "";
+      for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
+        vi = valueObject[_i];
+        val += evalFunction(vi, 0, variables, $wf.$type, {}, $wf.$globals) + " ";
+      }
+      val = val.substr(0, val.length - 1);
+    } else {
+      val = evalFunction(valueObject, 0, variables, $wf.$type, {}, $wf.$globals);
     }
-    if (hasDynamicProps) {
-      rDynamic.push({
-        name: selector,
-        value: dynamicProps + "}"
-      });
+    css = "" + property + ": " + val + ";";
+    if (typeof valueObject === 'object' && valueObject['transition']) {
+      transitions[property] = valueObject.transition;
+    }
+    if (valueObject instanceof Array) {
+      if (((function() {
+        var _j, _len1, _results;
+        _results = [];
+        for (_j = 0, _len1 = valueObject.length; _j < _len1; _j++) {
+          vi = valueObject[_j];
+          if (vi["individualized"]) {
+            _results.push(true);
+          }
+        }
+        return _results;
+      })())[0]) {
+        str.individual.push(css);
+      } else if (((function() {
+        var _j, _len1, _results;
+        _results = [];
+        for (_j = 0, _len1 = valueObject.length; _j < _len1; _j++) {
+          vi = valueObject[_j];
+          if (vi["dynamic"]) {
+            _results.push(true);
+          }
+        }
+        return _results;
+      })())[0]) {
+        str.dynamic.push(css);
+      } else {
+        str["static"].push(css);
+      }
+    } else if (typeof valueObject === 'object') {
+      if (valueObject["individualized"] === true) {
+        str.individual.push(css);
+      } else if (valueObject["dynamic"] === true) {
+        str.dynamic.push(css);
+      } else {
+        str["static"].push(css);
+      }
+    } else {
+      str["static"].push(css);
     }
   }
   return {
-    "static": rStatic,
-    dynamic: rDynamic,
-    final: {
-      "static": tStatic,
-      dynamic: tDynamic
-    }
+    props: str,
+    transitions: transitions
   };
 };
 
@@ -1254,6 +1312,34 @@ window.fashion.$actualizer.addTransitions = function(transitions) {
     "static": (hasStatic ? tStatic : false),
     dynamic: (hasDynamic ? tDynamic : false)
   };
+};
+window.fashion.$actualizer.makeDomStyleFromTree = function(parseTree, index) {
+  var dynamicMap, dynamicSheet, row, rule, rules, staticMap, staticSheet, _ref, _ref1;
+  dynamicSheet = window.fashion.$dom.makeStylesheet("fashionDynamic", index, true);
+  staticSheet = window.fashion.$dom.makeStylesheet("fashionStatic", index, false);
+  window.fashion.$dom.addElementToHead(staticSheet);
+  window.fashion.$dom.addElementToHead(dynamicSheet);
+  rules = window.fashion.$actualizer.generateStyleProperties(parseTree.selectors, parseTree.variables);
+  console.table(rules["static"]);
+  console.table(rules.dynamic);
+  staticMap = {};
+  _ref = rules["static"];
+  for (row in _ref) {
+    rule = _ref[row];
+    staticMap[rule.name] = [index, parseInt(row)];
+    window.fashion.$actualizer.addCSSRule(rule.value, staticSheet);
+  }
+  dynamicMap = {};
+  _ref1 = rules.dynamic;
+  for (row in _ref1) {
+    rule = _ref1[row];
+    dynamicMap[rule.name] = [index, parseInt(row)];
+    window.fashion.$actualizer.addCSSRule(rule.value, dynamicSheet);
+  }
+  wait(1, function() {
+    return window.fashion.$actualizer.subInFinalRules(rules.final, staticMap, dynamicMap, staticSheet, dynamicSheet);
+  });
+  return dynamicMap;
 };
 
 window.fashion.$actualizer.subInFinalRules = function(final, staticMap, dynamicMap, staticSheet, dynamicSheet) {

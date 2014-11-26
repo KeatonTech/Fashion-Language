@@ -17,9 +17,10 @@ window.fashion.$parser.parseExpression = (expressionString, vars, funcs, globals
 	regex = ///(
 			\$([\w\-]+)|			# Defined variable
 			\@([\w\-]+)|			# Global variable
+			(this|self|parent)|		# Relative variable
 			([\-]{0,1}				# Number with unit (negative)
 			([\.]{0,1}\d+|			# Number with unit (decimal at beginning)
-			\d+(\.\d*)?)			# Number with unit (decumal in middle)
+			\d+(\.\d*)?)			# Number with unit (decimal in middle)
 			[a-zA-Z]{1,4})|			# Number with unit (unit)
 			([\w\-]*)\(|			# Function definition
 			\)						# Track depth
@@ -29,6 +30,7 @@ window.fashion.$parser.parseExpression = (expressionString, vars, funcs, globals
 	depth = 0
 	stringOffset = 0
 	topLevelTypeUnit = []
+	individualized = false
 
 	# Handle each piece
 	while section = regex.exec expressionString
@@ -45,7 +47,7 @@ window.fashion.$parser.parseExpression = (expressionString, vars, funcs, globals
 				string = strSplice string, si, section[0].length, "v.#{section[2]}.value"
 
 		# Global variable
-		if section[3]
+		else if section[3]
 			section[3] = section[3].toLowerCase()
 			gObj = globals[section[3]]
 			if !gObj then console.log "[FASHION] Global @#{section[3]} does not exist."
@@ -55,10 +57,20 @@ window.fashion.$parser.parseExpression = (expressionString, vars, funcs, globals
 				stringOffset += "g.#{section[3]}.get()".length - section[0].length
 				string = strSplice string, si, section[0].length, "g.#{section[3]}.get()"
 
-		# Number with unit
+		# Relative variable
 		else if section[4]
+			individualized = true
+			if section[4] is "parent"
+				stringOffset += "this.parent".length - section[0].length
+				string = strSplice string, si, section[0].length, "this.parent"
+			else
+				stringOffset += "this".length - section[0].length
+				string = strSplice string, si, section[0].length, "this"
+
+		# Number with unit
+		else if section[5]
 			numberType = window.fashion.$type.Number
-			unittedValue = window.fashion.$run.getUnit(section[4],
+			unittedValue = window.fashion.$run.getUnit(section[5],
 				numberType, window.fashion.$type, window.fashion.$unit)
 			if unittedValue.value is NaN then unittedValue.value = 0
 			if depth is 0 then topLevelTypeUnit.push [numberType, unittedValue.unit]
@@ -66,15 +78,15 @@ window.fashion.$parser.parseExpression = (expressionString, vars, funcs, globals
 			string = strSplice string, si, section[0].length, unittedValue.value.toString()
 
 		# Function
-		else if section[6]
+		else if section[7]
 			depth++
-			fObj = funcs[section[6]]
-			if !fObj then console.log "[FASHION] Function '#{section[6]}' does not exist."
+			fObj = funcs[section[7]]
+			if !fObj then console.log "[FASHION] Function '#{section[7]}' does not exist."
 			else
-				functions.push section[6]
+				functions.push section[7]
 				if depth is 1 then topLevelTypeUnit.push [fObj.output, false]
-				stringOffset += "f.#{section[6]}(".length - section[0].length
-				string = strSplice string, si, section[0].length, "f.#{section[6]}("
+				stringOffset += "f.#{section[7]}(".length - section[0].length
+				string = strSplice string, si, section[0].length, "f.#{section[7]}("
 
 		# Closing parenthesis
 		else if section[0] is ")" then depth--
@@ -99,5 +111,7 @@ window.fashion.$parser.parseExpression = (expressionString, vars, funcs, globals
 		dynamic: dependencies.length > 0
 		evaluate: evaluate
 		script: script
+		individualized: individualized
+		unit: unit
 	}
 

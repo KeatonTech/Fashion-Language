@@ -38,7 +38,8 @@
 				"dependencies": ["$headerHeight"],
 				"functions": [],
 				"dynamic": true,
-				"evaluate": function(v, f){
+				"individualized": false,
+				"evaluate": function(v, g, f){
 					return v.headerHeight / 2;
 				}
 			}

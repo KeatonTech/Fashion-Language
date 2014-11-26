@@ -57,7 +57,6 @@ window.fashion.$parser.parsePropertyValue =
 		# Check to see if we have a multi-piece property
 		if forceArray or (typeof value is "string" and value.indexOf(" ") isnt -1)
 			parts = value.match /(["'][^'"]*["']|[\S]+)/g
-			console.log parts
 
 			# False alarm!
 			if !forceArray and parts.length is 1 then return (

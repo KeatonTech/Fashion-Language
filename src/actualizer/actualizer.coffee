@@ -16,5 +16,5 @@ window.fashion.$actualizer =
 
 	
 # Includes
-# @prepros-append ./css.coffee
+# @prepros-append ./css/css.coffee
 # @prepros-append ./javascript/javascript.coffee

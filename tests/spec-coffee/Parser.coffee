@@ -310,6 +310,8 @@ describe "Parser", ()->
 
 			expression = result.selectors.div.height
 			expect(expression.dynamic).toBe(true)
+			expect(expression.individualized).toBe(false)
+			expect(expression.unit).toBe("px")
 			expect(expression.evaluate({fullHeight: {value: 30}})).toBe("10px")
 			expect(expression.evaluate({fullHeight: {value: 60}})).toBe("20px")
 
@@ -327,6 +329,8 @@ describe "Parser", ()->
 
 			expression = result.selectors.div.height
 			expect(expression.dynamic).toBe(true)
+			expect(expression.individualized).toBe(false)
+			expect(expression.unit).toBe("px")
 			expect(expression.evaluate({heightDivisor: {value: 3}})).toBe("10px")
 			expect(expression.evaluate({heightDivisor: {value: 10}})).toBe("3px")
 
@@ -345,4 +349,17 @@ describe "Parser", ()->
 			expression = result.selectors.div.height
 			expect(expression.evaluate({fullHeight: {value: 30}})).toBe("10px")
 			expect(expression.important).toBe(true)
+			expect(expression.individualized).toBe(false)
+			expect(expression.unit).toBe("px")
+
+		it "should recognize expressions that need to be individualized", ()->
+			result = parse(	"""
+							div {
+								height: self.width / 1.5;
+							}
+							""")
+
+			expression = result.selectors.div.height
+			expect(expression.individualized).toBe(true)
+			expect(expression.unit).toBe(undefined)
 
