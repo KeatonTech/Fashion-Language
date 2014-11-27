@@ -13,8 +13,6 @@ window.fashion.$actualizer.makeDomStyleFromTree = (parseTree, index) ->
 	# Add style properties to the sheets
 	rules = window.fashion.$actualizer.generateStyleProperties(
 		parseTree.selectors, parseTree.variables)
-	console.table rules.static
-	console.table rules.dynamic
 
 	# Add each static rule to the static sheet
 	staticMap = {}

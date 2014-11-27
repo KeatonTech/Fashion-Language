@@ -213,6 +213,7 @@
         var expression, expressionResult, globals, locals, result;
         result = parse("$maxHeight: 300px;\ndiv {\n	height: min($maxHeight, @height);\n}");
         expression = result.selectors.div.height;
+        expect(expression.functions).toEqual(['min']);
         locals = {
           maxHeight: {
             value: 300
@@ -232,6 +233,7 @@
         var expression, expressionResult, globals, locals, result;
         result = parse("$maxHeight: 300px;\ndiv {\n	height: min($maxHeight * 2, @height);\n}");
         expression = result.selectors.div.height;
+        expect(expression.functions).toEqual(['min']);
         locals = {
           maxHeight: {
             value: 300
@@ -251,6 +253,7 @@
         var expression, expressionResult, globals, locals, result;
         result = parse("$maxHeight: 300px;\n$minHeight: 100px;\ndiv {\n	height: max(min($maxHeight, @height), $minHeight);\n}");
         expression = result.selectors.div.height;
+        expect(expression.functions).toEqual(['max', 'min']);
         locals = {
           maxHeight: {
             value: 300

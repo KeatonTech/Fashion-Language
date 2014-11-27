@@ -55,7 +55,11 @@
 	"globals": {
 		"width": {
 			"dependants": []
-		}
+		},
+	},
+	"requirements": {
+		"globals": ["width"],
+		"functions": ["min", "max"]
 	},
 	"javascript": [
 		"w.FASHION.transitions.push(/* transition object */)"

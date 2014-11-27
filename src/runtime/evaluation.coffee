@@ -14,7 +14,7 @@ window.fashion.$run.getVariable = (variables, varName, type = FASHION.type) ->
 window.fashion.$run.evaluate = (valueObject, element, variables, types, funcs, globals) ->
 	if !variables then variables = FASHION.variables
 	if !types then types = FASHION.type
-	if !funcs then funcs = window.fashion.$functions
+	if !funcs then funcs = FASHION.functions
 	if !globals then globals = FASHION.globals
 
 	# Evaluates a single value, not an array

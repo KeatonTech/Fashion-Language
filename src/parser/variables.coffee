@@ -23,7 +23,7 @@ window.fashion.$parser.parseVariable = (variableObject) ->
 
 
 # Link dependencies back to a variable's dependants field
-window.fashion.$parser.backlinkDependencies = (selector, properties, variables) ->
+window.fashion.$parser.backlinkVariables = (selector, properties, variables) ->
 
 	# Go through each dependancy variable
 	linkDependenciesList = (list, propertyName) ->

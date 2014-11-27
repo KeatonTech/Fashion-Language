@@ -211,7 +211,7 @@ window.fashion.$parser.expressionExpander =
 		)
 
 		# Bundle everything together
-		dependencies = []; functions = []; scripts = []; 
+		dependencies = []; functions = [name]; scripts = []; 
 		individualized = dynamic = false;
 
 		for expression in expressions

@@ -1,6 +1,7 @@
 window.fashion.$properties =
 
 	"text-style":
+		replace: true
 		compile: (values)->
 
 			# Store a list of font families

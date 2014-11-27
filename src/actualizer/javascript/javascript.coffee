@@ -12,6 +12,15 @@ window.fashion.$actualizer.createScriptFromTree = (tree, selMap) ->
 	jsText = window.fashion.$blueprint.initialize tree, selMap
 	jsText += window.fashion.$blueprint.basicRuntime() + "\n"
 	jsText += window.fashion.$actualizer.addGlobals(tree) + "\n"
+
+	# Add requirements
+	tr = tree.requirements
+	console.log tr.functions
+	jsText += "w.FASHION.functions = #{window.fashion.$stringify tr.functions};\n"
+	jsText += "w.FASHION.properties = #{window.fashion.$stringify tr.properties};\n"
+	jsText += "w.FASHION.blocks = #{window.fashion.$stringify tr.blocks};\n"
+
+	# Start this thing off
 	jsText += window.fashion.$blueprint.startRuntime()
 
 	# Return the text
@@ -20,7 +29,7 @@ window.fashion.$actualizer.createScriptFromTree = (tree, selMap) ->
 # Adds globals as needed
 window.fashion.$actualizer.addGlobals = (tree, globals = $wf.$globals) ->
 	if JSON.stringify(tree.globals) is "{}" then return ""
-	acc = "w.FASHION.globals = {\n"
+	acc = "w.FASHION.globals = {"
 
 	# Add each used global
 	for name, obj of tree.globals

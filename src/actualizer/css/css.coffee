@@ -68,7 +68,8 @@ window.fashion.$actualizer.propertiesToCSS = (properties, variables, evalFunctio
 			).join(" ")
 
 		# Single-value. Eg: "font-size: 12pt;"
-		else val = evalFunction valueObject, 0, variables, $wf.$type, {}, $wf.$globals
+		else val = evalFunction(valueObject, 0, variables,
+			$wf.$type, $wf.$functions, $wf.$globals)
 
 		# Turn it into a CSS property
 		css = "#{property}: #{val};"

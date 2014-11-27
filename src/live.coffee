@@ -54,6 +54,7 @@ document.onreadystatechange = ()->
 
 # Include helper files, used by everything
 # @prepros-append ./helpers/dom.coffee
+# @prepros-append ./helpers/stringify.coffee
 # @prepros-append ./types/types.coffee
 
 # Include the actual functional JS files

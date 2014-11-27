@@ -346,6 +346,7 @@ describe "Parser", ()->
 							""")
 
 			expression = result.selectors.div.height
+			expect(expression.functions).toEqual(['min'])
 			locals = {maxHeight: {value: 300}}
 			globals = {height: {get: () -> 400}}
 
@@ -362,6 +363,7 @@ describe "Parser", ()->
 							""")
 
 			expression = result.selectors.div.height
+			expect(expression.functions).toEqual(['min'])
 			locals = {maxHeight: {value: 300}}
 			globals = {height: {get: () -> 400}}
 
@@ -379,6 +381,7 @@ describe "Parser", ()->
 							""")
 
 			expression = result.selectors.div.height
+			expect(expression.functions).toEqual(['max','min'])
 			locals = {maxHeight: {value: 300}, minHeight: {value: 100}}
 
 			globals = {height: {get: () -> 50}}

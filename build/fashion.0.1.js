@@ -166,6 +166,44 @@ window.fashion.$dom = {
     return parseInt(sheet.getAttribute("data-index"));
   }
 };
+window.fashion.$stringify = function(value) {
+  switch (typeof value) {
+    case "string":
+      return JSON.stringify(value);
+    case "object":
+      return window.fashion.$stringifyObject(value);
+    case "array":
+      return window.fashion.$stringifyArray(value);
+    case "number":
+      return value;
+    case "undefined":
+      return "undefined";
+    default:
+      return value.toString();
+  }
+};
+
+window.fashion.$stringifyObject = function(object) {
+  var propStrings, property, value;
+  propStrings = [];
+  for (property in object) {
+    value = object[property];
+    if (object.hasOwnProperty(property)) {
+      propStrings.push("" + property + ": " + (window.fashion.$stringify(value)));
+    }
+  }
+  return "{" + (propStrings.join(',\n')) + "}";
+};
+
+window.fashion.$stringifyArray = function(array) {
+  var propStrings, value, _i, _len;
+  propStrings = [];
+  for (_i = 0, _len = object.length; _i < _len; _i++) {
+    value = object[_i];
+    propStrings.push(window.fashion.$stringify(value));
+  }
+  return "{" + (propStrings.join(',')) + "}";
+};
 window.fashion.$type = {
   Number: 0,
   String: 1,
@@ -268,7 +306,7 @@ window.fashion.$parser = {
       body = _ref1[key];
       nb = window.fashion.$parser.parseSelectorBody(body, parsed.variables);
       parsed.selectors[key] = nb;
-      window.fashion.$parser.backlinkDependencies(key, nb, parsed.variables);
+      window.fashion.$parser.backlinkVariables(key, nb, parsed.variables);
       window.fashion.$parser.backlinkGlobals(parsed, key, nb, $wf.$globals);
     }
     return parsed;
@@ -395,7 +433,7 @@ window.fashion.$parser.parseVariable = function(variableObject) {
   return variableObject;
 };
 
-window.fashion.$parser.backlinkDependencies = function(selector, properties, variables) {
+window.fashion.$parser.backlinkVariables = function(selector, properties, variables) {
   var depVar, k, key, linkDependenciesList, p, regex, tk, tp, vObj, varName, _ref, _results;
   linkDependenciesList = function(list, propertyName) {
     var depVar, varName, _i, _len, _results;
@@ -847,7 +885,7 @@ window.fashion.$parser.expressionExpander = {
       return _results;
     })();
     dependencies = [];
-    functions = [];
+    functions = [name];
     scripts = [];
     individualized = dynamic = false;
     for (_i = 0, _len = expressions.length; _i < _len; _i++) {
@@ -880,11 +918,70 @@ window.fashion.$parser.expressionExpander = {
     };
   }
 };
+var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
 window.fashion.$processor = {
   process: function(parseTree) {
     parseTree["javascript"] = [];
     parseTree = window.fashion.$processor.properties(parseTree, $wf.$properties);
+    window.fashion.$processor.listRequirements(parseTree);
     return parseTree;
+  },
+  listRequirements: function(parseTree) {
+    var bName, block, fName, gName, properties, property, req, selector, vName, value, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _results;
+    parseTree.requirements = {
+      globals: {},
+      functions: {},
+      blocks: {},
+      properties: {}
+    };
+    req = parseTree.requirements;
+    _ref = parseTree.selectors;
+    for (selector in _ref) {
+      properties = _ref[selector];
+      for (property in properties) {
+        value = properties[property];
+        if (!(typeof value === "object")) {
+          continue;
+        }
+        if (__indexOf.call($wf.$properties, property) >= 0) {
+          req.properties[property] = $wf.$properties[property];
+        }
+        if (value.dependencies) {
+          _ref1 = value.dependencies;
+          for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+            vName = _ref1[_i];
+            if (vName[0] === "@") {
+              gName = vName.substr(1);
+              if ($wf.$globals[gName]) {
+                req.globals[gName] = $wf.$globals[property];
+              }
+            }
+          }
+        }
+        if (value.functions) {
+          _ref2 = value.functions;
+          for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+            fName = _ref2[_j];
+            if ($wf.$functions[fName]) {
+              req.functions[fName] = $wf.$functions[fName];
+            }
+          }
+        }
+      }
+    }
+    _ref3 = parseTree.blocks;
+    _results = [];
+    for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
+      block = _ref3[_k];
+      bName = block.type;
+      if (__indexOf.call($wf.$blocks, bName) >= 0) {
+        _results.push(req.blocks[bName] = $wf.$blocks[bName]);
+      } else {
+        _results.push(void 0);
+      }
+    }
+    return _results;
   }
 };
 window.fashion.$processor.properties = function(parseTree, properties) {
@@ -934,7 +1031,7 @@ window.fashion.$run = {
     return console.log("[FASHION] " + message);
   },
   initializeSelector: function(selectors) {
-    var key, pVal, properties, sel, _results;
+    var e, key, pVal, properties, sel, _results;
     if (selectors == null) {
       selectors = FASHION.selectors;
     }
@@ -947,7 +1044,13 @@ window.fashion.$run = {
         for (key in properties) {
           pVal = properties[key];
           if (typeof pVal === "object" && pVal["script"]) {
-            _results1.push(pVal["evaluate"] = Function("v", "g", "f", pVal["script"]));
+            try {
+              _results1.push(pVal["evaluate"] = Function("v", "g", "f", pVal["script"]));
+            } catch (_error) {
+              e = _error;
+              console.log("[FASHION] Cannot convert script into function");
+              throw e;
+            }
           } else {
             _results1.push(void 0);
           }
@@ -1068,7 +1171,7 @@ window.fashion.$run.evaluate = function(valueObject, element, variables, types, 
     types = FASHION.type;
   }
   if (!funcs) {
-    funcs = window.fashion.$functions;
+    funcs = FASHION.functions;
   }
   if (!globals) {
     globals = FASHION.globals;
@@ -1414,7 +1517,7 @@ window.fashion.$actualizer.propertiesToCSS = function(properties, variables, eva
         })()).join(" ");
       }
     } else {
-      val = evalFunction(valueObject, 0, variables, $wf.$type, {}, $wf.$globals);
+      val = evalFunction(valueObject, 0, variables, $wf.$type, $wf.$functions, $wf.$globals);
     }
     css = "" + property + ": " + val + ";";
     if (typeof valueObject === 'object' && valueObject['transition']) {
@@ -1503,8 +1606,6 @@ window.fashion.$actualizer.makeDomStyleFromTree = function(parseTree, index) {
   window.fashion.$dom.addElementToHead(staticSheet);
   window.fashion.$dom.addElementToHead(dynamicSheet);
   rules = window.fashion.$actualizer.generateStyleProperties(parseTree.selectors, parseTree.variables);
-  console.table(rules["static"]);
-  console.table(rules.dynamic);
   staticMap = {};
   _ref = rules["static"];
   for (row in _ref) {
@@ -1568,10 +1669,15 @@ window.fashion.$actualizer.addScriptFromTree = function(tree, selMap) {
 };
 
 window.fashion.$actualizer.createScriptFromTree = function(tree, selMap) {
-  var jsText;
+  var jsText, tr;
   jsText = window.fashion.$blueprint.initialize(tree, selMap);
   jsText += window.fashion.$blueprint.basicRuntime() + "\n";
   jsText += window.fashion.$actualizer.addGlobals(tree) + "\n";
+  tr = tree.requirements;
+  console.log(tr.functions);
+  jsText += "w.FASHION.functions = " + (window.fashion.$stringify(tr.functions)) + ";\n";
+  jsText += "w.FASHION.properties = " + (window.fashion.$stringify(tr.properties)) + ";\n";
+  jsText += "w.FASHION.blocks = " + (window.fashion.$stringify(tr.blocks)) + ";\n";
   jsText += window.fashion.$blueprint.startRuntime();
   return jsText;
 };
@@ -1584,7 +1690,7 @@ window.fashion.$actualizer.addGlobals = function(tree, globals) {
   if (JSON.stringify(tree.globals) === "{}") {
     return "";
   }
-  acc = "w.FASHION.globals = {\n";
+  acc = "w.FASHION.globals = {";
   _ref = tree.globals;
   for (name in _ref) {
     obj = _ref[name];
@@ -1653,6 +1759,7 @@ window.fashion.$functions = {
 };
 window.fashion.$properties = {
   "text-style": {
+    replace: true,
     compile: function(values) {
       var compileSingleValue, families, v, _i, _len;
       families = [];
