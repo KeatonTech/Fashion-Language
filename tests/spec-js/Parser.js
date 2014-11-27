@@ -192,7 +192,7 @@
       });
       it("should allow untyped variables in expressions", function() {
         var expression, result;
-        result = parse("$heightDivisor: 3;\ndiv {\n	height: 30px/$heightDivisor;\n}");
+        result = parse("$heightDivisor: 3;\ndiv {\n	height: 30px / $heightDivisor;\n}");
         expression = result.selectors.div.height;
         expect(expression.dynamic).toBe(true);
         expect(expression.individualized).toBe(false);
@@ -209,6 +209,106 @@
         })).toBe("3px");
         return expect(result.variables.heightDivisor.dependants.div).toEqual(["height"]);
       });
+      it("should allow functions in expressions", function() {
+        var expression, expressionResult, globals, locals, result;
+        result = parse("$maxHeight: 300px;\ndiv {\n	height: min($maxHeight, @height);\n}");
+        expression = result.selectors.div.height;
+        locals = {
+          maxHeight: {
+            value: 300
+          }
+        };
+        globals = {
+          height: {
+            get: function() {
+              return 400;
+            }
+          }
+        };
+        expressionResult = expression.evaluate(locals, globals, $wf.$functions);
+        return expect(expressionResult).toBe("300px");
+      });
+      it("should allow math inside function arguments", function() {
+        var expression, expressionResult, globals, locals, result;
+        result = parse("$maxHeight: 300px;\ndiv {\n	height: min($maxHeight * 2, @height);\n}");
+        expression = result.selectors.div.height;
+        locals = {
+          maxHeight: {
+            value: 300
+          }
+        };
+        globals = {
+          height: {
+            get: function() {
+              return 400;
+            }
+          }
+        };
+        expressionResult = expression.evaluate(locals, globals, $wf.$functions);
+        return expect(expressionResult).toBe("400px");
+      });
+      it("should allow nested functions", function() {
+        var expression, expressionResult, globals, locals, result;
+        result = parse("$maxHeight: 300px;\n$minHeight: 100px;\ndiv {\n	height: max(min($maxHeight, @height), $minHeight);\n}");
+        expression = result.selectors.div.height;
+        locals = {
+          maxHeight: {
+            value: 300
+          },
+          minHeight: {
+            value: 100
+          }
+        };
+        globals = {
+          height: {
+            get: function() {
+              return 50;
+            }
+          }
+        };
+        expressionResult = expression.evaluate(locals, globals, $wf.$functions);
+        expect(expressionResult).toBe("100px");
+        globals = {
+          height: {
+            get: function() {
+              return 150;
+            }
+          }
+        };
+        expressionResult = expression.evaluate(locals, globals, $wf.$functions);
+        expect(expressionResult).toBe("150px");
+        globals = {
+          height: {
+            get: function() {
+              return 500;
+            }
+          }
+        };
+        expressionResult = expression.evaluate(locals, globals, $wf.$functions);
+        return expect(expressionResult).toBe("300px");
+      });
+      it("should allow bindings in expressions", function() {
+        var bindSpy, expression, result;
+        result = parse("div {\n	height: $('#sidebar')px;\n}");
+        bindSpy = jasmine.createSpy('spy').and.returnValue(10);
+        expression = result.selectors.div.height;
+        expect(expression.dynamic).toBe(true);
+        expect(expression.individualized).toBe(false);
+        expect(expression.unit).toBe("px");
+        expect(expression.evaluate({}, {}, {}, bindSpy)).toBe("10px");
+        return expect(bindSpy).toHaveBeenCalledWith("#sidebar");
+      });
+      it("should allow alternate-property bindings in expressions", function() {
+        var bindSpy, expression, result;
+        result = parse("div {\n	height: $('#sidebar', 'width')px;\n}");
+        bindSpy = jasmine.createSpy('spy').and.returnValue(20);
+        expression = result.selectors.div.height;
+        expect(expression.dynamic).toBe(true);
+        expect(expression.individualized).toBe(false);
+        expect(expression.unit).toBe("px");
+        expect(expression.evaluate({}, {}, {}, bindSpy)).toBe("20px");
+        return expect(bindSpy).toHaveBeenCalledWith("#sidebar", "width");
+      });
       it("should allow !important on expressions", function() {
         var expression, result;
         result = parse("$fullHeight: 30px;\ndiv {\n	height: $fullHeight / 3 !important;\n}");
@@ -224,10 +324,10 @@
       });
       return it("should recognize expressions that need to be individualized", function() {
         var expression, result;
-        result = parse("div {\n	height: self.width / 1.5;\n}");
+        result = parse("div {\n	height: $('self','width')px / 1.5;\n}");
         expression = result.selectors.div.height;
         expect(expression.individualized).toBe(true);
-        return expect(expression.unit).toBe(void 0);
+        return expect(expression.unit).toBe("px");
       });
     });
   });

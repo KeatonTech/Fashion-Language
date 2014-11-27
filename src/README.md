@@ -37,7 +37,8 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ##### Code to turn the processed parse tree into standard CSS and Javascript text
 
 * ***actualizer.coffee:*** Imports everything else, orchestrate the process on a high level.
-* ***css.coffee:*** Generates two stylesheets from the parse tree, one for static properties and one for dynamic properties. Returns a map describing where different selectors are located on the dynamic sheet.
+* ***css/css.coffee:*** Generates two stylesheets from the parse tree, one for static properties and one for dynamic properties. Returns a map describing where different selectors are located on the dynamic sheet.
+* ***css/dom.coffee:*** Adds stylesheets to the page, and is capable of swapping out their properties
 * ***javascript/javascript.coffee:*** Generates javascript text, adds it to the page inside a script tag.
 * ***javascript/blueprint.coffee:*** Text generating functions used for different parts of the actualized JS. Converts runtime functions into text and adds them to the output.
 

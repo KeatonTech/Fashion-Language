@@ -174,11 +174,12 @@ window.fashion.$type = {
   C4Number: 51,
   CBorder: 52,
   CShadow: 53,
-  KDisplay: 100,
-  KCenter: 101,
-  KListStyle: 102,
-  KLineStyle: 103,
-  KInset: 104,
+  KGeneric: 100,
+  KDisplay: 101,
+  KCenter: 102,
+  KListStyle: 103,
+  KLineStyle: 104,
+  KInset: 105,
   Unknown: 255
 };
 window.fashion.$unit = {
@@ -493,14 +494,18 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, vars) {
     }
     value = property[6];
     if (value.indexOf(',') !== -1) {
-      value = value.split(",");
-      for (i in value) {
-        item = value[i];
-        value[i] = item.trim();
-      }
-      for (i in value) {
-        item = value[i];
-        value[i] = window.fashion.$parser.parsePropertyValue(item, vars, true, true);
+      value = window.fashion.$parser.splitByTopLevelCommas(value);
+      if (value.length === 1) {
+        value = window.fashion.$parser.parsePropertyValue(value[0], vars);
+      } else {
+        for (i in value) {
+          item = value[i];
+          value[i] = item.trim();
+        }
+        for (i in value) {
+          item = value[i];
+          value[i] = window.fashion.$parser.parsePropertyValue(item, vars, true, true);
+        }
       }
     } else {
       value = window.fashion.$parser.parsePropertyValue(value, vars);
@@ -530,6 +535,10 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, vars) {
   return properties;
 };
 
+window.fashion.$parser.identifyExpression = function() {
+  return /(([\s][\+\-\/\*\=][\s])|[\(\)\[\]])/g;
+};
+
 window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpression, forceArray) {
   var parts, piece;
   if (allowExpression == null) {
@@ -538,7 +547,7 @@ window.fashion.$parser.parsePropertyValue = function(value, variables, allowExpr
   if (forceArray == null) {
     forceArray = false;
   }
-  if (allowExpression && value.match(/[\+\/\*\(\)\=]/g)) {
+  if (allowExpression && value.match($wf.$parser.identifyExpression())) {
     return window.fashion.$parser.parseSingleValue(value, variables, true);
   }
   if (forceArray || (typeof value === "string" && value.indexOf(" ") !== -1)) {
@@ -570,7 +579,7 @@ window.fashion.$parser.parseSingleValue = function(value, variables, allowExpres
   };
   hasVariable = false;
   if (value.indexOf("$") !== -1 || value.indexOf("@") !== -1) {
-    vars = valueObject.dependencies = value.match(/(\$([\w\-\$]*)|\@([\w\-\$]*))/g);
+    vars = valueObject.dependencies = value.match(/(\$([\w\-]*)|\@([\w\-]*))/g);
     valueObject.dynamic = true;
     hasVariable = vars.length > 0;
     if (vars.length === 1 && vars[0] === value) {
@@ -581,7 +590,7 @@ window.fashion.$parser.parseSingleValue = function(value, variables, allowExpres
       return valueObject;
     }
   }
-  if (allowExpression && value.match(/[\+\/\*\(\)\=]/g)) {
+  if (allowExpression && value.match($wf.$parser.identifyExpression())) {
     return window.fashion.$parser.parseExpression(value, variables, window.fashion.$functions, window.fashion.$globals);
   } else if (hasVariable) {
     valueObject.link = vars[0];
@@ -589,109 +598,287 @@ window.fashion.$parser.parseSingleValue = function(value, variables, allowExpres
   }
   return value;
 };
+
+window.fashion.$parser.splitByTopLevelCommas = function(value) {
+  var acc, depth, regex, ret, token;
+  depth = 0;
+  acc = "";
+  ret = [];
+  regex = /(\(|\)|\,|[^\(\)\,]+)/g;
+  while (token = regex.exec(value)) {
+    if (token[0] === "," && depth === 0) {
+      ret.push(acc);
+      acc = "";
+      continue;
+    }
+    if (token[0] === "(") {
+      depth++;
+    }
+    if (token[0] === ")") {
+      depth--;
+    }
+    acc += token[0];
+  }
+  ret.push(acc);
+  return ret;
+};
+window.fashion.$parser.parseExpression = function(expString, vars, funcs, globals, top) {
+  var contained, dependencies, dynamic, e, eObj, end, evaluate, expander, functions, individualized, length, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, type, types, unit, units, _ref;
+  if (top == null) {
+    top = true;
+  }
+  expander = $wf.$parser.expressionExpander;
+  dependencies = [];
+  functions = [];
+  script = expString;
+  individualized = dynamic = false;
+  types = [];
+  units = [];
+  scriptOffset = 0;
+  replaceInScript = function(start, length, string) {
+    script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
+    return scriptOffset += string.length - length;
+  };
+  regex = /([\$\@]\(['"](.*?)['"]\,?\s?['"]?(.*?)['"]?\)([^\s]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]{0,1}\d+|\d+(\.\d*)?)[a-zA-Z]{1,4})|([\w\-]*)\(|\(|\))/g;
+  shouldBreak = false;
+  while (!shouldBreak && (section = regex.exec(expString))) {
+    start = section.index;
+    length = section[0].length;
+    end = start + length;
+    if (section[2]) {
+      eObj = expander.domBinding(section[2], section[3], section[4]);
+    } else if (section[5]) {
+      eObj = expander.localVariable(section[5], vars);
+    } else if (section[6]) {
+      eObj = expander.globalVariable(section[6], globals);
+    } else if (section[7]) {
+      eObj = expander.numberWithUnit(section[7]);
+    } else if (section[10]) {
+      contained = window.fashion.$parser.matchParenthesis(regex, expString, end);
+      if (!contained) {
+        contained = expString.substr(end);
+        shouldBreak = true;
+      }
+      length += contained.length + 1;
+      eObj = expander["function"](section[10], contained, vars, funcs, globals);
+    }
+    if (!eObj) {
+      continue;
+    }
+    if (eObj.script) {
+      replaceInScript(start, length, eObj.script);
+    }
+    if (eObj.dependencies) {
+      dependencies.push.apply(dependencies, eObj.dependencies);
+    }
+    if (eObj.functions) {
+      functions.push.apply(functions, eObj.functions);
+    }
+    if (eObj.dynamic === true) {
+      dynamic = true;
+    }
+    if (eObj.individualized === true) {
+      individualized = true;
+    }
+    types.push(eObj.type === void 0 ? $wf.$type.Unknown : eObj.type);
+    units.push(eObj.unit || '');
+  }
+  _ref = $wf.$parser.determineExpressionType(types, units), type = _ref.type, unit = _ref.unit;
+  if (top) {
+    if (unit) {
+      script = "return (" + script + ") + '" + unit + "'";
+    } else {
+      script = "return " + script;
+    }
+    try {
+      evaluate = Function("v", "g", "f", "d", script);
+    } catch (_error) {
+      e = _error;
+      console.log("[FASHION] Could not compile script: " + script);
+      throw e;
+      evaluate = void 0;
+    }
+  } else {
+    script = "{value: " + script + ", type: " + type + ", unit: '" + unit + "'}";
+  }
+  return {
+    type: type,
+    unit: unit,
+    dynamic: dynamic,
+    individualized: individualized,
+    script: script,
+    evaluate: evaluate,
+    dependencies: dependencies,
+    functions: functions
+  };
+};
+
 window.fashion.$parser.spliceString = function(string, start, length, replacement) {
   return string.substr(0, start) + replacement + string.substr(start + length);
 };
 
-window.fashion.$parser.parseExpression = function(expressionString, vars, funcs, globals) {
-  var dependencies, depth, evaluate, fObj, functions, gObj, individualized, numberType, regex, script, section, si, strSplice, string, stringOffset, topLevelTypeUnit, typeUnit, unit, unittedValue, vObj, _i, _len;
-  strSplice = window.fashion.$parser.spliceString;
-  string = expressionString;
-  dependencies = [];
-  functions = [];
-  unit = void 0;
-  regex = /(\$([\w\-]+)|\@([\w\-]+)|(this|self|parent)|([\-]{0,1}([\.]{0,1}\d+|\d+(\.\d*)?)[a-zA-Z]{1,4})|([\w\-]*)\(|\))/g;
+window.fashion.$parser.matchParenthesis = function(regex, string, index) {
+  var acc, depth, lastIndex, section;
   depth = 0;
-  stringOffset = 0;
-  topLevelTypeUnit = [];
-  individualized = false;
-  while (section = regex.exec(expressionString)) {
-    si = section.index + stringOffset;
-    if (section[2]) {
-      vObj = vars[section[2]];
-      if (!vObj) {
-        console.log("[FASHION] Variable $" + section[2] + " does not exist.");
-      } else {
-        dependencies.push("$" + section[2]);
-        if (depth === 0) {
-          topLevelTypeUnit.push([vObj.type, vObj.unit]);
-        }
-        stringOffset += ("v." + section[2] + ".value").length - section[0].length;
-        string = strSplice(string, si, section[0].length, "v." + section[2] + ".value");
-      }
-    } else if (section[3]) {
-      section[3] = section[3].toLowerCase();
-      gObj = globals[section[3]];
-      if (!gObj) {
-        console.log("[FASHION] Global @" + section[3] + " does not exist.");
-      } else {
-        dependencies.push("@" + section[3]);
-        if (depth === 0) {
-          topLevelTypeUnit.push([gObj.type, gObj.unit]);
-        }
-        stringOffset += ("g." + section[3] + ".get()").length - section[0].length;
-        string = strSplice(string, si, section[0].length, "g." + section[3] + ".get()");
-      }
-    } else if (section[4]) {
-      individualized = true;
-      if (section[4] === "parent") {
-        stringOffset += "this.parent".length - section[0].length;
-        string = strSplice(string, si, section[0].length, "this.parent");
-      } else {
-        stringOffset += "this".length - section[0].length;
-        string = strSplice(string, si, section[0].length, "this");
-      }
-    } else if (section[5]) {
-      numberType = window.fashion.$type.Number;
-      unittedValue = window.fashion.$run.getUnit(section[5], numberType, window.fashion.$type, window.fashion.$unit);
-      if (unittedValue.value === NaN) {
-        unittedValue.value = 0;
-      }
-      if (depth === 0) {
-        topLevelTypeUnit.push([numberType, unittedValue.unit]);
-      }
-      stringOffset += unittedValue.value.toString().length - section[0].length;
-      string = strSplice(string, si, section[0].length, unittedValue.value.toString());
-    } else if (section[7]) {
+  acc = "";
+  lastIndex = index;
+  while (section = regex.exec(string)) {
+    if (section[0].indexOf("(") !== -1) {
       depth++;
-      fObj = funcs[section[7]];
-      if (!fObj) {
-        console.log("[FASHION] Function '" + section[7] + "' does not exist.");
-      } else {
-        functions.push(section[7]);
-        if (depth === 1) {
-          topLevelTypeUnit.push([fObj.output, false]);
-        }
-        stringOffset += ("f." + section[7] + "(").length - section[0].length;
-        string = strSplice(string, si, section[0].length, "f." + section[7] + "(");
+    } else if (section[0].indexOf(")") !== -1) {
+      if (depth-- === 0) {
+        return acc;
       }
-    } else if (section[0] === ")") {
-      depth--;
+    } else {
+      acc += string.substr(lastIndex, (section.index - lastIndex) + section[0].length);
+      lastIndex = section.index + section[0].length;
     }
   }
-  for (_i = 0, _len = topLevelTypeUnit.length; _i < _len; _i++) {
-    typeUnit = topLevelTypeUnit[_i];
-    if (typeUnit[1]) {
-      if (!unit) {
-        unit = typeUnit[1];
-      } else if (unit !== typeUnit[1]) {
+};
+
+window.fashion.$parser.determineExpressionType = function(types, units) {
+  var i, topType, topUnit, type, unit;
+  topType = topUnit = void 0;
+  for (i in types) {
+    type = types[i];
+    if (type === $wf.$type.Unknown) {
+      continue;
+    }
+    if (!topType) {
+      topType = type;
+    } else if (type !== topType) {
+      if (type === $wf.$type.String) {
+        type = $wf.$type.String;
+      } else {
+        console.log("[FASHION] Found mixed types in expression");
+        return {};
+      }
+    }
+    if (type === $wf.$type.Number) {
+      unit = units[i];
+      if (unit === "") {
+        continue;
+      }
+      if (!topUnit) {
+        topUnit = unit;
+      } else if (unit !== topUnit) {
         console.log("[FASHION] Conflicting units '" + unit + "' and '" + typeUnit[1] + "'");
         console.log("[FASHION] Unit conversion will be implemented in the future");
-        return "";
+        return {};
       }
     }
   }
-  script = "return (" + string + ") + '" + (unit || '') + "'";
-  evaluate = Function("v", "g", "f", script);
   return {
-    dependencies: dependencies,
-    functions: functions,
-    dynamic: dependencies.length > 0,
-    evaluate: evaluate,
-    script: script,
-    individualized: individualized,
-    unit: unit
+    type: topType,
+    unit: topUnit
   };
+};
+
+window.fashion.$parser.expressionExpander = {
+  localVariable: function(name, vars) {
+    var vObj;
+    vObj = vars[name];
+    if (!vObj) {
+      return console.log("[FASHION] Variable $" + name + " does not exist.");
+    }
+    return {
+      type: vObj.type,
+      unit: vObj.unit,
+      dynamic: true,
+      script: "v." + name + ".value",
+      dependencies: ["$" + name]
+    };
+  },
+  globalVariable: function(name, globals) {
+    var vObj;
+    name = name.toLowerCase();
+    vObj = globals[name];
+    if (!vObj) {
+      return console.log("[FASHION] Variable $" + name + " does not exist.");
+    }
+    return {
+      type: vObj.type,
+      unit: vObj.unit,
+      dynamic: true,
+      script: "g." + name + ".get()",
+      dependencies: ["@" + name]
+    };
+  },
+  numberWithUnit: function(value) {
+    var numberType, unittedValue;
+    numberType = window.fashion.$type.Number;
+    unittedValue = window.fashion.$run.getUnit(value, numberType, $wf.$type, $wf.$unit);
+    if (unittedValue.value === NaN) {
+      unittedValue.value = 0;
+    }
+    return {
+      type: numberType,
+      unit: unittedValue.unit,
+      script: unittedValue.value.toString()
+    };
+  },
+  domBinding: function(selector, property, unit) {
+    var individualized, script;
+    individualized = selector.indexOf("self") !== -1;
+    individualized || (individualized = selector.indexOf("parent") !== -1);
+    script = property ? "d('" + selector + "','" + property + "')" : "d('" + selector + "')";
+    return {
+      type: unit ? $wf.$type.Number : $wf.$type.Unknown,
+      unit: unit || "",
+      script: script,
+      dynamic: true,
+      individualized: individualized
+    };
+  },
+  "function": function(name, argumentsString, vars, funcs, globals) {
+    var arg, args, dependencies, dynamic, expression, expressions, fObj, functions, individualized, scripts, unit, _i, _len;
+    fObj = funcs[name];
+    if (!fObj) {
+      return console.log("[FASHION] Function $" + name + " does not exist.");
+    }
+    args = window.fashion.$parser.splitByTopLevelCommas(argumentsString);
+    expressions = (function() {
+      var _i, _len, _results;
+      _results = [];
+      for (_i = 0, _len = args.length; _i < _len; _i++) {
+        arg = args[_i];
+        _results.push(window.fashion.$parser.parseExpression(arg, vars, funcs, globals, false));
+      }
+      return _results;
+    })();
+    dependencies = [];
+    functions = [];
+    scripts = [];
+    individualized = dynamic = false;
+    for (_i = 0, _len = expressions.length; _i < _len; _i++) {
+      expression = expressions[_i];
+      if (expression.dynamic === true) {
+        dynamic = true;
+      }
+      if (expression.individualized === true) {
+        individualized = true;
+      }
+      dependencies.push.apply(dependencies, expression.dependencies || []);
+      functions.push.apply(functions, expression.functions || []);
+      scripts.push(expression.script);
+    }
+    if (fObj.unit !== void 0) {
+      unit = fObj.unit;
+    } else if (fObj.unitFrom !== void 0) {
+      unit = expressions[fObj.unitFrom].unit;
+    } else {
+      unit = "";
+    }
+    return {
+      type: fObj.output,
+      unit: unit,
+      script: "f." + name + ".evaluate(" + (scripts.join(',')) + ")",
+      dependencies: dependencies,
+      functions: functions,
+      dynamic: dynamic,
+      individualized: individualized
+    };
+  }
 };
 window.fashion.$processor = {
   process: function(parseTree) {
@@ -1138,35 +1325,6 @@ window.fashion.$actualizer = {
     return true;
   }
 };
-window.fashion.$actualizer.makeDomStyleFromTree = function(parseTree, index) {
-  var dynamicMap, dynamicSheet, row, rule, rules, staticMap, staticSheet, _ref, _ref1;
-  dynamicSheet = window.fashion.$dom.makeStylesheet("fashionDynamic", index, true);
-  staticSheet = window.fashion.$dom.makeStylesheet("fashionStatic", index, false);
-  window.fashion.$dom.addElementToHead(staticSheet);
-  window.fashion.$dom.addElementToHead(dynamicSheet);
-  rules = window.fashion.$actualizer.generateStyleProperties(parseTree.selectors, parseTree.variables);
-  console.table(rules["static"]);
-  console.table(rules.dynamic);
-  staticMap = {};
-  _ref = rules["static"];
-  for (row in _ref) {
-    rule = _ref[row];
-    staticMap[rule.name] = [index, parseInt(row)];
-    window.fashion.$actualizer.addCSSRule(rule.value, staticSheet);
-  }
-  dynamicMap = {};
-  _ref1 = rules.dynamic;
-  for (row in _ref1) {
-    rule = _ref1[row];
-    dynamicMap[rule.name] = [index, parseInt(row)];
-    window.fashion.$actualizer.addCSSRule(rule.value, dynamicSheet);
-  }
-  wait(1, function() {
-    return window.fashion.$actualizer.subInFinalRules(rules.final, staticMap, dynamicMap, staticSheet, dynamicSheet);
-  });
-  return dynamicMap;
-};
-
 window.fashion.$actualizer.generateStyleProperties = function(selectors, variables) {
   var attr, newSelector, properties, ps, rules, selector, selectorIsDynamic, tCSS, wrap;
   rules = {
@@ -1183,12 +1341,14 @@ window.fashion.$actualizer.generateStyleProperties = function(selectors, variabl
     newSelector = window.fashion.$run.expandVariables(selector, variables);
     selectorIsDynamic = newSelector !== selector;
     attr = window.fashion.$actualizer.propertiesToCSS(properties, variables);
-    wrap = function(cssString) {
-      return {
-        name: newSelector,
-        value: cssString
+    wrap = (function(newSelector) {
+      return function(cssString) {
+        return {
+          name: newSelector,
+          value: cssString
+        };
       };
-    };
+    })(newSelector);
     ps = attr.props;
     if (attr.props.dynamic.length > 0) {
       rules.dynamic.push(wrap("" + newSelector + " {" + (ps.dynamic.join('')) + "}"));
@@ -1211,7 +1371,7 @@ window.fashion.$actualizer.generateStyleProperties = function(selectors, variabl
 };
 
 window.fashion.$actualizer.propertiesToCSS = function(properties, variables, evalFunction) {
-  var css, property, str, transitions, val, valueObject, vi, _i, _len;
+  var css, property, str, transitions, val, valueObject, vi, vo;
   if (!evalFunction) {
     evalFunction = window.fashion.$run.evaluate;
   }
@@ -1224,12 +1384,35 @@ window.fashion.$actualizer.propertiesToCSS = function(properties, variables, eva
   for (property in properties) {
     valueObject = properties[property];
     if (valueObject instanceof Array) {
-      val = "";
-      for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
-        vi = valueObject[_i];
-        val += evalFunction(vi, 0, variables, $wf.$type, {}, $wf.$globals) + " ";
+      if (valueObject[0] instanceof Array) {
+        val = ((function() {
+          var _i, _len, _results;
+          _results = [];
+          for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
+            vi = valueObject[_i];
+            _results.push(((function() {
+              var _j, _len1, _results1;
+              _results1 = [];
+              for (_j = 0, _len1 = vi.length; _j < _len1; _j++) {
+                vo = vi[_j];
+                _results1.push(evalFunction(vo, 0, variables, $wf.$type, {}, $wf.$globals));
+              }
+              return _results1;
+            })()).join(" "));
+          }
+          return _results;
+        })()).join(", ");
+      } else {
+        val = ((function() {
+          var _i, _len, _results;
+          _results = [];
+          for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
+            vi = valueObject[_i];
+            _results.push(evalFunction(vi, 0, variables, $wf.$type, {}, $wf.$globals));
+          }
+          return _results;
+        })()).join(" ");
       }
-      val = val.substr(0, val.length - 1);
     } else {
       val = evalFunction(valueObject, 0, variables, $wf.$type, {}, $wf.$globals);
     }
@@ -1239,10 +1422,10 @@ window.fashion.$actualizer.propertiesToCSS = function(properties, variables, eva
     }
     if (valueObject instanceof Array) {
       if (((function() {
-        var _j, _len1, _results;
+        var _i, _len, _results;
         _results = [];
-        for (_j = 0, _len1 = valueObject.length; _j < _len1; _j++) {
-          vi = valueObject[_j];
+        for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
+          vi = valueObject[_i];
           if (vi["individualized"]) {
             _results.push(true);
           }
@@ -1251,10 +1434,10 @@ window.fashion.$actualizer.propertiesToCSS = function(properties, variables, eva
       })())[0]) {
         str.individual.push(css);
       } else if (((function() {
-        var _j, _len1, _results;
+        var _i, _len, _results;
         _results = [];
-        for (_j = 0, _len1 = valueObject.length; _j < _len1; _j++) {
-          vi = valueObject[_j];
+        for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
+          vi = valueObject[_i];
           if (vi["dynamic"]) {
             _results.push(true);
           }
@@ -1435,6 +1618,36 @@ window.fashion.$functions = {
     unitFrom: 0,
     evaluate: function(n) {
       return Math.round(n.value);
+    }
+  },
+  min: {
+    output: $wf.$type.Number,
+    unitFrom: 0,
+    evaluate: function() {
+      var arg, minSoFar, _i, _len;
+      minSoFar = 9007199254740992;
+      for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+        arg = arguments[_i];
+        if (arg.value < minSoFar) {
+          minSoFar = arg.value;
+        }
+      }
+      return minSoFar;
+    }
+  },
+  max: {
+    output: $wf.$type.Number,
+    unitFrom: 0,
+    evaluate: function() {
+      var arg, maxSoFar, _i, _len;
+      maxSoFar = -9007199254740992;
+      for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+        arg = arguments[_i];
+        if (arg.value > maxSoFar) {
+          maxSoFar = arg.value;
+        }
+      }
+      return maxSoFar;
     }
   }
 };

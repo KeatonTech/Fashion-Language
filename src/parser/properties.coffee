@@ -1,3 +1,4 @@
+
 # Convert a raw variable object into one with a little more info
 window.fashion.$parser.parseSelectorBody = (bodyString, vars) ->
 	properties = {}
@@ -18,10 +19,18 @@ window.fashion.$parser.parseSelectorBody = (bodyString, vars) ->
 
 		# Split it into multiple values if necessary
 		if value.indexOf(',') isnt -1
-			value = value.split(",");
-			value[i] = item.trim() for i,item of value
-			for i,item of value
-				value[i] = window.fashion.$parser.parsePropertyValue(item, vars, true, true)
+			value = window.fashion.$parser.splitByTopLevelCommas value
+
+			# False alarm
+			if value.length is 1
+				value = window.fashion.$parser.parsePropertyValue(value[0], vars)
+
+			# Build an array of processed values
+			else
+				value[i] = item.trim() for i,item of value
+				for i,item of value
+					value[i] = window.fashion.$parser.parsePropertyValue(
+						item, vars, true, true)
 
 		# Just process the one value
 		else value = window.fashion.$parser.parsePropertyValue(value, vars)
@@ -46,12 +55,16 @@ window.fashion.$parser.parseSelectorBody = (bodyString, vars) ->
 	return properties
 
 
+# Shared regex used to identify expressions
+window.fashion.$parser.identifyExpression = () -> /(([\s][\+\-\/\*\=][\s])|[\(\)\[\]])/g
+
+
 # Convert a property value into a linked object or expression, if necessary
 window.fashion.$parser.parsePropertyValue = 
 	(value, variables, allowExpression = true, forceArray = false) ->
 
 		# Pass expressions through
-		if allowExpression and value.match /[\+\/\*\(\)\=]/g
+		if allowExpression and value.match $wf.$parser.identifyExpression()
 			return window.fashion.$parser.parseSingleValue value, variables, true
 
 		# Check to see if we have a multi-piece property
@@ -70,6 +83,7 @@ window.fashion.$parser.parsePropertyValue =
 		# We have a single-piece property
 		else window.fashion.$parser.parseSingleValue value, variables, allowExpression
 
+
 # Convert a property value into a linked object or expression, if necessary
 window.fashion.$parser.parseSingleValue = (value, variables, allowExpression = true) ->
 	valueObject = {dynamic: false}
@@ -79,7 +93,7 @@ window.fashion.$parser.parseSingleValue = (value, variables, allowExpression = t
 	if value.indexOf("$") isnt -1 or value.indexOf("@") isnt -1
 
 		# Get the list of variables involved
-		vars = valueObject.dependencies = value.match /(\$([\w\-\$]*)|\@([\w\-\$]*))/g
+		vars = valueObject.dependencies = value.match /(\$([\w\-]*)|\@([\w\-]*))/g
 		valueObject.dynamic = true
 		hasVariable = vars.length > 0
 
@@ -90,7 +104,7 @@ window.fashion.$parser.parseSingleValue = (value, variables, allowExpression = t
 			return valueObject;
 
 	# Check to see if it's an expression
-	if allowExpression and value.match /[\+\/\*\(\)\=]/g
+	if allowExpression and value.match $wf.$parser.identifyExpression()
 		return window.fashion.$parser.parseExpression(
 			value, variables, window.fashion.$functions, window.fashion.$globals)
 
@@ -101,3 +115,27 @@ window.fashion.$parser.parseSingleValue = (value, variables, allowExpression = t
 
 	# Nope, this is just a normal property
 	return value
+
+
+# Splits a string by commas, but only those not inside parenthesis
+window.fashion.$parser.splitByTopLevelCommas = (value) ->
+	depth = 0
+	acc = ""
+	ret = []
+
+	# Go through, counting the depth
+	regex = /(\(|\)|\,|[^\(\)\,]+)/g
+	while token = regex.exec value
+		if token[0] is "," and depth is 0
+			ret.push acc
+			acc = ""
+			continue;
+
+		if token[0] is "(" then depth++
+		if token[0] is ")" then depth--
+
+		acc += token[0]
+
+	# Return an array of values
+	ret.push acc
+	return ret

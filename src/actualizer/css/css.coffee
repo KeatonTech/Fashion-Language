@@ -15,7 +15,9 @@ window.fashion.$actualizer.generateStyleProperties = (selectors, variables) ->
 			attr = window.fashion.$actualizer.propertiesToCSS properties, variables
 
 			# Helper function to turn strings into rule objects
-			wrap = (cssString) -> {name: newSelector, value: cssString}
+			wrap = (
+				(newSelector) -> (cssString)-> {name: newSelector, value: cssString}
+			)(newSelector)
 
 			# Combine the properties into CSS Rules
 			ps = attr.props
@@ -51,12 +53,22 @@ window.fashion.$actualizer.propertiesToCSS = (properties, variables, evalFunctio
 
 		# Evaluate the property into a string value
 		if valueObject instanceof Array
-			val = ""
-			for vi in valueObject
-				val += evalFunction(vi, 0, variables, $wf.$type, {}, $wf.$globals) + " "
-			val = val.substr(0, val.length - 1)
-		else
-			val = evalFunction valueObject, 0, variables, $wf.$type, {}, $wf.$globals
+
+			# Multi-component multi-value. Eg: "border: 1px solid black, 2px solid red;"
+			if valueObject[0] instanceof Array
+				val = (for vi in valueObject
+					(for vo in vi
+						evalFunction(vo, 0, variables, $wf.$type, {}, $wf.$globals)
+					).join(" ")
+				).join(", ")
+
+			# Multi-value. Eg: "border: 1px solid black;"
+			else val = (for vi in valueObject
+				evalFunction(vi, 0, variables, $wf.$type, {}, $wf.$globals)
+			).join(" ")
+
+		# Single-value. Eg: "font-size: 12pt;"
+		else val = evalFunction valueObject, 0, variables, $wf.$type, {}, $wf.$globals
 
 		# Turn it into a CSS property
 		css = "#{property}: #{val};"

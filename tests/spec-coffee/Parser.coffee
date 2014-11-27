@@ -318,12 +318,11 @@ describe "Parser", ()->
 			# Test the backlink
 			expect(result.variables.fullHeight.dependants.div).toEqual(["height"])
 
-
 		it "should allow untyped variables in expressions", ()->
 			result = parse(	"""
 							$heightDivisor: 3;
 							div {
-								height: 30px/$heightDivisor;
+								height: 30px / $heightDivisor;
 							}
 							""")
 
@@ -336,6 +335,98 @@ describe "Parser", ()->
 
 			# Test the backlink
 			expect(result.variables.heightDivisor.dependants.div).toEqual(["height"])
+
+
+		it "should allow functions in expressions", ()->
+			result = parse(	"""
+							$maxHeight: 300px;
+							div {
+								height: min($maxHeight, @height);
+							}
+							""")
+
+			expression = result.selectors.div.height
+			locals = {maxHeight: {value: 300}}
+			globals = {height: {get: () -> 400}}
+
+			expressionResult = expression.evaluate locals, globals, $wf.$functions
+			expect(expressionResult).toBe("300px")
+
+
+		it "should allow math inside function arguments", ()->
+			result = parse(	"""
+							$maxHeight: 300px;
+							div {
+								height: min($maxHeight * 2, @height);
+							}
+							""")
+
+			expression = result.selectors.div.height
+			locals = {maxHeight: {value: 300}}
+			globals = {height: {get: () -> 400}}
+
+			expressionResult = expression.evaluate locals, globals, $wf.$functions
+			expect(expressionResult).toBe("400px")
+
+
+		it "should allow nested functions", ()->
+			result = parse(	"""
+							$maxHeight: 300px;
+							$minHeight: 100px;
+							div {
+								height: max(min($maxHeight, @height), $minHeight);
+							}
+							""")
+
+			expression = result.selectors.div.height
+			locals = {maxHeight: {value: 300}, minHeight: {value: 100}}
+
+			globals = {height: {get: () -> 50}}
+			expressionResult = expression.evaluate locals, globals, $wf.$functions
+			expect(expressionResult).toBe("100px")
+
+			globals = {height: {get: () -> 150}}
+			expressionResult = expression.evaluate locals, globals, $wf.$functions
+			expect(expressionResult).toBe("150px")
+
+			globals = {height: {get: () -> 500}}
+			expressionResult = expression.evaluate locals, globals, $wf.$functions
+			expect(expressionResult).toBe("300px")
+
+
+		it "should allow bindings in expressions", ()->
+			result = parse(	"""
+							div {
+								height: $('#sidebar')px;
+							}
+							""")
+
+			bindSpy = jasmine.createSpy('spy').and.returnValue(10)
+
+			expression = result.selectors.div.height
+			expect(expression.dynamic).toBe(true)
+			expect(expression.individualized).toBe(false)
+			expect(expression.unit).toBe("px")
+			expect(expression.evaluate({},{},{},bindSpy)).toBe("10px")
+
+			expect(bindSpy).toHaveBeenCalledWith("#sidebar")
+
+		it "should allow alternate-property bindings in expressions", ()->
+			result = parse(	"""
+							div {
+								height: $('#sidebar', 'width')px;
+							}
+							""")
+
+			bindSpy = jasmine.createSpy('spy').and.returnValue(20)
+
+			expression = result.selectors.div.height
+			expect(expression.dynamic).toBe(true)
+			expect(expression.individualized).toBe(false)
+			expect(expression.unit).toBe("px")
+			expect(expression.evaluate({},{},{},bindSpy)).toBe("20px")
+
+			expect(bindSpy).toHaveBeenCalledWith("#sidebar", "width")
 
 
 		it "should allow !important on expressions", ()->
@@ -355,11 +446,11 @@ describe "Parser", ()->
 		it "should recognize expressions that need to be individualized", ()->
 			result = parse(	"""
 							div {
-								height: self.width / 1.5;
+								height: $('self','width')px / 1.5;
 							}
 							""")
 
 			expression = result.selectors.div.height
 			expect(expression.individualized).toBe(true)
-			expect(expression.unit).toBe(undefined)
+			expect(expression.unit).toBe("px")
 

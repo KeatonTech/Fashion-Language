@@ -13,11 +13,12 @@ window.fashion.$type =
 	CShadow: 	53
 
 	# Constant Valued Types (display, text-align)
-	KDisplay:	100
-	KCenter:	101
-	KListStyle:	102
-	KLineStyle:	103
-	KInset:		104
+	KGeneric: 	100
+	KDisplay:	101
+	KCenter:	102
+	KListStyle:	103
+	KLineStyle:	104
+	KInset:		105
 
 	# Special Types
 	Unknown:	255
