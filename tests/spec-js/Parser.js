@@ -299,7 +299,7 @@
         expect(expression.individualized).toBe(false);
         expect(expression.unit).toBe("px");
         expect(expression.evaluate({}, {}, {}, bindSpy)).toBe("10px");
-        return expect(bindSpy).toHaveBeenCalledWith("#sidebar");
+        return expect(bindSpy).toHaveBeenCalledWith("#sidebar", "", void 0);
       });
       it("should allow alternate-property bindings in expressions", function() {
         var bindSpy, expression, result;
@@ -310,7 +310,7 @@
         expect(expression.individualized).toBe(false);
         expect(expression.unit).toBe("px");
         expect(expression.evaluate({}, {}, {}, bindSpy)).toBe("20px");
-        return expect(bindSpy).toHaveBeenCalledWith("#sidebar", "width");
+        return expect(bindSpy).toHaveBeenCalledWith("#sidebar", "width", void 0);
       });
       it("should allow !important on expressions", function() {
         var expression, result;
@@ -325,12 +325,20 @@
         expect(expression.individualized).toBe(false);
         return expect(expression.unit).toBe("px");
       });
-      return it("should recognize expressions that need to be individualized", function() {
+      it("should recognize expressions that need to be individualized", function() {
         var expression, result;
         result = parse("div {\n	height: $('self','width')px / 1.5;\n}");
         expression = result.selectors.div.height;
         expect(expression.individualized).toBe(true);
         return expect(expression.unit).toBe("px");
+      });
+      return it("should recognize setter expressions", function() {
+        var expression, result;
+        result = parse("$selected: \"divName\";\ndiv {\n	on-click: $selected = @self.id;\n}");
+        expression = result.selectors.div['on-click'];
+        expect(expression.individualized).toBe(true);
+        expect(expression.type).toBe($wf.$type.String);
+        return expect(expression.unit).toBe(void 0);
       });
     });
   });

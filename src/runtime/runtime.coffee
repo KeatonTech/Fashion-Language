@@ -80,3 +80,4 @@ window.fashion.$run =
 # @prepros-append "./observer.coffee"
 # @prepros-append "./types.coffee"
 # @prepros-append "./units.coffee"
+# @prepros-append "./dom.coffee"

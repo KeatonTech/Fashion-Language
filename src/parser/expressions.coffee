@@ -24,6 +24,8 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 			[\$\@]\(['"](.*?)['"]	# Binding function (selector)
 			\,?\s?['"]?(.*?)['"]?\)	# Binding function (property - optional)
 			([^\s]*)|				# Binding function (unit - optional)
+			\@(self|this|parent)	# Relative element reference (name)
+			\.([^\s]+?)|			# Relative element reference (property)
 			\$([\w\-]+)|			# Defined variable
 			\@([\w\-]+)|			# Global variable
 			([\-]{0,1}				# Number with unit (negative)
@@ -41,17 +43,18 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 
 		# Pass off to the relevant expander functions
 		if section[2] then eObj = expander.domBinding section[2], section[3], section[4]
-		else if section[5] then eObj = expander.localVariable section[5], vars
-		else if section[6] then eObj = expander.globalVariable section[6], globals
-		else if section[7] then eObj = expander.numberWithUnit section[7]
-		else if section[10]
+		else if section[5] then eObj = expander.relativeObject section[5], section[6]
+		else if section[7] then eObj = expander.localVariable section[7], vars
+		else if section[8] then eObj = expander.globalVariable section[8], globals
+		else if section[9] then eObj = expander.numberWithUnit section[9]
+		else if section[12]
 			contained = window.fashion.$parser.matchParenthesis regex, expString, end
 			if !contained
 				contained = expString.substr(end)
 				shouldBreak = true
 
 			length += contained.length + 1
-			eObj = expander.function section[10], contained, vars, funcs, globals
+			eObj = expander.function section[12], contained, vars, funcs, globals
 
 		# Handle the expanded object (eObj)
 		if !eObj then continue
@@ -69,6 +72,9 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 	# Determine the type and unit of the complete expression
 	{type: type, unit: unit} = $wf.$parser.determineExpressionType types, units
 
+	# If the script sets a value, don't bother with units
+	if expString.match /\s\=\s/g then unit = undefined
+
 	# Wrap the script text in something useful
 	# Top level returns a string, for the property
 	# Other levels return an object, for function calls
@@ -78,7 +84,9 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 
 		# Attempt to make this function
 		try
-			evaluate = Function("v","g","f","d",script)
+			# Function(variables, globals, functions, DOM Binding function, element)
+			# "e" is only actually available for individualized expressions
+			evaluate = Function("v","g","f","d","e",script)
 		catch e
 			console.log "[FASHION] Could not compile script: #{script}"
 			throw e
@@ -183,12 +191,34 @@ window.fashion.$parser.expressionExpander =
 			script: unittedValue.value.toString()	
 		}	
 
+	# Expand relative object references (disguised as globals)
+	relativeObject: (keyword, property) ->
+		varName = if keyword is "parent" then "e.parent." else "e."
+
+		# Determine the type based on the last property
+		dotProperties = property.split(".")
+		lastProperty = dotProperties[dotProperties.length - 1]
+
+		if lastProperty in ["top","bottom","left","right","number","children"]
+			type = $wf.$type.Number
+			unit = "px"
+		else 
+			type = $wf.$type.String
+
+		return {
+			type: type, unit: unit,
+			script: varName + property,
+			dynamic: true
+			individualized: true
+		}
+
 	# Expand DOM bindings
 	domBinding: (selector, property, unit) ->
 		individualized = selector.indexOf("self") isnt -1
 		individualized ||= selector.indexOf("parent") isnt -1
 
-		script = if property then "d('#{selector}','#{property}')" else "d('#{selector}')"
+		# Turn it into a full-on function call
+		script = "d('#{selector}', #{'\'' + property + '\'' || 'undefined'}, e)" 
 
 		return {
 			type: if unit then $wf.$type.Number else $wf.$type.Unknown,

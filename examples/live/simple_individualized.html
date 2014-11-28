@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Fashion Test</title>
+	<script src="../../build/fashion.0.1.js"></script>
+	<style type="text/x-fashion">
+
+	$divWidth: 400px;
+	$divHeight: 100px;
+
+	html,body {width: 100%;}
+
+	div {
+		width: $divWidth;
+		height: $divHeight;
+		line-height: $divHeight;
+
+		margin: 0 auto;
+		margin-top: 20px;
+		margin-bottom: 20px;
+		color: white;
+		text-align: center;
+		background-color: @self.class;
+	}
+
+	</style>
+</head>
+<body>
+	<div class="blue">Awesome Item!</div>
+	<div class="#f00">Cool Item!</div>
+	<div class="rgba(255,100,50,1.0)">Sweet Item!</div>
+	<div class="aqua">Totally Radical Item!</div>
+</body>
+</html>

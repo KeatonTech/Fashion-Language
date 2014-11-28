@@ -412,7 +412,7 @@ describe "Parser", ()->
 			expect(expression.unit).toBe("px")
 			expect(expression.evaluate({},{},{},bindSpy)).toBe("10px")
 
-			expect(bindSpy).toHaveBeenCalledWith("#sidebar")
+			expect(bindSpy).toHaveBeenCalledWith("#sidebar", "", undefined)
 
 		it "should allow alternate-property bindings in expressions", ()->
 			result = parse(	"""
@@ -429,7 +429,7 @@ describe "Parser", ()->
 			expect(expression.unit).toBe("px")
 			expect(expression.evaluate({},{},{},bindSpy)).toBe("20px")
 
-			expect(bindSpy).toHaveBeenCalledWith("#sidebar", "width")
+			expect(bindSpy).toHaveBeenCalledWith("#sidebar", "width", undefined)
 
 
 		it "should allow !important on expressions", ()->
@@ -446,6 +446,7 @@ describe "Parser", ()->
 			expect(expression.individualized).toBe(false)
 			expect(expression.unit).toBe("px")
 
+
 		it "should recognize expressions that need to be individualized", ()->
 			result = parse(	"""
 							div {
@@ -457,3 +458,17 @@ describe "Parser", ()->
 			expect(expression.individualized).toBe(true)
 			expect(expression.unit).toBe("px")
 
+
+		it "should recognize setter expressions", ()->
+			result = parse(	"""
+							$selected: "divName";
+							div {
+								on-click: $selected = @self.id;
+							}
+							""")
+
+			expression = result.selectors.div['on-click']
+			expect(expression.individualized).toBe(true)
+			expect(expression.type).toBe($wf.$type.String);
+			expect(expression.unit).toBe(undefined);
+			

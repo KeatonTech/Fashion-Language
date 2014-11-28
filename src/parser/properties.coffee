@@ -56,7 +56,14 @@ window.fashion.$parser.parseSelectorBody = (bodyString, vars) ->
 
 
 # Shared regex used to identify expressions
-window.fashion.$parser.identifyExpression = () -> /(([\s][\+\-\/\*\=][\s])|[\(\)\[\]])/g
+# This doesn't consider whether or not they're within a string
+# TODO(keatontech): Fix that
+window.fashion.$parser.identifyExpression = () -> 
+	///(
+	([\s][\+\-\/\*\=][\s])|	# Operator with a space around it: dead givaway
+	[\(\)\[\]]|				# Parenthesis and brackets: definitely
+	\@|\$ 					# Variables and globals
+	)///g
 
 
 # Convert a property value into a linked object or expression, if necessary

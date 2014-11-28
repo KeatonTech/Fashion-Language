@@ -25,24 +25,14 @@ window.fashion.$blueprint =
 	basicRuntime: () ->
 		"""
 		var __indexOf = #{'[].indexOf' or `__indexOf.toString()`};
-		w.FASHION.runtime = {
-			throwError: #{window.fashion.$run.throwError.toString()},
-			updateVariable: #{window.fashion.$run.updateVariable.toString()},
-			getVariable: #{window.fashion.$run.getVariable.toString()},
-			evaluate: #{window.fashion.$run.evaluate.toString()},
-			determineType: #{window.fashion.$run.determineType.toString()},
-			getUnit: #{window.fashion.$run.getUnit.toString()},
-			defineProperties: #{window.fashion.$run.defineProperties.toString()},
-			watchGlobals: #{window.fashion.$run.watchGlobals.toString()},
-			updateSelector: #{window.fashion.$run.updateSelector.toString()},
-			regenerateSelector: #{window.fashion.$run.regenerateSelector.toString()},
-			expandVariables: #{window.fashion.$run.expandVariables.toString()}
-		}
+		w.FASHION.runtime = #{window.fashion.$stringify window.fashion.$run}
 		"""
 
 	# Start any necessary functions
 	startRuntime: () ->
 		"""
-		w.FASHION.runtime.defineProperties.call(w.FASHION.runtime)
-		w.FASHION.runtime.watchGlobals.call(w.FASHION.runtime)
+		w.FASHION.runtime.defineProperties.call(w.FASHION.runtime);
+		w.FASHION.runtime.watchGlobals.call(w.FASHION.runtime);
+		w.FASHION.runtime.applyIndividualizedSelectors.call(
+			w.FASHION.runtime, w.FASHION.selectors.individual);
 		"""
