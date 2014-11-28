@@ -16,7 +16,10 @@ window.fashion.$processor.properties = (parseTree, properties) ->
 				# Bind the API to this particular run state
 				# Guarantees a certain amount of safety
 				API =
+					throwError: funcs.throwError.bind 0, property
 					setProperty: funcs.setProperty.bind 0, parseTree, selector, index
+					getProperty: funcs.setProperty.bind 0, parseTree, selector
+					parseValue: funcs.parseValue
 
 				# Process it!
 				properties[property].compile.call API, value
@@ -26,6 +29,9 @@ window.fashion.$processor.properties = (parseTree, properties) ->
 
 # Useful internal functions to expose to the properties compiler
 window.fashion.$processor.propertiesApi =
+
+	# Throws an error
+	throwError: (property, error) -> console.log "[FASHION: #{property}] #{error}"
 
 	# Sets a property in the parse tree
 	setProperty: (parseTree, selector, insertIndex, name, value) ->
@@ -43,3 +49,16 @@ window.fashion.$processor.propertiesApi =
 
 		# Add the property
 		properties[name] = value
+
+	# Gets a property from the parse tree
+	getProperty: (parseTree, selector, property) ->
+
+		# Make sure the selector exists (it really always should)
+		properties = parseTree.selectors[selector]
+		if !properties then return false
+		return properties[property]
+
+	# Parse a value
+	parseValue: (value) ->
+		if !value or typeof value isnt "string" then return ""
+		return $wf.$parser.parseSingleValue value

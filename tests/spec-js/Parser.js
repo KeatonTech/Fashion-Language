@@ -209,6 +209,23 @@
         })).toBe("3px");
         return expect(result.variables.heightDivisor.dependants.div).toEqual(["height"]);
       });
+      it("should parse functions with no arguments", function() {
+        var expression, expressionResult, result;
+        result = parse("div {\n	height: random();\n}");
+        expression = result.selectors.div.height;
+        expect(expression.functions).toEqual(['random']);
+        expressionResult = expression.evaluate({}, {}, $wf.$functions);
+        expect(parseFloat(expressionResult)).toBeGreaterThan(0);
+        return expect(parseFloat(expressionResult)).toBeLessThan(1);
+      });
+      it("should parse functions with 1 argument", function() {
+        var expression, expressionResult, result;
+        result = parse("div {\n	height: round(11.4);\n}");
+        expression = result.selectors.div.height;
+        expect(expression.functions).toEqual(['round']);
+        expressionResult = expression.evaluate({}, {}, $wf.$functions);
+        return expect(parseFloat(expressionResult)).toBe(11);
+      });
       it("should allow functions in expressions", function() {
         var expression, expressionResult, globals, locals, result;
         result = parse("$maxHeight: 300px;\ndiv {\n	height: min($maxHeight, @height);\n}");
@@ -332,13 +349,21 @@
         expect(expression.individualized).toBe(true);
         return expect(expression.unit).toBe("px");
       });
-      return it("should recognize setter expressions", function() {
+      it("should recognize setter expressions", function() {
         var expression, result;
         result = parse("$selected: \"divName\";\ndiv {\n	on-click: $selected = @self.id;\n}");
         expression = result.selectors.div['on-click'];
         expect(expression.individualized).toBe(true);
         expect(expression.type).toBe($wf.$type.String);
         return expect(expression.unit).toBe(void 0);
+      });
+      return it("should apply units to relative variables", function() {
+        var expression, result;
+        result = parse("div {\n	width: @self.width;\n}");
+        expression = result.selectors.div.width;
+        expect(expression.individualized).toBe(true);
+        expect(expression.type).toBe($wf.$type.Number);
+        return expect(expression.unit).toBe("px");
       });
     });
   });

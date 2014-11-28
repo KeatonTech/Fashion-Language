@@ -337,6 +337,35 @@ describe "Parser", ()->
 			expect(result.variables.heightDivisor.dependants.div).toEqual(["height"])
 
 
+		it "should parse functions with no arguments", ()->
+			result = parse(	"""
+							div {
+								height: random();
+							}
+							""")
+
+			expression = result.selectors.div.height
+			expect(expression.functions).toEqual(['random'])
+
+			expressionResult = expression.evaluate {}, {}, $wf.$functions
+			expect(parseFloat(expressionResult)).toBeGreaterThan(0)
+			expect(parseFloat(expressionResult)).toBeLessThan(1)
+
+
+		it "should parse functions with 1 argument", ()->
+			result = parse(	"""
+							div {
+								height: round(11.4);
+							}
+							""")
+
+			expression = result.selectors.div.height
+			expect(expression.functions).toEqual(['round'])
+
+			expressionResult = expression.evaluate {}, {}, $wf.$functions
+			expect(parseFloat(expressionResult)).toBe(11)
+
+
 		it "should allow functions in expressions", ()->
 			result = parse(	"""
 							$maxHeight: 300px;
@@ -471,4 +500,17 @@ describe "Parser", ()->
 			expect(expression.individualized).toBe(true)
 			expect(expression.type).toBe($wf.$type.String);
 			expect(expression.unit).toBe(undefined);
+
+
+		it "should apply units to relative variables", ()->
+			result = parse(	"""
+							div {
+								width: @self.width;
+							}
+							""")
+
+			expression = result.selectors.div.width
+			expect(expression.individualized).toBe(true)
+			expect(expression.type).toBe($wf.$type.Number);
+			expect(expression.unit).toBe("px");
 			

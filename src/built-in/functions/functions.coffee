@@ -1,5 +1,10 @@
 window.fashion.$functions =
 
+	random:
+		output: $wf.$type.Number
+		unit: ''
+		evaluate: () -> Math.random()
+
 	round:
 		output: $wf.$type.Number
 		unitFrom: 0

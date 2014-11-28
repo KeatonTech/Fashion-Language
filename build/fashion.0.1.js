@@ -63,6 +63,32 @@ window.fashion.addProperties = function(obj, force) {
   return _results;
 };
 
+window.fashion.addFunction = function(name, functionObject, force) {
+  if (force == null) {
+    force = false;
+  }
+  if (!functionObject.output || !functionObject.evaluate) {
+    return new Error("Function objects must have 'output' and 'evaluate' properties");
+  }
+  if (!force && window.fashion.$functions[name]) {
+    return new Error("There is already a function named " + name);
+  }
+  return window.fashion.$functions[name] = functionObject;
+};
+
+window.fashion.addFunctions = function(obj, force) {
+  var k, v, _i, _len, _results;
+  if (force == null) {
+    force = false;
+  }
+  _results = [];
+  for (v = _i = 0, _len = obj.length; _i < _len; v = ++_i) {
+    k = obj[v];
+    _results.push(window.fashion.addFunction(k, v, force));
+  }
+  return _results;
+};
+
 window.fashion.addGlobal = function(name, globalObject, force) {
   if (force == null) {
     force = false;
@@ -131,6 +157,19 @@ document.onreadystatechange = function() {
       }
     });
   }
+};
+window.fashion.$extend = function(object, anotherObject) {
+  var key, value, _results;
+  _results = [];
+  for (key in anotherObject) {
+    value = anotherObject[key];
+    if (!object[key]) {
+      _results.push(object[key] = value);
+    } else {
+      _results.push(void 0);
+    }
+  }
+  return _results;
 };
 window.fashion.$dom = {
   addElementToHead: function(element) {
@@ -679,7 +718,7 @@ window.fashion.$parser.parseExpression = function(expString, vars, funcs, global
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /([\$\@]\(['"](.*?)['"]\,?\s?['"]?(.*?)['"]?\)([^\s]*)|\@(self|this|parent)\.([^\s]+?)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]{0,1}\d+|\d+(\.\d*)?)[a-zA-Z]{1,4})|([\w\-]*)\(|\(|\))/g;
+  regex = /([\$\@]\(['"](.*?)['"]\,?\s?['"]?(.*?)['"]?\)([^\s]*)|\@(self|this|parent)\.([^\s]+)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]{0,1}\d+|\d+(\.\d*)?)[a-zA-Z]{1,4})|([\w\-]*)\(|\(|\))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
     start = section.index;
@@ -698,7 +737,7 @@ window.fashion.$parser.parseExpression = function(expString, vars, funcs, global
     } else if (section[12]) {
       contained = window.fashion.$parser.matchParenthesis(regex, expString, end);
       if (!contained) {
-        contained = expString.substr(end);
+        contained = expString.substring(end, expString.length - 1);
         shouldBreak = true;
       }
       length += contained.length + 1;
@@ -867,7 +906,7 @@ window.fashion.$parser.expressionExpander = {
     varName = keyword === "parent" ? "e.parent." : "e.";
     dotProperties = property.split(".");
     lastProperty = dotProperties[dotProperties.length - 1];
-    if (lastProperty === "top" || lastProperty === "bottom" || lastProperty === "left" || lastProperty === "right" || lastProperty === "number" || lastProperty === "children") {
+    if (lastProperty === "top" || lastProperty === "bottom" || lastProperty === "left" || lastProperty === "right" || lastProperty === "number" || lastProperty === "width" || lastProperty === "height") {
       type = $wf.$type.Number;
       unit = "px";
     } else {
@@ -900,20 +939,25 @@ window.fashion.$parser.expressionExpander = {
     if (!fObj) {
       return console.log("[FASHION] Function $" + name + " does not exist.");
     }
-    args = window.fashion.$parser.splitByTopLevelCommas(argumentsString);
-    expressions = (function() {
-      var _i, _len, _results;
-      _results = [];
-      for (_i = 0, _len = args.length; _i < _len; _i++) {
-        arg = args[_i];
-        _results.push(window.fashion.$parser.parseExpression(arg, vars, funcs, globals, false));
-      }
-      return _results;
-    })();
+    if (argumentsString.length > 1) {
+      args = window.fashion.$parser.splitByTopLevelCommas(argumentsString);
+      expressions = (function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = args.length; _i < _len; _i++) {
+          arg = args[_i];
+          _results.push(window.fashion.$parser.parseExpression(arg, vars, funcs, globals, false));
+        }
+        return _results;
+      })();
+    } else {
+      expressions = [];
+    }
     dependencies = [];
     functions = [name];
     scripts = [];
-    individualized = dynamic = false;
+    individualized = fObj.individualized || false;
+    dynamic = false;
     for (_i = 0, _len = expressions.length; _i < _len; _i++) {
       expression = expressions[_i];
       if (expression.dynamic === true) {
@@ -1022,7 +1066,10 @@ window.fashion.$processor.properties = function(parseTree, properties) {
       index++;
       if (properties[property]) {
         API = {
-          setProperty: funcs.setProperty.bind(0, parseTree, selector, index)
+          throwError: funcs.throwError.bind(0, property),
+          setProperty: funcs.setProperty.bind(0, parseTree, selector, index),
+          getProperty: funcs.setProperty.bind(0, parseTree, selector),
+          parseValue: funcs.parseValue
         };
         properties[property].compile.call(API, value);
       }
@@ -1032,6 +1079,9 @@ window.fashion.$processor.properties = function(parseTree, properties) {
 };
 
 window.fashion.$processor.propertiesApi = {
+  throwError: function(property, error) {
+    return console.log("[FASHION: " + property + "] " + error);
+  },
   setProperty: function(parseTree, selector, insertIndex, name, value) {
     var index, k, properties, v, _i, _len;
     properties = parseTree.selectors[selector];
@@ -1050,6 +1100,20 @@ window.fashion.$processor.propertiesApi = {
       }
     }
     return properties[name] = value;
+  },
+  getProperty: function(parseTree, selector, property) {
+    var properties;
+    properties = parseTree.selectors[selector];
+    if (!properties) {
+      return false;
+    }
+    return properties[property];
+  },
+  parseValue: function(value) {
+    if (!value || typeof value !== "string") {
+      return "";
+    }
+    return $wf.$parser.parseSingleValue(value);
   }
 };
 window.fashion.$run = {
@@ -1448,25 +1512,42 @@ window.fashion.$run.applyIndividualizedSelectors = function(selectors) {
 };
 
 window.fashion.$run.buildObjectForElement = function(element) {
-  var eObj;
+  var attribute, cs, eObj, _i, _len, _ref;
+  if (!element) {
+    return {};
+  }
   eObj = {
     element: element
   };
-  Object.defineProperty(eObj, "id", {
-    get: function() {
-      return element.getAttribute('id');
+  if (element.attributes) {
+    _ref = element.attributes;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      attribute = _ref[_i];
+      eObj[attribute.name] = attribute.value;
     }
+  }
+  Object.defineProperty(eObj, "parent", {
+    get: (function(_this) {
+      return function() {
+        return _this.buildObjectForElement(element.parentNode);
+      };
+    })(this)
   });
-  Object.defineProperty(eObj, "class", {
-    get: function() {
-      return element.getAttribute('class');
-    }
-  });
-  Object.defineProperty(eObj, "name", {
-    get: function() {
-      return element.getAttribute('name');
-    }
-  });
+  eObj.width = element.clientWidth;
+  eObj.height = element.clientHeight;
+  cs = window.getComputedStyle(element);
+  if (cs) {
+    Object.defineProperty(eObj, "outerWidth", {
+      get: function() {
+        return parseFloat(cs.marginLeft) + parseFloat(cs.marginRight) + eObj.width;
+      }
+    });
+    Object.defineProperty(eObj, "outerHeight", {
+      get: function() {
+        return parseFloat(cs.marginTop) + parseFloat(cs.marginBottom) + eObj.height;
+      }
+    });
+  }
   return eObj;
 };
 
@@ -1820,6 +1901,13 @@ window.fashion.$blueprint = {
   }
 };
 window.fashion.$functions = {
+  random: {
+    output: $wf.$type.Number,
+    unit: '',
+    evaluate: function() {
+      return Math.random();
+    }
+  },
   round: {
     output: $wf.$type.Number,
     unitFrom: 0,
@@ -1911,6 +1999,56 @@ window.fashion.$functions = {
     }
   }
 };
+$wf.$extend(window.fashion.$properties, {
+  pin: {
+    replace: true,
+    compile: function(values) {
+      var bottomExpr, leftExpr, processPosition, rightExpr, topExpr;
+      if (typeof values === "object") {
+        if (values.length > 2 || values[0] instanceof Array) {
+          this.throwError("Valid arguments: '{x}px {y}px' or '{both}px'");
+        }
+      }
+      this.setProperty("position", "absolute");
+      leftExpr = rightExpr = topExpr = bottomExpr = void 0;
+      processPosition = function(val) {
+        switch (val) {
+          case "left":
+            return leftExpr = "0px";
+          case "right":
+            return rightExpr = "0px";
+          case "top":
+            return topExpr = "0px";
+          case "bottom":
+            return bottomExpr = "0px";
+          case "center":
+            leftExpr = "@parent.width / 2 - @self.outerWidth / 2";
+            return topExpr = "@parent.height / 2 - @self.outerHeight / 2";
+          default:
+            return this.throwError("Invalid position: " + val);
+        }
+      };
+      if (typeof values === "object") {
+        processPosition(values[0]);
+        if (values.length === 2) {
+          processPosition(values[1]);
+        }
+      } else if (typeof values === "string") {
+        processPosition(values);
+      }
+      if (leftExpr) {
+        this.setProperty("left", this.parseValue(leftExpr));
+      } else {
+        this.setProperty("right", this.parseValue(rightExpr));
+      }
+      if (topExpr) {
+        return this.setProperty("top", this.parseValue(topExpr));
+      } else {
+        return this.setProperty("bottom", this.parseValue(bottomExpr));
+      }
+    }
+  }
+});
 window.fashion.$globals = {
   width: {
     type: $wf.$type.Number,

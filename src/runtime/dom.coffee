@@ -36,11 +36,28 @@ window.fashion.$run.applyIndividualizedSelectors = (selectors)->
 
 # Fashion objects contain HTML elements but also have some nice syntactic sugar
 window.fashion.$run.buildObjectForElement = (element) ->
+	if !element then return {}
 	eObj = {element: element}
 
-	Object.defineProperty eObj, "id", {get: ()-> element.getAttribute('id')}
-	Object.defineProperty eObj, "class", {get: ()-> element.getAttribute('class')}
-	Object.defineProperty eObj, "name", {get: ()-> element.getAttribute('name')}
+	# Attributes
+	if element.attributes
+		for attribute in element.attributes
+			eObj[attribute.name] = attribute.value
+
+	# Navigation (deferred until the user asks for it)
+	Object.defineProperty eObj, "parent", 
+		get: ()=> @buildObjectForElement element.parentNode
+
+	# Positioning
+	eObj.width = element.clientWidth
+	eObj.height = element.clientHeight
+
+	cs = window.getComputedStyle(element);
+	if cs
+		Object.defineProperty eObj, "outerWidth", 
+			get: ()-> parseFloat(cs.marginLeft) + parseFloat(cs.marginRight) + eObj.width
+		Object.defineProperty eObj, "outerHeight", 
+			get: ()-> parseFloat(cs.marginTop) + parseFloat(cs.marginBottom) + eObj.height
 
 	return eObj
 	

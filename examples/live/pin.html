@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Fashion Test</title>
+	<script src="../../build/fashion.0.1.js"></script>
+	<style type="text/x-fashion">
+
+	$boxWidth: 300px;
+	$boxAspect: 0.66;
+
+	.container {
+		width: $boxWidth;
+		height: $boxWidth * $boxAspect;
+		margin: 10px;
+		position: relative;
+		display: inline-block;
+		background-color: randomColor(self.id);
+	
+		p span {	
+			margin: 10px;
+			padding: 5px;
+			background-color: white
+		}
+		
+		.ptl {pin: left top;}
+		.pbl {pin: left bottom;}
+		.ptr {pin: right top;}
+		.pbr {pin: right bottom;}
+		.pc {pin: center;}
+	}
+
+	</style>
+	<script>
+		window.fashion.addFunction("randomColor",{
+			output: window.fashion.$type.Color,
+			individualized: true,
+			evaluate: function() {
+				v = Math.random()
+				if (v > 0.0 && v <= 0.2) return "#f00"
+				if (v > 0.2 && v <= 0.4) return "#0f0"
+				if (v > 0.4 && v <= 0.6) return "#00f"
+				if (v > 0.6 && v <= 0.8) return "#ff0"
+				if (v > 0.8 && v <= 1.0) return "#0ff"
+			}
+		});
+	</script>
+</head>
+<body>
+	<div class="container"><p class="ptl"><span>Top left!</span></p></div>
+	<div class="container"><p class="pbl"><span>Bottom left!</span></p></div>
+	<div class="container"><p class="ptr"><span>Top right!</span></p></div>
+	<div class="container"><p class="pbr"><span>Bottom right!</span></p></div>
+	<div class="container"><p class="pc"><span>Centered!!!</span></p></div>
+</body>
+</html>

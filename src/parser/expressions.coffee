@@ -25,7 +25,7 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 			\,?\s?['"]?(.*?)['"]?\)	# Binding function (property - optional)
 			([^\s]*)|				# Binding function (unit - optional)
 			\@(self|this|parent)	# Relative element reference (name)
-			\.([^\s]+?)|			# Relative element reference (property)
+			\.([^\s]+)|				# Relative element reference (property)
 			\$([\w\-]+)|			# Defined variable
 			\@([\w\-]+)|			# Global variable
 			([\-]{0,1}				# Number with unit (negative)
@@ -50,7 +50,7 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 		else if section[12]
 			contained = window.fashion.$parser.matchParenthesis regex, expString, end
 			if !contained
-				contained = expString.substr(end)
+				contained = expString.substring(end, expString.length - 1)
 				shouldBreak = true
 
 			length += contained.length + 1
@@ -199,7 +199,7 @@ window.fashion.$parser.expressionExpander =
 		dotProperties = property.split(".")
 		lastProperty = dotProperties[dotProperties.length - 1]
 
-		if lastProperty in ["top","bottom","left","right","number","children"]
+		if lastProperty in ["top","bottom","left","right","number","width","height"]
 			type = $wf.$type.Number
 			unit = "px"
 		else 
@@ -235,14 +235,17 @@ window.fashion.$parser.expressionExpander =
 		if !fObj then return console.log "[FASHION] Function $#{name} does not exist."
 
 		# Evaluate each argument separately
-		args = window.fashion.$parser.splitByTopLevelCommas argumentsString
-		expressions = (for arg in args
-			window.fashion.$parser.parseExpression(arg, vars, funcs, globals, false)
-		)
+		if argumentsString.length > 1
+			args = window.fashion.$parser.splitByTopLevelCommas argumentsString
+			expressions = (for arg in args
+				window.fashion.$parser.parseExpression(arg, vars, funcs, globals, false)
+			)
+		else expressions = []
 
 		# Bundle everything together
 		dependencies = []; functions = [name]; scripts = []; 
-		individualized = dynamic = false;
+		individualized = fObj.individualized || false;
+		dynamic = false;
 
 		for expression in expressions
 			if expression.dynamic is true then dynamic = true

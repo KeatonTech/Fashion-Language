@@ -19,6 +19,22 @@ window.fashion.addProperties = (obj, force = false) ->
 	window.fashion.addProperty(k,v,force) for k,v in obj
 
 
+# Functions ================================================================================
+
+window.fashion.addFunction = (name, functionObject, force = false) ->
+
+	if !functionObject.output or !functionObject.evaluate
+		return new Error "Function objects must have 'output' and 'evaluate' properties"
+
+	if !force and window.fashion.$functions[name]
+		return new Error "There is already a function named #{name}"
+
+	window.fashion.$functions[name] = functionObject
+
+window.fashion.addFunctions = (obj, force = false) ->
+	window.fashion.addFunction(k,v,force) for k,v in obj
+
+
 # Globals ==================================================================================
 
 window.fashion.addGlobal = (name, globalObject, force = false) ->

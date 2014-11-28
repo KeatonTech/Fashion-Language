@@ -20,15 +20,15 @@
 		margin-bottom: 20px;
 		color: white;
 		text-align: center;
-		background-color: @self.class;
+		background-color: @self.color || "green";
 	}
 
 	</style>
 </head>
 <body>
-	<div class="blue">Awesome Item!</div>
-	<div class="#f00">Cool Item!</div>
-	<div class="rgba(255,100,50,1.0)">Sweet Item!</div>
-	<div class="aqua">Totally Radical Item!</div>
+	<div color="blue">Awesome Item!</div>
+	<div color="#f00">Cool Item!</div>
+	<div color="rgba(255,100,50,1.0)">Sweet Item!</div>
+	<div>Totally Radical Item!</div>
 </body>
 </html>

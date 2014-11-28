@@ -34,3 +34,6 @@ window.fashion.$properties =
 
 			# Add the font families
 			@setProperty "font-family", families.join(", ")
+
+# Include other properties
+#@prepros-append ./layout.coffee
