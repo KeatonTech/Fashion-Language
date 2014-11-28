@@ -32,7 +32,7 @@ window.fashion.$actualizer.makeDomStyleFromTree = (parseTree, index) ->
 		rules.final, staticMap, dynamicMap, staticSheet, dynamicSheet)
 
 	# Return the map
-	return dynamicMap
+	return {map: dynamicMap, rules: rules}
 
 # Sub in final CSS (used to prevent transitions from happening at the beginning)
 window.fashion.$actualizer.subInFinalRules = 

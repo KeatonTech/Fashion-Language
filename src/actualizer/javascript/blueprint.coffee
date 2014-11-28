@@ -9,7 +9,6 @@ window.fashion.$blueprint =
 		w = window;
 		w.FASHION = {
 			variables: #{JSON.stringify parseTree.variables},
-			selectors:  #{JSON.stringify parseTree.selectors},
 			cssMap: #{JSON.stringify selMap},
 			type: #{JSON.stringify window.fashion.$type},
 			unit: #{JSON.stringify window.fashion.$unit},
@@ -28,7 +27,6 @@ window.fashion.$blueprint =
 		var __indexOf = #{'[].indexOf' or `__indexOf.toString()`};
 		w.FASHION.runtime = {
 			throwError: #{window.fashion.$run.throwError.toString()},
-			initializeSelector: #{window.fashion.$run.initializeSelector.toString()},
 			updateVariable: #{window.fashion.$run.updateVariable.toString()},
 			getVariable: #{window.fashion.$run.getVariable.toString()},
 			evaluate: #{window.fashion.$run.evaluate.toString()},
@@ -45,7 +43,6 @@ window.fashion.$blueprint =
 	# Start any necessary functions
 	startRuntime: () ->
 		"""
-		w.FASHION.runtime.initializeSelector()
 		w.FASHION.runtime.defineProperties.call(w.FASHION.runtime)
 		w.FASHION.runtime.watchGlobals.call(w.FASHION.runtime)
 		"""

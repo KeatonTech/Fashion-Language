@@ -6,17 +6,6 @@ window.fashion.$run =
 	# Throws an error to the console
 	throwError: (message) -> console.log "[FASHION] " + message
 
-	# Convert selector scripts to functions
-	initializeSelector: (selectors = FASHION.selectors) ->
-		for sel, properties of selectors
-			for key, pVal of properties
-				if typeof pVal is "object" and pVal["script"]
-					try
-						pVal["evaluate"] = Function("v","g","f",pVal["script"])
-					catch e
-						console.log "[FASHION] Cannot convert script into function"
-						throw e
-
 	# Updates a variable's value and name, if possible
 	# Errors out of the variable's type would change
 	updateVariable: (name, value, variables = FASHION.variables, types = FASHION.type) ->
@@ -46,7 +35,7 @@ window.fashion.$run =
 
 		# Defaults (set here to keep the function definition under 93 chars)
 		if !variables then variables = FASHION.variables
-		if !selectors then selectors = FASHION.selectors
+		if !selectors then selectors = FASHION.selectors.dynamic
 		if !map then map = FASHION.cssMap
 
 		# Load what we need

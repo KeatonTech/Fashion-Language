@@ -22,3 +22,5 @@ window.fashion.$functions =
 			for arg in arguments
 				if arg.value > maxSoFar then maxSoFar = arg.value
 			return maxSoFar
+
+#@prepros-append ./triggers.coffee

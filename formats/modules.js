@@ -48,6 +48,9 @@ globalName: {
 	// Occurs during runtime for each matched element
 	"apply": function(value, element) {},
 
+	// True if the property should be entirely removed from the original CSS
+	"replace": false,
+
 	// Optionally add functions to the compiled fashion runtime
 	"runtimeKey": "propertyName",
 	"runtimeObject": {

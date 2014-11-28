@@ -2,26 +2,27 @@ describe "CSS Actualizer", ()->
 	actualizer = window.fashion.$actualizer
 	makeSheets = actualizer.generateStyleProperties
 	makeRules = actualizer.propertiesToCSS
+	splitProperties = actualizer.splitProperties
 	type = window.fashion.$type
 
-	describe "Rule Maker", () ->
+	describe "Property Splitter", () ->
 
-		it "should turn static properties into CSS rules", () ->
+		it "should split out static properties", () ->
 
 			# None of these properties change, should be a pretty easy task
 			properties = {
 				color: "black"
 				"text-size": "12pt"
 			}
-			result = makeRules properties, {}
+			result = splitProperties properties, {}
 
-			expect(result.props.static).toEqual ["color: black;", "text-size: 12pt;"]
-			expect(result.props.dynamic).toEqual []
-			expect(result.props.individual).toEqual []
+			expect(result.props.static).toEqual {'color': 'black','text-size': '12pt';}
+			expect(result.props.dynamic).toEqual {}
+			expect(result.props.individual).toEqual {}
 			expect(result.transitions).toEqual []
 
 
-		it "should turn dynamic properties into CSS rules", () ->
+		it "should split out dynamic properties", () ->
 
 			# None of these properties change, should be a pretty easy task
 			properties = {
@@ -33,11 +34,12 @@ describe "CSS Actualizer", ()->
 				size: {type: type.Number, value: 12, unit: "px"}
 			}
 
-			result = makeRules properties, variables
+			result = splitProperties properties, variables
 
-			expect(result.props.dynamic).toEqual ["color: red;", "text-size: 12px;"]
-			expect(result.props.static).toEqual []
-			expect(result.props.individual).toEqual []
+			expect(result.props.dynamic.color).not.toBeUndefined()
+			expect(result.props.dynamic['text-size']).not.toBeUndefined()
+			expect(result.props.static).toEqual {}
+			expect(result.props.individual).toEqual {}
 			expect(result.transitions).toEqual []
 
 
@@ -53,9 +55,9 @@ describe "CSS Actualizer", ()->
 				size: {type: type.Number, value: 12, unit: "px"}
 			}
 
-			result = makeRules properties, variables
+			result = splitProperties properties, variables
 
-			expect(result.props.dynamic).toEqual ["margin: 12px 2px;"]
-			expect(result.props.static).toEqual ["border: 3px 3px;", "padding: 2px 2px;"]
-			expect(result.props.individual).toEqual []
+			expect(result.props.dynamic.margin).not.toBeUndefined()
+			expect(result.props.static).toEqual {'border': '3px 3px', 'padding': ['2px','2px']}
+			expect(result.props.individual).toEqual {}
 			expect(result.transitions).toEqual []

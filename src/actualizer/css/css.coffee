@@ -1,6 +1,9 @@
 # Calls propertiesToCSS on each selector and collects the results into sheets
 window.fashion.$actualizer.generateStyleProperties = (selectors, variables) ->
-		rules = {dynamic: [], static: [], individual: [], final: {dynamic: [], static: []}}
+		rules = {
+			dynamic: [], static: [], 
+			javascript: {dynamic: {}, individual: {}},
+			final: {dynamic: [], static: []}}
 
 		# Loop over every selector
 		for selector, properties of selectors
@@ -11,25 +14,30 @@ window.fashion.$actualizer.generateStyleProperties = (selectors, variables) ->
 			# Separate styles based on whether or not they'll actually change
 			selectorIsDynamic = newSelector isnt selector
 
-			# Process the property
-			attr = window.fashion.$actualizer.propertiesToCSS properties, variables
+			# Split the properties into 3 sheets: static, dynamic & individual
+			sheets = window.fashion.$actualizer.splitProperties properties
+			ps = sheets.props
 
 			# Helper function to turn strings into rule objects
-			wrap = (
-				(newSelector) -> (cssString)-> {name: newSelector, value: cssString}
-			)(newSelector)
+			wrap = ((sel) -> (css)-> {name: sel, value: css})(newSelector)
 
-			# Combine the properties into CSS Rules
-			ps = attr.props
-			if attr.props.dynamic.length > 0
-				rules.dynamic.push wrap "#{newSelector} {#{ps.dynamic.join('')}}" 
-			if attr.props.static.length > 0
-				rules.static.push wrap "#{newSelector} {#{ps.static.join('')}}" 
-			if attr.props.individual.length > 0
-				rules.individual.push wrap "#{newSelector} {#{ps.individual.join('')}}"
+			# Evaluate static and dynamic sheets
+			if sheets.lengths.static > 0
+				evaluated = $wf.$actualizer.propertiesToCSS ps.static, variables
+				rules.static.push wrap "#{newSelector} {#{evaluated.join('')}}" 
+
+			if sheets.lengths.dynamic > 0
+				evaluated = $wf.$actualizer.propertiesToCSS ps.dynamic, variables
+				rules.dynamic.push wrap "#{newSelector} {#{evaluated.join('')}}" 
+
+			# Pass the raw properties off to the Javascript
+			if sheets.lengths.dynamic > 0
+				rules.javascript.dynamic[newSelector] = ps.dynamic
+			if sheets.lengths.individual > 0
+				rules.javascript.individual[newSelector] = ps.individual
 
 			# Add transition properties
-			tCSS = window.fashion.$actualizer.addTransitions(attr.transitions)
+			tCSS = window.fashion.$actualizer.addTransitions(sheets.transitions)
 
 			# Add a 'final' state that includes the CSS rules and the transitions
 			if tCSS.static then rules.final.static.push wrap(
@@ -40,13 +48,58 @@ window.fashion.$actualizer.generateStyleProperties = (selectors, variables) ->
 		# Return lists of static and dynamic CSS rules
 		return rules
 
-# Turn an array of properties into 3 strings
+# Turn an array of properties into 3 arrays of properties
+window.fashion.$actualizer.splitProperties = (properties) ->
+	# Get some space
+	props = {dynamic: {}, static: {}, individual: {}};
+	lengths = {dynamic: 0, static: 0, individual: 0}
+	transitions = []
+
+	# Loop over every property in the selector
+	for property, value of properties
+
+		# Check to see if the value has a transition
+		if typeof value is 'object' and value['transition']
+			transitions[property] = value.transition
+			value.transition = undefined
+
+		# Add the property to the appropriate string
+		if value instanceof Array
+			if (true for vi in value when vi["individualized"])[0]
+				props.individual[property] = value
+				lengths.individual++
+			else if (true for vi in value when vi["dynamic"])[0]
+				props.dynamic[property] = value
+				lengths.dynamic++
+			else 
+				props.static[property] = value
+				lengths.static++
+
+		else if typeof value is 'object'
+			if value["individualized"] is true
+				props.individual[property] = value
+				lengths.individual++
+			else if value["dynamic"] is true
+				props.dynamic[property] = value
+				lengths.dynamic++
+			else 
+				props.static[property] = value
+				lengths.static++
+
+		else 
+			props.static[property] = value
+			lengths.static++
+	
+	# Return something useful
+	return {props: props, lengths: lengths, transitions: transitions}
+
+
+# Turn an array of properties into an array of strings by evaluating each property
 window.fashion.$actualizer.propertiesToCSS = (properties, variables, evalFunction) ->
 	if !evalFunction then evalFunction = window.fashion.$run.evaluate
 
 	# Get some space
-	str = {dynamic: [], static: [], individual: []};
-	transitions = []
+	cssValues = []
 
 	# Loop over every property in the selector
 	for property, valueObject of properties
@@ -72,29 +125,10 @@ window.fashion.$actualizer.propertiesToCSS = (properties, variables, evalFunctio
 			$wf.$type, $wf.$functions, $wf.$globals)
 
 		# Turn it into a CSS property
-		css = "#{property}: #{val};"
-
-		# Check to see if the value has a transition
-		if typeof valueObject is 'object' and valueObject['transition']
-			transitions[property] = valueObject.transition
-
-		# Add the property to the appropriate string
-		if valueObject instanceof Array
-			if (true for vi in valueObject when vi["individualized"])[0]
-				str.individual.push css
-			else if (true for vi in valueObject when vi["dynamic"])[0]
-				str.dynamic.push css
-			else str.static.push css
-
-		else if typeof valueObject is 'object'
-			if valueObject["individualized"] is true then str.individual.push css
-			else if valueObject["dynamic"] is true then str.dynamic.push css
-			else str.static.push css
-
-		else str.static.push css
+		cssValues.push "#{property}: #{val};"
 	
 	# Return something useful
-	return {props: str, transitions: transitions}
+	return cssValues
 
 
 # Add transition properties 

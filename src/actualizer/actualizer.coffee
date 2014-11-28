@@ -6,10 +6,10 @@ window.fashion.$actualizer =
 	actualizeFullSheet: (parseTree, index) ->
 
 		# Create the stylesheets and get a selector mapping
-		selMap = window.fashion.$actualizer.makeDomStyleFromTree parseTree, index
+		{map: selMap, rules: rules} = $wf.$actualizer.makeDomStyleFromTree parseTree, index
 
 		# Create a javascript file with all of the necessary logic
-		window.fashion.$actualizer.addScriptFromTree parseTree, selMap
+		window.fashion.$actualizer.addScriptFromTree parseTree, selMap, rules
 
 		# Return everything
 		return true
