@@ -6,9 +6,9 @@
 
 ### Variables
 
-In many ways, Fashion is similar to other languages like LESS or SASS. It has variables and expressions, selectors can be nested, and you can do math inline. The most immidiate difference is that Fashion code is dynamic; the compiler produces both CSS and Javascript for your site. So while this may look familiar:
+In many ways, Fashion is similar to other languages like SASS or LESS. It has variables and expressions, selectors can be nested, and you can do math inline. The most immidiate difference is that Fashion code is dynamic; the compiler produces both CSS and Javascript for your site. So while this may look familiar:
 	
-```Less
+```scss
 $background: #DC493C;
 
 body, html {
@@ -28,7 +28,7 @@ Obviously changing page styles from Javascript is nothing new, so this may not s
 
 Variables aren't just useful for changing things like colors and sizes, they can be used to select elements too. So, if you wanted to build a simple sidebar menu and control which item was selected, you could do it without any DOM hassle.
 
-```Less
+```scss
 $item: awesome;
 #select #$item {
 	background-color: red;
@@ -51,7 +51,7 @@ Then selecting the 'cool' item would be as simple as running style.item = 'cool'
 
 You don't have to set every variable, Fashion actually has a bunch that it will set for you. For example, the window height. This snippet here makes a div square div and centers it in the page, with an appropriate amount of padding on the top and bottom.  
 
-```Less
+```scss
 $padding: 50px;
 div#centeredSquare {
 	width: @height - $padding * 2;
@@ -76,7 +76,7 @@ Here, the @height variable is the total height of the window. Fashion intelligen
 
 The web is an increasingly animated place. Far beyond the geocities gifs of yesteryear, animations on the modern web can visually guide users around a website and provide context for interactions. CSS3 introduced syntax for GPU-accelerated transitions, which tend to work pretty well. The only downside is that the syntax is cumbersome and needs to be browser-prefixed, which might lead some developers to forego transitions in places where they would be helpful. Fashion provides some new syntactic sugar to combat this.
 
-```Less
+```scss
 $noticeBottom: 0px;
 #notice {
 	position: absolute;
@@ -88,7 +88,7 @@ This will generate fully prefixed CSS3 transitions, so all you as the developer 
 
 You can also use this to set up more complex, multipart transitions, like so.
 
-```Less
+```scss
 $boxHeight: 0px;
 $boxAnimateDuration: 500ms;
 $contentAnimateDuration: 300ms;
@@ -108,7 +108,7 @@ The third property for transitions is the delay, so in this case the box's conte
 
 Here's the part where we start to break some new ground. Fashion is more than just a fancy stylesheet, it's also a layer between your HTML and your Javascript. Gone are the days of tying your event handling code to specific CSS selectors, now you can use Fashion to link specific selectors to specific functions.
 
-```Less
+```scss
 .button.submit {
 	on-click: submit(@self.parent)
 }
@@ -118,7 +118,7 @@ Here's the part where we start to break some new ground. Fashion is more than ju
 
 This same technique can be used to create things like navigation menus with absolutely no Javascript.
 
-```Less
+```scss
 $item: option-one;
 $selectionColor: red;
 
