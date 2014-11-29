@@ -91,7 +91,7 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 			evaluate = undefined
 	
 	else script = "{value: #{script}, type: #{type}, unit: '#{unit}'}"
-
+	
 	# Return something useful for the parser
 	return {
 		type: type, unit: unit, 

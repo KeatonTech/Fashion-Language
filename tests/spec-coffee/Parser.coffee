@@ -486,7 +486,7 @@ describe "Parser", ()->
 		it "should recognize expressions that need to be individualized", ()->
 			result = parse(	"""
 							div {
-								height: @('','width', @self)px / 1.5;
+								height: @('', 'width', @self)px / 1.5;
 							}
 							""")
 

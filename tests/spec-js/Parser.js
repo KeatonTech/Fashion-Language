@@ -361,7 +361,7 @@
       });
       it("should recognize expressions that need to be individualized", function() {
         var expression, result;
-        result = parse("div {\n	height: @('','width', @self)px / 1.5;\n}");
+        result = parse("div {\n	height: @('', 'width', @self)px / 1.5;\n}");
         expression = result.selectors.div.height;
         expect(expression.individualized).toBe(true);
         return expect(expression.unit).toBe("px");

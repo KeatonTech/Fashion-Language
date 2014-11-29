@@ -7,24 +7,39 @@
 
 	$item: awesome;
 
-	li {
+	body, html {
 		width: 100%;
+		padding: 0;
+		margin: 0;
+	}
+
+	div {
+		width: @width - 20px;
 		height: 44px;
+		text-align: center;
+		line-height: 44px;
+		margin: 10px;
 		background-color: [ease-out 200ms] inherit;
+		on-click: $item = @self.id;
+		border-radius: 3px;
+		cursor: pointer;
+
+		&:hover {
+			background-color: #fed;
+		}
 	}
 
 	#$item {
-		background-color: red;
+		background-color: #f95;
+		color: white;
 	}
 
 	</style>
 </head>
 <body>
-	<ul>
-		<li id="awesome">Awesome Item!</li>
-		<li id="cool">Cool Item!</li>
-		<li id="sweet">Sweet Item!</li>
-		<li id="eighties">Totally Radical Item!</li>
-	</ul>
+	<div id="awesome" color="red">Awesome Item!</div>
+	<div id="cool" color="blue">Cool Item!</div>
+	<div id="sweet" color="yellow">Sweet Item!</div>
+	<div id="eighties" color="green">Totally Radical Item!</div>
 </body>
 </html>

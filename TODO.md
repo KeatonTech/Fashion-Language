@@ -1,6 +1,5 @@
 ## Features
 
-* Event handling with trigger properties.
 * Full support for blocks throughout the whole system. Parser -> Processor -> Actualizer
 * Binding function, with DOM observers to update its value
 * Variable scoping to allow per-element values. (Big changes to parser, actualizer & runtime)

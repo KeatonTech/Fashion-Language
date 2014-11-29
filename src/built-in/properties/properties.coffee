@@ -37,3 +37,4 @@ window.fashion.$properties =
 
 # Include other properties
 #@prepros-append ./layout.coffee
+#@prepros-append ./triggers.coffee

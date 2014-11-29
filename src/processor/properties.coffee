@@ -11,7 +11,7 @@ window.fashion.$processor.properties = (parseTree, properties) ->
 			index++
 
 			# Determine if this is a fashion property
-			if properties[property]
+			if properties[property] and properties[property]['compile']
 
 				# Bind the API to this particular run state
 				# Guarantees a certain amount of safety

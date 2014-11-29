@@ -28,5 +28,4 @@ window.fashion.$functions =
 				if arg.value > maxSoFar then maxSoFar = arg.value
 			return maxSoFar
 
-#@prepros-append ./triggers.coffee
 #@prepros-append ./binding.coffee

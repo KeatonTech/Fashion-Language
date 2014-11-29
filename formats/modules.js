@@ -48,7 +48,9 @@ globalName: {
 	"compile": function(value, self) {},
 
 	// Occurs during runtime for each matched element
-	"apply": function(value, element) {},
+	// evaluateExpression() is passed if value is an expression
+	// It is pre-bound so it takes no arguments
+	"apply": function(element, value, evaluateExpression) {},
 
 	// True if the property should be entirely removed from the original CSS
 	"replace": false,

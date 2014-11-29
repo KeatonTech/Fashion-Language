@@ -1009,7 +1009,7 @@ window.fashion.$processor = {
         if (!(typeof value === "object")) {
           continue;
         }
-        if (__indexOf.call($wf.$properties, property) >= 0) {
+        if ($wf.$properties[property]) {
           req.properties[property] = $wf.$properties[property];
         }
         if (value.dependencies) {
@@ -1059,7 +1059,7 @@ window.fashion.$processor.properties = function(parseTree, properties) {
     for (property in selectorProperties) {
       value = selectorProperties[property];
       index++;
-      if (properties[property]) {
+      if (properties[property] && properties[property]['compile']) {
         API = {
           throwError: funcs.throwError.bind(0, property),
           setProperty: funcs.setProperty.bind(0, parseTree, selector, index),
@@ -1220,7 +1220,7 @@ window.fashion.$run.getVariable = function(variables, varName, type) {
 window.fashion.$run.evaluate = function(valueObject, element, variables, types, funcs, globals) {
   var evaluateSingleValue, value, vi, vo;
   if (!variables) {
-    variables = FASHION.variables;
+    variables = FASHION.variableProxy;
   }
   if (!types) {
     types = FASHION.type;
@@ -1256,6 +1256,8 @@ window.fashion.$run.evaluate = function(valueObject, element, variables, types, 
       }
     } else if (valueObject.evaluate) {
       return valueObject.evaluate(variables, globals, funcs);
+    } else if (valueObject.value) {
+      return valueObject.value;
     }
   };
   if (valueObject instanceof Array) {
@@ -1296,7 +1298,7 @@ window.fashion.$run.evaluate = function(valueObject, element, variables, types, 
   }
 };
 window.fashion.$run.defineProperties = function(variables, objectName) {
-  var container, propObject, varName, varObj, _results;
+  var container, propObject, proxy, varName, varObj, _results;
   if (variables == null) {
     variables = FASHION.variables;
   }
@@ -1309,6 +1311,7 @@ window.fashion.$run.defineProperties = function(variables, objectName) {
   } else {
     container = window;
   }
+  proxy = w.FASHION.variableProxy = {};
   _results = [];
   for (varName in variables) {
     varObj = variables[varName];
@@ -1327,7 +1330,9 @@ window.fashion.$run.defineProperties = function(variables, objectName) {
       })(this))(varName, varObj)
     };
     Object.defineProperty(container, varName, propObject);
-    _results.push(Object.defineProperty(container, "$" + varName, propObject));
+    Object.defineProperty(container, "$" + varName, propObject);
+    proxy[varName] = {};
+    _results.push(Object.defineProperty(proxy[varName], "value", propObject));
   }
   return _results;
 };
@@ -1476,7 +1481,7 @@ window.fashion.$run.getUnit = function(rawValue, varType, type, unit) {
   };
 };
 window.fashion.$run.applyIndividualizedSelectors = function(selectors) {
-  var acc, e, element, elements, expression, properties, property, propertyObject, selector, value, _results;
+  var acc, e, element, elements, evaluateExpression, expression, properties, property, propertyObject, selector, value, _results;
   _results = [];
   for (selector in selectors) {
     properties = selectors[selector];
@@ -1492,9 +1497,10 @@ window.fashion.$run.applyIndividualizedSelectors = function(selectors) {
           expression = properties[property];
           propertyObject = w.FASHION.properties[property];
           if (propertyObject && propertyObject['apply']) {
-            propertyObject['apply'](expression, e);
+            evaluateExpression = expression.evaluate.bind({}, w.FASHION.variableProxy, w.FASHION.globals, w.FASHION.functions, {}, e);
+            propertyObject['apply'](element, expression, evaluateExpression);
           } else {
-            value = expression.evaluate(w.FASHION.variables, w.FASHION.globals, w.FASHION.functions, {}, e);
+            value = expression.evaluate(w.FASHION.variableProxy, w.FASHION.globals, w.FASHION.functions, {}, e);
             acc += "" + property + ": " + value + ";";
           }
         }
@@ -1580,7 +1586,11 @@ window.fashion.$actualizer.generateStyleProperties = function(selectors, variabl
     properties = selectors[selector];
     newSelector = window.fashion.$run.expandVariables(selector, variables);
     selectorIsDynamic = newSelector !== selector;
-    sheets = window.fashion.$actualizer.splitProperties(properties);
+    if (selectorIsDynamic) {
+      sheets = $wf.$actualizer.processDynamicProperties(properties);
+    } else {
+      sheets = $wf.$actualizer.splitProperties(properties);
+    }
     ps = sheets.props;
     wrap = (function(sel) {
       return function(css) {
@@ -1589,7 +1599,7 @@ window.fashion.$actualizer.generateStyleProperties = function(selectors, variabl
           value: css
         };
       };
-    })(newSelector);
+    })(selector);
     if (sheets.lengths["static"] > 0) {
       evaluated = $wf.$actualizer.propertiesToCSS(ps["static"], variables);
       rules["static"].push(wrap("" + newSelector + " {" + (evaluated.join('')) + "}"));
@@ -1599,17 +1609,19 @@ window.fashion.$actualizer.generateStyleProperties = function(selectors, variabl
       rules.dynamic.push(wrap("" + newSelector + " {" + (evaluated.join('')) + "}"));
     }
     if (sheets.lengths.dynamic > 0) {
-      rules.javascript.dynamic[newSelector] = ps.dynamic;
+      rules.javascript.dynamic[selector] = ps.dynamic;
     }
     if (sheets.lengths.individual > 0) {
-      rules.javascript.individual[newSelector] = ps.individual;
+      rules.javascript.individual[selector] = ps.individual;
     }
     tCSS = window.fashion.$actualizer.addTransitions(sheets.transitions);
-    if (tCSS["static"]) {
-      rules.final["static"].push(wrap("" + newSelector + " {" + (ps["static"].join('')) + tCSS["static"] + "}"));
+    if (sheets.lengths["static"] > 0 && tCSS["static"]) {
+      evaluated = $wf.$actualizer.propertiesToCSS(ps["static"], variables);
+      rules["static"].push(wrap("" + newSelector + " {" + (evaluated.join('')) + tCSS["static"] + "}"));
     }
-    if (tCSS.dynamic) {
-      rules.final.dynamic.push(wrap("" + newSelector + " {" + (ps.dynamic.join('')) + tCSS.dynamic + "}"));
+    if (sheets.lengths.dynamic > 0 && tCSS.dynamic) {
+      evaluated = $wf.$actualizer.propertiesToCSS(ps.dynamic, variables);
+      rules.dynamic.push(wrap("" + newSelector + " {" + (evaluated.join('')) + tCSS.dynamic + "}"));
     }
   }
   return rules;
@@ -1680,6 +1692,35 @@ window.fashion.$actualizer.splitProperties = function(properties) {
       props["static"][property] = value;
       lengths["static"]++;
     }
+  }
+  return {
+    props: props,
+    lengths: lengths,
+    transitions: transitions
+  };
+};
+
+window.fashion.$actualizer.processDynamicProperties = function(properties) {
+  var lengths, property, props, transitions, value;
+  props = {
+    dynamic: {},
+    "static": {},
+    individual: {}
+  };
+  lengths = {
+    dynamic: 0,
+    "static": 0,
+    individual: 0
+  };
+  transitions = [];
+  for (property in properties) {
+    value = properties[property];
+    if (typeof value === 'object' && value['transition']) {
+      transitions[property] = value.transition;
+      value.transition = void 0;
+    }
+    props.dynamic[property] = value;
+    lengths.dynamic++;
   }
   return {
     props: props,
@@ -1941,8 +1982,7 @@ window.fashion.$functions = {
     }
   }
 };
-
-;$wf.$extend(window.fashion.$functions, {
+$wf.$extend(window.fashion.$functions, {
   "@": {
     output: $wf.$type.Number,
     unit: '',
@@ -2060,6 +2100,28 @@ $wf.$extend(window.fashion.$properties, {
     }
   }
 });
+$wf.$extend(window.fashion.$properties, new ((function() {
+  function _Class() {
+    var applyForEvent, events, evt, _i, _len;
+    events = ["click", "dblclick", "mousedown", "mouseup", "mouseenter", "mouseleave", "mousemove", "mouseout", "mouseover", "drag", "dragdrop", "dragend", "drop", "dragenter", "dragexit", "draggesture", "dragleave", "dragover", "dragstart", "blur", "change", "focus", "focusin", "focusout", "submit", "reset"];
+    applyForEvent = function(evt) {
+      var body;
+      body = "element.addEventListener('" + evt + "', evaluate, false);";
+      return new Function("element", "value", "evaluate", body);
+    };
+    for (_i = 0, _len = events.length; _i < _len; _i++) {
+      evt = events[_i];
+      this["on-" + evt] = {
+        replace: true,
+        individualized: true,
+        "apply": applyForEvent(evt)
+      };
+    }
+  }
+
+  return _Class;
+
+})()));
 window.fashion.$globals = {
   width: {
     type: $wf.$type.Number,

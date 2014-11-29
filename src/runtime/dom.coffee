@@ -21,12 +21,15 @@ window.fashion.$run.applyIndividualizedSelectors = (selectors)->
 
 				# Let the custom property handle it itself
 				if propertyObject and propertyObject['apply']
-					propertyObject['apply'](expression, e)
+					evaluateExpression = expression.evaluate.bind({},
+						w.FASHION.variableProxy, w.FASHION.globals,
+						w.FASHION.functions, {}, e)
+					propertyObject['apply'](element, expression, evaluateExpression)
 
 				# Otherwise, run the expression and save its result
 				else 
 					value = expression.evaluate(
-						w.FASHION.variables, w.FASHION.globals,
+						w.FASHION.variableProxy, w.FASHION.globals,
 						w.FASHION.functions, {}, e)
 					acc += "#{property}: #{value};"
 

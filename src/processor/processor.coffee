@@ -29,7 +29,7 @@ window.fashion.$processor =
 			for property, value of properties when typeof value is "object"
 
 				# Add properties
-				if property in $wf.$properties
+				if $wf.$properties[property]
 					req.properties[property] = $wf.$properties[property]
 
 				# Add globals

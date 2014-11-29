@@ -12,7 +12,7 @@ window.fashion.$run.getVariable = (variables, varName, type = FASHION.type) ->
 
 # Turn a value object into an actual string value for the sheet
 window.fashion.$run.evaluate = (valueObject, element, variables, types, funcs, globals) ->
-	if !variables then variables = FASHION.variables
+	if !variables then variables = FASHION.variableProxy
 	if !types then types = FASHION.type
 	if !funcs then funcs = FASHION.functions
 	if !globals then globals = FASHION.globals
@@ -43,6 +43,9 @@ window.fashion.$run.evaluate = (valueObject, element, variables, types, funcs, g
 		# Handle expressions
 		else if valueObject.evaluate
 			return valueObject.evaluate variables, globals, funcs
+
+		# Handle valued objects (used with transitiong)
+		else if valueObject.value then return valueObject.value
 
 
 	# Check to see if this is an array of values
