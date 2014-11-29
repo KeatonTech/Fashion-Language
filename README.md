@@ -120,13 +120,14 @@ This same technique can be used to create things like navigation menus with abso
 
 ```Less
 $item: option-one;
+$selectionColor: red;
 
 li {
 	on-click: $item = @self.id;
 }
 
 li#$item {
-	background-color: @self.color;
+	background-color: $selectionColor;
 }
 ```
 
