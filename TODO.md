@@ -37,6 +37,7 @@
 * Pin property should make its parent at least position relative
 * Pin property should respect relative-to
 * Binding functions should find a way to inherit the transition of their parent
+* Selectors with qualifiers like :hover don't support individualized properties
 
 
 ## Tests

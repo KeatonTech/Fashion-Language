@@ -15,10 +15,7 @@ window.fashion.$actualizer.generateStyleProperties = (selectors, variables) ->
 			selectorIsDynamic = newSelector isnt selector
 
 			# Split the properties into 3 sheets: static, dynamic & individual
-			if selectorIsDynamic
-				sheets = $wf.$actualizer.processDynamicProperties properties
-			else
-				sheets = $wf.$actualizer.splitProperties properties
+			sheets = $wf.$actualizer.splitProperties properties, !selectorIsDynamic
 
 			ps = sheets.props
 
@@ -55,7 +52,7 @@ window.fashion.$actualizer.generateStyleProperties = (selectors, variables) ->
 		return rules
 
 # Turn an array of properties into 3 arrays of properties
-window.fashion.$actualizer.splitProperties = (properties) ->
+window.fashion.$actualizer.splitProperties = (properties, allowStatic = true) ->
 	# Get some space
 	props = {dynamic: {}, static: {}, individual: {}};
 	lengths = {dynamic: 0, static: 0, individual: 0}
@@ -74,7 +71,7 @@ window.fashion.$actualizer.splitProperties = (properties) ->
 			if (true for vi in value when vi["individualized"])[0]
 				props.individual[property] = value
 				lengths.individual++
-			else if (true for vi in value when vi["dynamic"])[0]
+			else if !allowStatic or (true for vi in value when vi["dynamic"])[0]
 				props.dynamic[property] = value
 				lengths.dynamic++
 			else 
@@ -85,38 +82,20 @@ window.fashion.$actualizer.splitProperties = (properties) ->
 			if value["individualized"] is true
 				props.individual[property] = value
 				lengths.individual++
-			else if value["dynamic"] is true
+			else if !allowStatic or value["dynamic"] is true
 				props.dynamic[property] = value
 				lengths.dynamic++
 			else 
 				props.static[property] = value
 				lengths.static++
 
-		else 
+		else if allowStatic
 			props.static[property] = value
 			lengths.static++
-	
-	# Return something useful
-	return {props: props, lengths: lengths, transitions: transitions}
 
-
-# Turn an array of properties into a slightly different array of properties
-window.fashion.$actualizer.processDynamicProperties = (properties) ->
-	# Get some space
-	props = {dynamic: {}, static: {}, individual: {}};
-	lengths = {dynamic: 0, static: 0, individual: 0}
-	transitions = []
-
-	# Loop over every property in the selector
-	for property, value of properties
-
-		# Check to see if the value has a transition
-		if typeof value is 'object' and value['transition']
-			transitions[property] = value.transition
-			value.transition = undefined
-
-		props.dynamic[property] = value
-		lengths.dynamic++
+		else 
+			props.dynamic[property] = value
+			lengths.dynamic++
 	
 	# Return something useful
 	return {props: props, lengths: lengths, transitions: transitions}

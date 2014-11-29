@@ -1149,17 +1149,17 @@ window.fashion.$run = {
     return _results;
   },
   updateSelector: function(name, variables, selectors, map) {
-    var cssElem, location, properties;
+    var cssElem, individualProps, location, properties;
     if (!variables) {
       variables = FASHION.variables;
     }
     if (!selectors) {
-      selectors = FASHION.selectors.dynamic;
+      selectors = FASHION.selectors;
     }
     if (!map) {
       map = FASHION.cssMap;
     }
-    properties = selectors[name];
+    properties = selectors.dynamic[name];
     if (!properties) {
       return this.throwError("Could not find selector '" + name + "'");
     }
@@ -1168,6 +1168,10 @@ window.fashion.$run = {
       return this.throwError("Could not find selector '" + name + "' in CSS");
     }
     cssElem = document.getElementById("" + FASHION.config.cssId + location[0]);
+    individualProps = selectors.individual[name];
+    if (individualProps) {
+      this.applyIndividualizedSelectors(selectors.individual);
+    }
     cssElem.sheet.deleteRule(location[1]);
     return cssElem.sheet.insertRule(this.regenerateSelector(name, properties), location[1]);
   },
@@ -1482,9 +1486,11 @@ window.fashion.$run.getUnit = function(rawValue, varType, type, unit) {
 };
 window.fashion.$run.applyIndividualizedSelectors = function(selectors) {
   var acc, e, element, elements, evaluateExpression, expression, properties, property, propertyObject, selector, value, _results;
+  this.removeFashionStyles();
   _results = [];
   for (selector in selectors) {
     properties = selectors[selector];
+    selector = window.fashion.$run.expandVariables(selector, FASHION.variables);
     elements = document.querySelectorAll(selector);
     _results.push((function() {
       var _i, _len, _results1;
@@ -1492,22 +1498,43 @@ window.fashion.$run.applyIndividualizedSelectors = function(selectors) {
       for (_i = 0, _len = elements.length; _i < _len; _i++) {
         element = elements[_i];
         e = this.buildObjectForElement(element);
-        acc = "";
+        acc = "/*FS>*/";
         for (property in properties) {
           expression = properties[property];
           propertyObject = w.FASHION.properties[property];
           if (propertyObject && propertyObject['apply']) {
+            if (e["bind-" + property] === "true") {
+              continue;
+            }
             evaluateExpression = expression.evaluate.bind({}, w.FASHION.variableProxy, w.FASHION.globals, w.FASHION.functions, {}, e);
             propertyObject['apply'](element, expression, evaluateExpression);
+            element.setAttribute("bind-" + property, "true");
           } else {
             value = expression.evaluate(w.FASHION.variableProxy, w.FASHION.globals, w.FASHION.functions, {}, e);
             acc += "" + property + ": " + value + ";";
           }
         }
-        _results1.push(this.addStyleToElement(element, acc));
+        _results1.push(this.addStyleToElement(element, acc.length > 7 ? acc + "/*<FS*/" : ""));
       }
       return _results1;
     }).call(this));
+  }
+  return _results;
+};
+
+window.fashion.$run.removeFashionStyles = function() {
+  var element, elements, style, _i, _len, _results;
+  elements = document.querySelectorAll("[style]");
+  _results = [];
+  for (_i = 0, _len = elements.length; _i < _len; _i++) {
+    element = elements[_i];
+    style = element.getAttribute("style");
+    if (style.match(/\/\*FS>\*\/(.*?)\/\*<FS\*\//g)) {
+      style = style.replace(/\/\*FS>\*\/(.*?)\/\*<FS\*\//g, "");
+      _results.push(element.setAttribute("style", style));
+    } else {
+      _results.push(void 0);
+    }
   }
   return _results;
 };
@@ -1586,11 +1613,7 @@ window.fashion.$actualizer.generateStyleProperties = function(selectors, variabl
     properties = selectors[selector];
     newSelector = window.fashion.$run.expandVariables(selector, variables);
     selectorIsDynamic = newSelector !== selector;
-    if (selectorIsDynamic) {
-      sheets = $wf.$actualizer.processDynamicProperties(properties);
-    } else {
-      sheets = $wf.$actualizer.splitProperties(properties);
-    }
+    sheets = $wf.$actualizer.splitProperties(properties, !selectorIsDynamic);
     ps = sheets.props;
     wrap = (function(sel) {
       return function(css) {
@@ -1627,8 +1650,11 @@ window.fashion.$actualizer.generateStyleProperties = function(selectors, variabl
   return rules;
 };
 
-window.fashion.$actualizer.splitProperties = function(properties) {
+window.fashion.$actualizer.splitProperties = function(properties, allowStatic) {
   var lengths, property, props, transitions, value, vi;
+  if (allowStatic == null) {
+    allowStatic = true;
+  }
   props = {
     dynamic: {},
     "static": {},
@@ -1660,7 +1686,7 @@ window.fashion.$actualizer.splitProperties = function(properties) {
       })())[0]) {
         props.individual[property] = value;
         lengths.individual++;
-      } else if (((function() {
+      } else if (!allowStatic || ((function() {
         var _i, _len, _results;
         _results = [];
         for (_i = 0, _len = value.length; _i < _len; _i++) {
@@ -1681,46 +1707,20 @@ window.fashion.$actualizer.splitProperties = function(properties) {
       if (value["individualized"] === true) {
         props.individual[property] = value;
         lengths.individual++;
-      } else if (value["dynamic"] === true) {
+      } else if (!allowStatic || value["dynamic"] === true) {
         props.dynamic[property] = value;
         lengths.dynamic++;
       } else {
         props["static"][property] = value;
         lengths["static"]++;
       }
-    } else {
+    } else if (allowStatic) {
       props["static"][property] = value;
       lengths["static"]++;
+    } else {
+      props.dynamic[property] = value;
+      lengths.dynamic++;
     }
-  }
-  return {
-    props: props,
-    lengths: lengths,
-    transitions: transitions
-  };
-};
-
-window.fashion.$actualizer.processDynamicProperties = function(properties) {
-  var lengths, property, props, transitions, value;
-  props = {
-    dynamic: {},
-    "static": {},
-    individual: {}
-  };
-  lengths = {
-    dynamic: 0,
-    "static": 0,
-    individual: 0
-  };
-  transitions = [];
-  for (property in properties) {
-    value = properties[property];
-    if (typeof value === 'object' && value['transition']) {
-      transitions[property] = value.transition;
-      value.transition = void 0;
-    }
-    props.dynamic[property] = value;
-    lengths.dynamic++;
   }
   return {
     props: props,

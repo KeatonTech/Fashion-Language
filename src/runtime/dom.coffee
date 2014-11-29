@@ -2,9 +2,13 @@
 
 # Loop through elements belonging to given selectors and add properties to them
 window.fashion.$run.applyIndividualizedSelectors = (selectors)->
+	@removeFashionStyles()
 
 	# Go through each selector
 	for selector, properties of selectors
+
+		# Expand variables in the selector
+		selector = window.fashion.$run.expandVariables selector, FASHION.variables
 
 		# Get every element on the page that has this selector applied to it
 		elements = document.querySelectorAll selector
@@ -13,7 +17,7 @@ window.fashion.$run.applyIndividualizedSelectors = (selectors)->
 			# Use this in the expression
 			e = @buildObjectForElement element
 
-			acc = ""
+			acc = "/*FS>*/"
 			for property, expression of properties
 				
 				# Check to see if this is a custom property
@@ -21,10 +25,12 @@ window.fashion.$run.applyIndividualizedSelectors = (selectors)->
 
 				# Let the custom property handle it itself
 				if propertyObject and propertyObject['apply']
+					if e["bind-#{property}"] is "true" then continue
 					evaluateExpression = expression.evaluate.bind({},
 						w.FASHION.variableProxy, w.FASHION.globals,
 						w.FASHION.functions, {}, e)
 					propertyObject['apply'](element, expression, evaluateExpression)
+					element.setAttribute "bind-#{property}", "true"
 
 				# Otherwise, run the expression and save its result
 				else 
@@ -33,9 +39,19 @@ window.fashion.$run.applyIndividualizedSelectors = (selectors)->
 						w.FASHION.functions, {}, e)
 					acc += "#{property}: #{value};"
 
-			# Add the properties to the object
-			@addStyleToElement element, acc
 
+			# Add the properties to the object
+			@addStyleToElement element, if acc.length > 7 then acc + "/*<FS*/" else ""
+
+
+# Loop through each element with a style tag and remove the Fashion part
+window.fashion.$run.removeFashionStyles = () ->
+	elements = document.querySelectorAll "[style]"
+	for element in elements
+		style = element.getAttribute("style")
+		if style.match /\/\*FS>\*\/(.*?)\/\*<FS\*\//g
+			style = style.replace /\/\*FS>\*\/(.*?)\/\*<FS\*\//g, ""
+			element.setAttribute "style", style
 
 # Fashion objects contain HTML elements but also have some nice syntactic sugar
 window.fashion.$run.buildObjectForElement = (element) ->

@@ -35,17 +35,21 @@ window.fashion.$run =
 
 		# Defaults (set here to keep the function definition under 93 chars)
 		if !variables then variables = FASHION.variables
-		if !selectors then selectors = FASHION.selectors.dynamic
+		if !selectors then selectors = FASHION.selectors
 		if !map then map = FASHION.cssMap
 
 		# Load what we need
-		properties = selectors[name]
+		properties = selectors.dynamic[name]
 		if !properties then return @throwError "Could not find selector '#{name}'"
 		location = map[name]
 		if !location then return @throwError "Could not find selector '#{name}' in CSS"
 
 		# Get the sheet that contains the selector
 		cssElem = document.getElementById("#{FASHION.config.cssId}#{location[0]}")
+
+		# Update individualized properties if necessary
+		individualProps = selectors.individual[name]
+		if individualProps then @applyIndividualizedSelectors selectors.individual
 
 		# Swap out the selector
 		cssElem.sheet.deleteRule location[1] 
