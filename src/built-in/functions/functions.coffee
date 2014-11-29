@@ -29,3 +29,4 @@ window.fashion.$functions =
 			return maxSoFar
 
 #@prepros-append ./triggers.coffee
+#@prepros-append ./binding.coffee

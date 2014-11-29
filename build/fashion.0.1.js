@@ -702,11 +702,12 @@ window.fashion.$parser.splitByTopLevelCommas = function(value) {
   return ret;
 };
 window.fashion.$parser.parseExpression = function(expString, vars, funcs, globals, top) {
-  var contained, dependencies, dynamic, e, eObj, end, evaluate, expander, functions, individualized, length, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, type, types, unit, units, _ref;
+  var contained, dependencies, dynamic, e, eObj, end, evaluate, expander, functions, funit, individualized, length, matchParens, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, type, types, unit, units, _ref, _ref1;
   if (top == null) {
     top = true;
   }
   expander = $wf.$parser.expressionExpander;
+  matchParens = window.fashion.$parser.matchParenthesis;
   dependencies = [];
   functions = [];
   script = expString;
@@ -718,30 +719,31 @@ window.fashion.$parser.parseExpression = function(expString, vars, funcs, global
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /([\$\@]\(['"](.*?)['"]\,?\s?['"]?(.*?)['"]?\)([^\s]*)|\@(self|this|parent)\.([^\s]+)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]{0,1}\d+|\d+(\.\d*)?)[a-zA-Z]{1,4})|([\w\-]*)\(|\(|\))/g;
+  regex = /(\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]{0,1}\d+|\d+(\.\d*)?)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\(|\)([\S]*))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
     start = section.index;
     length = section[0].length;
     end = start + length;
     if (section[2]) {
-      eObj = expander.domBinding(section[2], section[3], section[4]);
+      eObj = expander.relativeObject(section[2], section[3]);
+    } else if (section[4]) {
+      eObj = expander.localVariable(section[4], vars);
     } else if (section[5]) {
-      eObj = expander.relativeObject(section[5], section[6]);
-    } else if (section[7]) {
-      eObj = expander.localVariable(section[7], vars);
-    } else if (section[8]) {
-      eObj = expander.globalVariable(section[8], globals);
+      eObj = expander.globalVariable(section[5], globals);
+    } else if (section[6]) {
+      eObj = expander.numberWithUnit(section[6]);
     } else if (section[9]) {
-      eObj = expander.numberWithUnit(section[9]);
-    } else if (section[12]) {
-      contained = window.fashion.$parser.matchParenthesis(regex, expString, end);
+      _ref = matchParens(regex, expString, end), contained = _ref.body, funit = _ref.unit;
       if (!contained) {
         contained = expString.substring(end, expString.length - 1);
         shouldBreak = true;
       }
       length += contained.length + 1;
-      eObj = expander["function"](section[12], contained, vars, funcs, globals);
+      if (funit) {
+        length += funit.length;
+      }
+      eObj = expander["function"](section[9], contained, funit, vars, funcs, globals);
     }
     if (!eObj) {
       continue;
@@ -764,7 +766,7 @@ window.fashion.$parser.parseExpression = function(expString, vars, funcs, global
     types.push(eObj.type === void 0 ? $wf.$type.Unknown : eObj.type);
     units.push(eObj.unit || '');
   }
-  _ref = $wf.$parser.determineExpressionType(types, units), type = _ref.type, unit = _ref.unit;
+  _ref1 = $wf.$parser.determineExpressionType(types, units), type = _ref1.type, unit = _ref1.unit;
   if (expString.match(/\s\=\s/g)) {
     unit = void 0;
   }
@@ -775,7 +777,7 @@ window.fashion.$parser.parseExpression = function(expString, vars, funcs, global
       script = "return " + script;
     }
     try {
-      evaluate = Function("v", "g", "f", "d", "e", script);
+      evaluate = Function("v", "g", "f", "t", "e", script);
     } catch (_error) {
       e = _error;
       console.log("[FASHION] Could not compile script: " + script);
@@ -809,10 +811,12 @@ window.fashion.$parser.matchParenthesis = function(regex, string, index) {
   while (section = regex.exec(string)) {
     if (section[0].indexOf("(") !== -1) {
       depth++;
-    } else if (section[0].indexOf(")") !== -1) {
-      if (depth-- === 0) {
-        return acc;
-      }
+    } else if (section[0].indexOf(")") !== -1 && depth-- === 0) {
+      acc += string.substr(lastIndex, section.index - lastIndex);
+      return {
+        body: acc,
+        unit: section[10]
+      };
     } else {
       acc += string.substr(lastIndex, (section.index - lastIndex) + section[0].length);
       lastIndex = section.index + section[0].length;
@@ -832,7 +836,7 @@ window.fashion.$parser.determineExpressionType = function(types, units) {
       topType = type;
     } else if (type !== topType) {
       if (type === $wf.$type.String) {
-        type = $wf.$type.String;
+        topType = $wf.$type.String;
       } else {
         console.log("[FASHION] Found mixed types in expression");
         return {};
@@ -902,8 +906,8 @@ window.fashion.$parser.expressionExpander = {
     };
   },
   relativeObject: function(keyword, property) {
-    var dotProperties, lastProperty, type, unit, varName;
-    varName = keyword === "parent" ? "e.parent." : "e.";
+    var dotProperties, lastProperty, script, type, unit, varName;
+    varName = keyword === "parent" ? "e.parent" : "e";
     dotProperties = property.split(".");
     lastProperty = dotProperties[dotProperties.length - 1];
     if (lastProperty === "top" || lastProperty === "bottom" || lastProperty === "left" || lastProperty === "right" || lastProperty === "number" || lastProperty === "width" || lastProperty === "height") {
@@ -912,28 +916,19 @@ window.fashion.$parser.expressionExpander = {
     } else {
       type = $wf.$type.String;
     }
+    script = varName;
+    if (property) {
+      script += "." + property;
+    }
     return {
       type: type,
       unit: unit,
-      script: varName + property,
+      script: script,
       dynamic: true,
       individualized: true
     };
   },
-  domBinding: function(selector, property, unit) {
-    var individualized, script;
-    individualized = selector.indexOf("self") !== -1;
-    individualized || (individualized = selector.indexOf("parent") !== -1);
-    script = "d('" + selector + "', " + ('\'' + property + '\'' || 'undefined') + ", e)";
-    return {
-      type: unit ? $wf.$type.Number : $wf.$type.Unknown,
-      unit: unit || "",
-      script: script,
-      dynamic: true,
-      individualized: individualized
-    };
-  },
-  "function": function(name, argumentsString, vars, funcs, globals) {
+  "function": function(name, argumentsString, inputUnit, vars, funcs, globals) {
     var arg, args, dependencies, dynamic, expression, expressions, fObj, functions, individualized, scripts, unit, _i, _len;
     fObj = funcs[name];
     if (!fObj) {
@@ -955,9 +950,9 @@ window.fashion.$parser.expressionExpander = {
     }
     dependencies = [];
     functions = [name];
-    scripts = [];
+    scripts = ["t"];
     individualized = fObj.individualized || false;
-    dynamic = false;
+    dynamic = fObj.dynamic || false;
     for (_i = 0, _len = expressions.length; _i < _len; _i++) {
       expression = expressions[_i];
       if (expression.dynamic === true) {
@@ -979,8 +974,8 @@ window.fashion.$parser.expressionExpander = {
     }
     return {
       type: fObj.output,
-      unit: unit,
-      script: "f." + name + ".evaluate(" + (scripts.join(',')) + ")",
+      unit: inputUnit || unit,
+      script: "f['" + name + "'].evaluate.call(" + (scripts.join(',')) + ")",
       dependencies: dependencies,
       functions: functions,
       dynamic: dynamic,
@@ -1947,7 +1942,23 @@ window.fashion.$functions = {
   }
 };
 
-;window.fashion.$properties = {
+;$wf.$extend(window.fashion.$functions, {
+  "@": {
+    output: $wf.$type.Number,
+    unit: '',
+    dynamic: true,
+    evaluate: function(selector, property, element) {
+      var matched, style;
+      if (!element) {
+        element = document;
+      }
+      matched = this.querySelector(selector.value);
+      style = this.getComputedStyle(matched);
+      return style[property.value];
+    }
+  }
+});
+window.fashion.$properties = {
   "text-style": {
     replace: true,
     compile: function(values) {

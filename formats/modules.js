@@ -4,7 +4,8 @@ functionName: {
 	"unitFrom": 0, // Output in the same unit as the first argument
 	"unit": "px",  // Don't use with unitFrom. Hard-code a unit
 	"evaluate": function(n){ Math.round(n); }, // Function body
-	"individualized": false // True if the function should be evaluated for each element
+	"individualized": false, // True if the function should be evaluated for each element
+	"dynamic": true // True if the function's value could change at runtime
 }
 
 // Globals

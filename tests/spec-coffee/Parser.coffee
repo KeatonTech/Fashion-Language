@@ -426,39 +426,46 @@ describe "Parser", ()->
 			expect(expressionResult).toBe("300px")
 
 
+		### MAYBE THIS WILL COME BACK LATER
 		it "should allow bindings in expressions", ()->
 			result = parse(	"""
 							div {
-								height: $('#sidebar')px;
+								height: @('#sidebar')px;
 							}
 							""")
 
 			bindSpy = jasmine.createSpy('spy').and.returnValue(10)
+			thisObj = {querySelector: bindSpy}
 
 			expression = result.selectors.div.height
 			expect(expression.dynamic).toBe(true)
 			expect(expression.individualized).toBe(false)
 			expect(expression.unit).toBe("px")
-			expect(expression.evaluate({},{},{},bindSpy)).toBe("10px")
+			expect(expression.evaluate({},{},$wf.$functions,thisObj)).toBe("10px")
 
-			expect(bindSpy).toHaveBeenCalledWith("#sidebar", "", undefined)
+			expect(bindSpy).toHaveBeenCalledWith("#sidebar")
+		###
 
 		it "should allow alternate-property bindings in expressions", ()->
 			result = parse(	"""
 							div {
-								height: $('#sidebar', 'width')px;
+								height: @('#sidebar', 'width')px;
 							}
 							""")
 
-			bindSpy = jasmine.createSpy('spy').and.returnValue(20)
+			bindSpy = jasmine.createSpy('spy').and.returnValue({})
+			thisObj = {
+				querySelector: bindSpy
+				getComputedStyle: ()-> {width: 20}
+			}
 
 			expression = result.selectors.div.height
 			expect(expression.dynamic).toBe(true)
 			expect(expression.individualized).toBe(false)
 			expect(expression.unit).toBe("px")
-			expect(expression.evaluate({},{},{},bindSpy)).toBe("20px")
+			expect(expression.evaluate({},{},$wf.$functions,thisObj)).toBe("20px")
 
-			expect(bindSpy).toHaveBeenCalledWith("#sidebar", "width", undefined)
+			expect(bindSpy).toHaveBeenCalledWith("#sidebar")
 
 
 		it "should allow !important on expressions", ()->
@@ -479,7 +486,7 @@ describe "Parser", ()->
 		it "should recognize expressions that need to be individualized", ()->
 			result = parse(	"""
 							div {
-								height: $('self','width')px / 1.5;
+								height: @('','width', @self)px / 1.5;
 							}
 							""")
 

@@ -5,6 +5,7 @@
 # Recursively convert an expression string into a parse tree
 window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top = true) ->
 	expander = $wf.$parser.expressionExpander
+	matchParens = window.fashion.$parser.matchParenthesis
 
 	# Create some space
 	dependencies = []; functions = []; script = expString; 
@@ -21,19 +22,16 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 
 	# Detect functions and variables
 	regex = ///(
-			[\$\@]\(['"](.*?)['"]	# Binding function (selector)
-			\,?\s?['"]?(.*?)['"]?\)	# Binding function (property - optional)
-			([^\s]*)|				# Binding function (unit - optional)
 			\@(self|this|parent)	# Relative element reference (name)
-			\.([^\s]+)|				# Relative element reference (property)
+			\.?([^\s\)]*)|			# Relative element reference (property)
 			\$([\w\-]+)|			# Defined variable
 			\@([\w\-]+)|			# Global variable
 			([\-]{0,1}				# Number with unit (negative)
 			([\.]{0,1}\d+|			# Number with unit (decimal at beginning)
 			\d+(\.\d*)?)			# Number with unit (decimal in middle)
 			[a-zA-Z]{1,4})|			# Number with unit (unit)
-			([\w\-]*)\(|			# Function definition
-			\(|\)					# Track depth (for matchParenthesis)
+			([\w\-\@\$]*)\(|		# Function definition
+			\(|\)([\S]*)			# Track depth and pull out function units
 			)///g
 	
 	# Handle each piece
@@ -42,19 +40,19 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 		start = section.index; length = section[0].length; end = start + length;
 
 		# Pass off to the relevant expander functions
-		if section[2] then eObj = expander.domBinding section[2], section[3], section[4]
-		else if section[5] then eObj = expander.relativeObject section[5], section[6]
-		else if section[7] then eObj = expander.localVariable section[7], vars
-		else if section[8] then eObj = expander.globalVariable section[8], globals
-		else if section[9] then eObj = expander.numberWithUnit section[9]
-		else if section[12]
-			contained = window.fashion.$parser.matchParenthesis regex, expString, end
+		if section[2] then eObj = expander.relativeObject section[2], section[3]
+		else if section[4] then eObj = expander.localVariable section[4], vars
+		else if section[5] then eObj = expander.globalVariable section[5], globals
+		else if section[6] then eObj = expander.numberWithUnit section[6]
+		else if section[9]
+			{body: contained, unit: funit} = matchParens regex, expString, end
 			if !contained
 				contained = expString.substring(end, expString.length - 1)
 				shouldBreak = true
 
 			length += contained.length + 1
-			eObj = expander.function section[12], contained, vars, funcs, globals
+			if funit then length += funit.length
+			eObj = expander.function section[9], contained, funit, vars, funcs, globals
 
 		# Handle the expanded object (eObj)
 		if !eObj then continue
@@ -84,9 +82,9 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 
 		# Attempt to make this function
 		try
-			# Function(variables, globals, functions, DOM Binding function, element)
+			# Function(variables, globals, functions, function execution environment, element)
 			# "e" is only actually available for individualized expressions
-			evaluate = Function("v","g","f","d","e",script)
+			evaluate = Function("v","g","f","t","e",script)
 		catch e
 			console.log "[FASHION] Could not compile script: #{script}"
 			throw e
@@ -116,8 +114,10 @@ window.fashion.$parser.matchParenthesis = (regex, string, index) ->
 	lastIndex = index
 	while section = regex.exec string
 		if section[0].indexOf("(") isnt -1 then depth++
-		else if section[0].indexOf(")") isnt -1 then if depth-- is 0 then return acc
-		else 
+		else if section[0].indexOf(")") isnt -1 and depth-- is 0
+			acc += string.substr(lastIndex, (section.index - lastIndex))
+			return {body: acc, unit: section[10]}
+		else
 			acc += string.substr(lastIndex, (section.index - lastIndex) + section[0].length)
 			lastIndex = section.index + section[0].length
 
@@ -131,7 +131,7 @@ window.fashion.$parser.determineExpressionType = (types, units) ->
 		if type is $wf.$type.Unknown then continue
 		if !topType then topType = type
 		else if type isnt topType 
-			if type is $wf.$type.String then type = $wf.$type.String
+			if type is $wf.$type.String then topType = $wf.$type.String
 			else
 				console.log "[FASHION] Found mixed types in expression"
 				return {}
@@ -193,7 +193,7 @@ window.fashion.$parser.expressionExpander =
 
 	# Expand relative object references (disguised as globals)
 	relativeObject: (keyword, property) ->
-		varName = if keyword is "parent" then "e.parent." else "e."
+		varName = if keyword is "parent" then "e.parent" else "e"
 
 		# Determine the type based on the last property
 		dotProperties = property.split(".")
@@ -205,31 +205,18 @@ window.fashion.$parser.expressionExpander =
 		else 
 			type = $wf.$type.String
 
+		script = varName
+		if property then script += "." + property
+
 		return {
 			type: type, unit: unit,
-			script: varName + property,
+			script: script,
 			dynamic: true
 			individualized: true
 		}
 
-	# Expand DOM bindings
-	domBinding: (selector, property, unit) ->
-		individualized = selector.indexOf("self") isnt -1
-		individualized ||= selector.indexOf("parent") isnt -1
-
-		# Turn it into a full-on function call
-		script = "d('#{selector}', #{'\'' + property + '\'' || 'undefined'}, e)" 
-
-		return {
-			type: if unit then $wf.$type.Number else $wf.$type.Unknown,
-			unit: unit || "",
-			script: script,
-			dynamic: true
-			individualized: individualized
-		}
-
 	# Expand functions, which involves expanding any arguments of theirs into expressions
-	function: (name, argumentsString, vars, funcs, globals) ->
+	function: (name, argumentsString, inputUnit, vars, funcs, globals) ->
 
 		fObj = funcs[name]
 		if !fObj then return console.log "[FASHION] Function $#{name} does not exist."
@@ -243,9 +230,9 @@ window.fashion.$parser.expressionExpander =
 		else expressions = []
 
 		# Bundle everything together
-		dependencies = []; functions = [name]; scripts = []; 
+		dependencies = []; functions = [name]; scripts = ["t"]; 
 		individualized = fObj.individualized || false;
-		dynamic = false;
+		dynamic = fObj.dynamic || false;
 
 		for expression in expressions
 			if expression.dynamic is true then dynamic = true
@@ -261,8 +248,8 @@ window.fashion.$parser.expressionExpander =
 
 		# Return a neat little package
 		return {
-			type: fObj.output, unit: unit,
-			script: "f.#{name}.evaluate(#{scripts.join(',')})"
+			type: fObj.output, unit: inputUnit || unit,
+			script: "f['#{name}'].evaluate.call(#{scripts.join(',')})"
 			dependencies: dependencies,
 			functions: functions
 			dynamic: dynamic
