@@ -1301,71 +1301,6 @@ window.fashion.$run.evaluate = function(valueObject, element, variables, types, 
     return evaluateSingleValue(valueObject);
   }
 };
-window.fashion.$run.defineProperties = function(variables, objectName) {
-  var container, propObject, proxy, varName, varObj, _results;
-  if (variables == null) {
-    variables = FASHION.variables;
-  }
-  if (objectName == null) {
-    objectName = FASHION.config.variableObject;
-  }
-  container = void 0;
-  if (objectName) {
-    container = window[objectName] = {};
-  } else {
-    container = window;
-  }
-  proxy = w.FASHION.variableProxy = {};
-  _results = [];
-  for (varName in variables) {
-    varObj = variables[varName];
-    propObject = {
-      get: (function(varObj) {
-        return function() {
-          return varObj.value;
-        };
-      })(varObj),
-      set: ((function(_this) {
-        return function(varName, varObj) {
-          return function(newValue) {
-            return _this.updateVariable(varName, newValue);
-          };
-        };
-      })(this))(varName, varObj)
-    };
-    Object.defineProperty(container, varName, propObject);
-    Object.defineProperty(container, "$" + varName, propObject);
-    proxy[varName] = {};
-    _results.push(Object.defineProperty(proxy[varName], "value", propObject));
-  }
-  return _results;
-};
-
-window.fashion.$run.watchGlobals = function(globals) {
-  var gObj, name, _results;
-  if (globals == null) {
-    globals = FASHION.globals;
-  }
-  _results = [];
-  for (name in globals) {
-    gObj = globals[name];
-    _results.push(gObj.watch(((function(_this) {
-      return function(gObj) {
-        return function() {
-          var properties, selector, _ref, _results1;
-          _ref = gObj.dependants;
-          _results1 = [];
-          for (selector in _ref) {
-            properties = _ref[selector];
-            _results1.push(_this.updateSelector(selector));
-          }
-          return _results1;
-        };
-      };
-    })(this))(gObj)));
-  }
-  return _results;
-};
 var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 window.fashion.$run.determineType = function(value, types, constants) {
@@ -1586,6 +1521,71 @@ window.fashion.$run.addStyleToElement = function(element, style) {
   }
   currentStyle = element.getAttribute("style") || "";
   return element.setAttribute("style", currentStyle + style);
+};
+window.fashion.$run.defineProperties = function(variables, objectName) {
+  var container, propObject, proxy, varName, varObj, _results;
+  if (variables == null) {
+    variables = FASHION.variables;
+  }
+  if (objectName == null) {
+    objectName = FASHION.config.variableObject;
+  }
+  container = void 0;
+  if (objectName) {
+    container = window[objectName] = {};
+  } else {
+    container = window;
+  }
+  proxy = w.FASHION.variableProxy = {};
+  _results = [];
+  for (varName in variables) {
+    varObj = variables[varName];
+    propObject = {
+      get: (function(varObj) {
+        return function() {
+          return varObj.value;
+        };
+      })(varObj),
+      set: ((function(_this) {
+        return function(varName, varObj) {
+          return function(newValue) {
+            return _this.updateVariable(varName, newValue);
+          };
+        };
+      })(this))(varName, varObj)
+    };
+    Object.defineProperty(container, varName, propObject);
+    Object.defineProperty(container, "$" + varName, propObject);
+    proxy[varName] = {};
+    _results.push(Object.defineProperty(proxy[varName], "value", propObject));
+  }
+  return _results;
+};
+
+window.fashion.$run.watchGlobals = function(globals) {
+  var gObj, name, _results;
+  if (globals == null) {
+    globals = FASHION.globals;
+  }
+  _results = [];
+  for (name in globals) {
+    gObj = globals[name];
+    _results.push(gObj.watch(((function(_this) {
+      return function(gObj) {
+        return function() {
+          var properties, selector, _ref, _results1;
+          _ref = gObj.dependants;
+          _results1 = [];
+          for (selector in _ref) {
+            properties = _ref[selector];
+            _results1.push(_this.updateSelector(selector));
+          }
+          return _results1;
+        };
+      };
+    })(this))(gObj)));
+  }
+  return _results;
 };
 window.fashion.$actualizer = {
   actualizeFullSheet: function(parseTree, index) {

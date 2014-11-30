@@ -1,5 +1,3 @@
-# THESE FUNCTIONS CAN ONLY BE RUN IN THE LIVE ENVIRONMENT
-
 # Loop through elements belonging to given selectors and add properties to them
 window.fashion.$run.applyIndividualizedSelectors = (selectors)->
 	@removeFashionStyles()

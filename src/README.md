@@ -42,14 +42,19 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***javascript/javascript.coffee:*** Generates javascript text, adds it to the page inside a script tag.
 * ***javascript/blueprint.coffee:*** Text generating functions used for different parts of the actualized JS. Converts runtime functions into text and adds them to the output.
 
-### ./runtime
+### ./shared
 ##### Code used to deal with variables and expressions that is used by both the compiler and the outputted code
 
-* ***runtime.coffee:*** Has basic functions dealing with variables. Also includes all the other runtime files.
-* ***evaluation.coffee:*** Evaluates expressions and returns their result as a CSS value.
-* ***observer.coffee:*** Object.observe and polyfills that watch for changes to a variables object. *Only used in output code*
-* ***types.coffee:*** Functions dealing with data types, including determining the type of a value.
+* ***evaluation.coffee:*** Evaluates expressions & other value objects and returns their result as a CSS value.
+* ***types.coffee:*** Determines the data type of an input CSS value, used to type variables and to validate their new values.
 * ***units.coffee:*** Functions to deal with units, including determining numerical & color units and conversion infrastructure.
+
+### ./runtime
+##### Functions that are used in the generated Javascript code and run on the page.
+
+* ***runtime.coffee:*** Has basic functions for updating Fashion variables and associated CSS selectors
+* ***dom/watch-vars.coffee:*** Watches for changes to the variables object. Supports IE9+, optional polyfill may be added later.
+* ***dom/individualized.coffee:*** Applies individualized properties to each element matching the selector.
 
 ***
 

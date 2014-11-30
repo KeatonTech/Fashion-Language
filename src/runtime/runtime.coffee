@@ -1,6 +1,6 @@
-# Runtime methods are also used in the compile step and 
-# as such are stored as functions
-# Functions must be run with self set to either window.fashion.$run or FASHION.runtime
+# Functions that are included in the compiled JS and run on the client.
+# Must be run with self set to either window.fashion.$run or FASHION.runtime
+# Note: These will only be minified if you run the minified Fashion compiler.
 window.fashion.$run = 
 
 	# Throws an error to the console
@@ -80,8 +80,8 @@ window.fashion.$run =
 			else return ""
 
 # Includes
-# @prepros-append "./evaluation.coffee"
-# @prepros-append "./observer.coffee"
-# @prepros-append "./types.coffee"
-# @prepros-append "./units.coffee"
-# @prepros-append "./dom.coffee"
+# @prepros-append "../shared/evaluation.coffee"
+# @prepros-append "../shared/types.coffee"
+# @prepros-append "../shared/units.coffee"
+# @prepros-append "./dom/individualized.coffee"
+# @prepros-append "./dom/watch-vars.coffee"

@@ -1,5 +1,3 @@
-# THESE FUNCTIONS CAN ONLY BE RUN IN THE LIVE ENVIRONMENT
-
 # Wait for a change in the style object
 window.fashion.$run.defineProperties = 
 	(variables = FASHION.variables, objectName = FASHION.config.variableObject)->
