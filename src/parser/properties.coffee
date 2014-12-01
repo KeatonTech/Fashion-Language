@@ -122,27 +122,3 @@ window.fashion.$parser.parseSingleValue = (value, variables, allowExpression = t
 
 	# Nope, this is just a normal property
 	return value
-
-
-# Splits a string by commas, but only those not inside parenthesis
-window.fashion.$parser.splitByTopLevelCommas = (value) ->
-	depth = 0
-	acc = ""
-	ret = []
-
-	# Go through, counting the depth
-	regex = /(\(|\)|\,|[^\(\)\,]+)/g
-	while token = regex.exec value
-		if token[0] is "," and depth is 0
-			ret.push acc
-			acc = ""
-			continue;
-
-		if token[0] is "(" then depth++
-		if token[0] is ")" then depth--
-
-		acc += token[0]
-
-	# Return an array of values
-	ret.push acc
-	return ret

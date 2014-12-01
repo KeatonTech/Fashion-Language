@@ -23,11 +23,16 @@ window.fashion.$parser.parseSections = (fashionText) ->
 			variables[segment[3]] = {raw: segment[4]}
 
 		# Parse blocks
-		else if segment[5] and segment[6]
+		else if segment[5]
 			startIndex = segment.index + segment[0].length
+
+			# Parse out the arguments
+			if segment[6] then blockArgs = $wf.$parser.splitByTopLevelSpaces segment[6]
+			else blockArgs = []
+
 			blocks.push
 				type: segment[5],
-				arguments: segment[7],
+				arguments: blockArgs,
 				body: window.fashion.$parser.parseBlock fashionText, regex, startIndex
 
 		# Parse selectors
@@ -119,4 +124,4 @@ window.fashion.$parser.parseBlock = (fashionText, regex, startIndex) ->
 		else if segment[7] then bracketDepth++ # Nested Selector
 
 	# Return the selectors
-	return fashionText.substring(startIndex, endIndex)
+	return fashionText.substring(startIndex, endIndex - 1).trim()

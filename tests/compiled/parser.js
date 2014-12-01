@@ -408,9 +408,62 @@
 
 }).call(this);
 (function() {
+  window.fashiontests.parser.blocks = function() {
+    var parse;
+    parse = window.fashion.$parser.parse;
+    it("should parse the block body and properties", function() {
+      var block, result;
+      result = parse("@block property1 property2 {\n	block body\n}");
+      block = result.blocks[0];
+      expect(block["arguments"].length).toBe(2);
+      expect(block["arguments"][0]).toBe("property1");
+      expect(block["arguments"][1]).toBe("property2");
+      expect(block.body).toBe("block body");
+      return expect(block.type).toBe("block");
+    });
+    it("should parse blocks with no properties", function() {
+      var block, result;
+      result = parse("@block-type {\n	block body 2\n}");
+      block = result.blocks[0];
+      expect(block["arguments"].length).toBe(0);
+      expect(block.body).toBe("block body 2");
+      return expect(block.type).toBe("block-type");
+    });
+    it("should parse one-line blocks", function() {
+      var block, result;
+      result = parse("@block_type a1 { block body 3 }");
+      block = result.blocks[0];
+      expect(block["arguments"].length).toBe(1);
+      expect(block["arguments"][0]).toBe("a1");
+      expect(block.body).toBe("block body 3");
+      return expect(block.type).toBe("block_type");
+    });
+    it("should parse blocks with nested brackets", function() {
+      var block, result;
+      result = parse("@outer-block {\n	selector: {\n		property: 1;\n	}\n}");
+      block = result.blocks[0];
+      expect(block["arguments"].length).toBe(0);
+      expect(block.body).toBe("selector: {\n		property: 1;\n	}");
+      return expect(block.type).toBe("outer-block");
+    });
+    return it("should parse blocks with complex expression properties", function() {
+      var block, result;
+      result = parse("@client (@width < 10) 'this is a message' {\n	selector: {property: 1}\n}");
+      block = result.blocks[0];
+      expect(block["arguments"].length).toBe(2);
+      expect(block["arguments"][0]).toBe("(@width < 10)");
+      expect(block["arguments"][1]).toBe("'this is a message'");
+      expect(block.body).toBe("selector: {property: 1}");
+      return expect(block.type).toBe("client");
+    });
+  };
+
+}).call(this);
+(function() {
   describe("Parser", function() {
     describe("Variables", window.fashiontests.parser.variables);
     describe("Selectors", window.fashiontests.parser.selectors);
+    describe("Blocks", window.fashiontests.parser.blocks);
     describe("Properties", window.fashiontests.parser.properties);
     return describe("Expressions", window.fashiontests.parser.expressions);
   });

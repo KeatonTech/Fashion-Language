@@ -353,8 +353,66 @@ window.fashion.$parser = {
     return parsed;
   }
 };
+
+window.fashion.$parser.splitByTopLevelCommas = function(value) {
+  var acc, depth, regex, ret, token;
+  depth = 0;
+  acc = "";
+  ret = [];
+  regex = /(\(|\)|\,|[^\(\)\,]+)/g;
+  while (token = regex.exec(value)) {
+    if (token[0] === "," && depth === 0) {
+      ret.push(acc);
+      acc = "";
+      continue;
+    }
+    if (token[0] === "(") {
+      depth++;
+    }
+    if (token[0] === ")") {
+      depth--;
+    }
+    acc += token[0];
+  }
+  ret.push(acc);
+  return ret;
+};
+
+window.fashion.$parser.splitByTopLevelSpaces = function(value) {
+  var acc, bt, depth, dq, regex, ret, sq, token;
+  depth = 0;
+  sq = dq = bt = false;
+  acc = "";
+  ret = [];
+  regex = /(\(|\)|\"|\'|\`|\s|[^\(\)\"\'\`\s]+)/g;
+  while (token = regex.exec(value)) {
+    if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
+      ret.push(acc);
+      acc = "";
+      continue;
+    }
+    if (token[0] === "(") {
+      depth++;
+    }
+    if (token[0] === ")") {
+      depth--;
+    }
+    if (token[0] === "'" && !dq && !bt) {
+      sq = !sq;
+    }
+    if (token[0] === '"' && !sq && !bt) {
+      dq = !dq;
+    }
+    if (token[0] === "`" && !dq && !sq) {
+      bt = !bt;
+    }
+    acc += token[0];
+  }
+  ret.push(acc);
+  return ret;
+};
 window.fashion.$parser.parseSections = function(fashionText) {
-  var blocks, newSels, regex, sObj, segment, selectors, startIndex, variables, _i, _len;
+  var blockArgs, blocks, newSels, regex, sObj, segment, selectors, startIndex, variables, _i, _len;
   variables = {};
   selectors = {};
   blocks = [];
@@ -367,11 +425,16 @@ window.fashion.$parser.parseSections = function(fashionText) {
       variables[segment[3]] = {
         raw: segment[4]
       };
-    } else if (segment[5] && segment[6]) {
+    } else if (segment[5]) {
       startIndex = segment.index + segment[0].length;
+      if (segment[6]) {
+        blockArgs = $wf.$parser.splitByTopLevelSpaces(segment[6]);
+      } else {
+        blockArgs = [];
+      }
       blocks.push({
         type: segment[5],
-        "arguments": segment[7],
+        "arguments": blockArgs,
         body: window.fashion.$parser.parseBlock(fashionText, regex, startIndex)
       });
     } else if (segment[7]) {
@@ -456,7 +519,7 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
       bracketDepth++;
     }
   }
-  return fashionText.substring(startIndex, endIndex);
+  return fashionText.substring(startIndex, endIndex - 1).trim();
 };
 var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -676,30 +739,6 @@ window.fashion.$parser.parseSingleValue = function(value, variables, allowExpres
     return valueObject;
   }
   return value;
-};
-
-window.fashion.$parser.splitByTopLevelCommas = function(value) {
-  var acc, depth, regex, ret, token;
-  depth = 0;
-  acc = "";
-  ret = [];
-  regex = /(\(|\)|\,|[^\(\)\,]+)/g;
-  while (token = regex.exec(value)) {
-    if (token[0] === "," && depth === 0) {
-      ret.push(acc);
-      acc = "";
-      continue;
-    }
-    if (token[0] === "(") {
-      depth++;
-    }
-    if (token[0] === ")") {
-      depth--;
-    }
-    acc += token[0];
-  }
-  ret.push(acc);
-  return ret;
 };
 window.fashion.$parser.parseExpression = function(expString, vars, funcs, globals, top) {
   var contained, dependencies, dynamic, e, eObj, end, evaluate, expander, functions, funit, individualized, length, matchParens, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, type, types, unit, units, _ref, _ref1;
