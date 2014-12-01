@@ -3,6 +3,7 @@
 * Full support for blocks throughout the whole system. Parser -> Processor -> Actualizer
 * Binding function, with DOM observers to update its value
 * Variable scoping to allow per-element values. (Big changes to parser, actualizer & runtime)
+* Also, while that's happening, variables declarations should support expressions
 * Switch to generating a single stylesheet, instead of 2, to keep inheritance fully in tact
 * Allow ternaries (CS and JS formats) in expressions
 * Optionally move individualized properties out of the style tag and into the CSS.
