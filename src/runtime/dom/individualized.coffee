@@ -26,7 +26,7 @@ window.fashion.$run.applyIndividualizedSelectors = (selectors)->
 					if e["bind-#{property}"] is "true" then continue
 					evaluateExpression = expression.evaluate.bind({},
 						w.FASHION.variableProxy, w.FASHION.globals,
-						w.FASHION.functions, {}, e)
+						w.FASHION.functions, w.FASHION.runtime, e)
 					propertyObject['apply'](element, expression, evaluateExpression)
 					element.setAttribute "bind-#{property}", "true"
 
@@ -34,7 +34,7 @@ window.fashion.$run.applyIndividualizedSelectors = (selectors)->
 				else 
 					value = expression.evaluate(
 						w.FASHION.variableProxy, w.FASHION.globals,
-						w.FASHION.functions, {}, e)
+						w.FASHION.functions, w.FASHION.runtime, e)
 					acc += "#{property}: #{value};"
 
 

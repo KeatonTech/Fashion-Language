@@ -16,6 +16,7 @@ window.fashion.$run.evaluate = (valueObject, element, variables, types, funcs, g
 	if !types then types = FASHION.type
 	if !funcs then funcs = FASHION.functions
 	if !globals then globals = FASHION.globals
+	runtime = if window.FASHION then w.FASHION.runtime else $wf.$run
 
 	# Evaluates a single value, not an array
 	evaluateSingleValue = (valueObject) ->
@@ -42,7 +43,7 @@ window.fashion.$run.evaluate = (valueObject, element, variables, types, funcs, g
 
 		# Handle expressions
 		else if valueObject.evaluate
-			return valueObject.evaluate variables, globals, funcs
+			return valueObject.evaluate variables, globals, funcs, runtime
 
 		# Handle valued objects (used with transitiong)
 		else if valueObject.value then return valueObject.value

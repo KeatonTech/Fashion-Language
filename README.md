@@ -104,9 +104,43 @@ $contentAnimateDuration: 300ms;
 
 The third property for transitions is the delay, so in this case the box's content will wait until the box has animated in to animate in itself. Also notice that every property of the transition can be bound to a variable, so adding something like an animation speed setting for your users would be trivial.
 
+But wait, there's more! CSS3 provides the @keyframes block to define more complex animations. Unfortunately, this block can only apply to individual elements, so it is not very useful when orchestrating a whole big animated event on your site (a transition between pages, for example). Creating this kind of beautiful symphony of animations right now requires some really ugly Javascript code with things like setTimeout scattered around. Fashion solves this with the new @transition block.
+
+```scss
+@transition fade-in {
+	start {
+		div {
+			opacity: 0.0;
+			position: relative;
+			right: 100px;
+
+			p {opacity: 0;}
+		}
+	}
+
+	0% {
+		div {
+			opacity: [linear 50%] 1.0;
+			right: [ease-out 75%] 0px;
+		}
+	}
+	50% {
+		div p {opacity: [linear 50%] 1.0;}
+	}
+}
+
+button {
+	on-click: trigger("fade-in", 500ms);
+}
+
+```
+
+Notice that all of the durations are specified in terms of percentages, transitions are meant to easily scale faster or slower for easy tweaking later on. In this transition, the div would be fading from 0ms to 250ms and moving from 0ms to 375ms. The p's inside the div would start fading in at 250ms and finish at 500ms.
+
+
 ### Event Handling
 
-Here's the part where we start to break some new ground. Fashion is more than just a fancy stylesheet, it's also a layer between your HTML and your Javascript. Gone are the days of tying your event handling code to specific CSS selectors, now you can use Fashion to link specific selectors to specific functions.
+Here's the part where we start to break some totally new ground. Fashion is more than just a fancy stylesheet, it's also a layer between your HTML and your Javascript. Gone are the days of tying your event handling code to specific CSS selectors, now you can use Fashion to link specific selectors to specific functions.
 
 ```scss
 .button.submit {

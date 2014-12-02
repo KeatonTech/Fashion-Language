@@ -68,4 +68,5 @@ document.onreadystatechange = ()->
 # Include all of the built-in Fashion modules
 # @prepros-append ./built-in/functions/functions.coffee
 # @prepros-append ./built-in/properties/properties.coffee
+# @prepros-append ./built-in/blocks/blocks.coffee
 # @prepros-append ./built-in/globals.coffee

@@ -44,3 +44,11 @@ window.fashion.$run.getUnit = (rawValue, varType, type=FASHION.type, unit=FASHIO
 			rawValue = rawValue.substring(1, rawValue.length - 1)
 
 	return {value: rawValue, unit: undefined}
+
+# CONVERSION METHODS
+
+# Convert time to milliseconds
+window.fashion.$run.timeInMs = (valueObject) ->
+	if valueObject.unit is "ms" then return valueObject.value
+	else if valueObject.unit is "s" then return valueObject.value * 1000
+	else return 0

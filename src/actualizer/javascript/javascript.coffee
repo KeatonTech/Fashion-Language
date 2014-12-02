@@ -21,6 +21,9 @@ window.fashion.$actualizer.createScriptFromTree = (tree, selMap, rules) ->
 	jsText += "w.FASHION.properties = #{window.fashion.$stringify tr.properties};\n"
 	jsText += "w.FASHION.blocks = #{window.fashion.$stringify tr.blocks};\n"
 
+	# Add scripts that the modules have generated
+	jsText += s for s in tree.javascript
+
 	# Start this thing off
 	jsText += window.fashion.$blueprint.startRuntime()
 

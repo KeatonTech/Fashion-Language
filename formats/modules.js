@@ -56,7 +56,6 @@ globalName: {
 	"replace": false,
 
 	// Optionally add functions to the compiled fashion runtime
-	"runtimeKey": "propertyName",
 	"runtimeObject": {
 		"usefulFunction": function() {console.log("I'm useful");}
 	}
@@ -76,11 +75,10 @@ blockName: {
 	// }
 	// Returns an error if the block could not be added
 
-	"compile": function(value) {},
+	"compile": function(args, body) {},
 
 	// Optionally add functions to the compiled fashion runtime
-	"runtimeKey": "propertyName",
 	"runtimeObject": {
-		"usefulFunction": function() {console.log("I'm useful");}
+		"trigger": function() {console.log("I'm useful");}
 	}
 }

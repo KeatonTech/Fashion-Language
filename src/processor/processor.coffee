@@ -8,11 +8,14 @@ window.fashion.$processor =
 		# Used to allow modules to inject extra JS code into the compiled output
 		parseTree["javascript"] = []
 
-		# Process properties
-		parseTree = window.fashion.$processor.properties parseTree, $wf.$properties
-
 		# Now that that's all done, list all of the module requirements for the parse tree
 		window.fashion.$processor.listRequirements parseTree
+
+		# Process blocks
+		parseTree = window.fashion.$processor.blocks parseTree, $wf.$blocks
+
+		# Process properties
+		parseTree = window.fashion.$processor.properties parseTree, $wf.$properties
 
 		# Pass it back
 		# I know this shouldn't be necessary but let's stay safe
@@ -49,8 +52,12 @@ window.fashion.$processor =
 		# Add blocks from the blocks list
 		for block in parseTree.blocks
 			bName = block.type
-			if bName in $wf.$blocks
-				req.blocks[bName] = $wf.$blocks[bName]
+			if $wf.$blocks[bName]
+				req.blocks[bName] = $wf.$blocks[bName]["runtimeObject"]
 
-# Includes
+# Helper methods that provide functionality to extensions
+# @prepros-append ./api.coffee
+
+# Processors that run code for different extensions
+# @prepros-append ./blocks.coffee
 # @prepros-append ./properties.coffee

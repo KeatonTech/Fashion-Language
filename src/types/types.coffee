@@ -2,9 +2,10 @@
 window.fashion.$type =
 
 	# Basic Singular Types (font, width, color)
-	Number: 	0
-	String:		1
-	Color: 		2
+	None:		0
+	Number: 	1
+	String:		2
+	Color: 		3
 
 	# Composite Types (border, box-shadow, padding)
 	C2Number:	50

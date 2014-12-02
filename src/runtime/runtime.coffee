@@ -6,6 +6,7 @@ window.fashion.$run =
 	# Throws an error to the console
 	throwError: (message) -> console.log "[FASHION] " + message
 
+
 	# Updates a variable's value and name, if possible
 	# Errors out of the variable's type would change
 	updateVariable: (name, value, variables = FASHION.variables, types = FASHION.type) ->
@@ -31,29 +32,57 @@ window.fashion.$run =
 
 
 	# Refresh the values for a selector
-	updateSelector: (name, variables, selectors, map) ->
+	updateSelector: (name, variables, selectors, map, allowNonexistant = false) ->
 
 		# Defaults (set here to keep the function definition under 93 chars)
 		if !variables then variables = FASHION.variables
 		if !selectors then selectors = FASHION.selectors
 		if !map then map = FASHION.cssMap
 
-		# Load what we need
-		properties = selectors.dynamic[name]
-		if !properties then return @throwError "Could not find selector '#{name}'"
-		location = map[name]
-		if !location then return @throwError "Could not find selector '#{name}' in CSS"
+		# Deal with dynamic selectors
+		if selectors.dynamic[name]
+			properties = selectors.dynamic[name]
 
-		# Get the sheet that contains the selector
-		cssElem = document.getElementById("#{FASHION.config.cssId}#{location[0]}")
+			# Check that everything is as it should be
+			if !properties then return @throwError "Could not find selector '#{name}'"
+			location = map[name]
+			if !location and !allowNonexistant
+				return @throwError "Could not find selector '#{name}' in CSS"
 
-		# Update individualized properties if necessary
-		individualProps = selectors.individual[name]
-		if individualProps then @applyIndividualizedSelectors selectors.individual
+			# Delete the existing rule, or make a new one
+			if location
+				cssElem = document.getElementById("#{FASHION.config.cssId}#{location[0]}")
+				cssElem.sheet.deleteRule location[1]
+			else 
+				cssElem = document.getElementById("#{FASHION.config.cssId}0")
+				map[name] = location = [0, cssElem.sheet.rules.length]
 
-		# Swap out the selector
-		cssElem.sheet.deleteRule location[1] 
-		cssElem.sheet.insertRule @regenerateSelector(name, properties), location[1]
+			# Add the regenerated selector
+			cssElem.sheet.insertRule @regenerateSelector(name, properties), location[1]
+
+		# Deal with individualized selectors
+		if selectors.individual[name]
+			individualProps = selectors.individual[name]
+			if individualProps then @applyIndividualizedSelectors selectors.individual
+
+
+	# Add new properties to a selector
+	addProperties: (name, properties, overwrite = true, selectors) ->
+
+		# Defaults (set here to keep the function definition under 93 chars)
+		if !selectors then selectors = FASHION.selectors
+
+		# Add the selector, if necessary
+		if !selectors.dynamic[name] then selectors.dynamic[name] = {}
+
+		# Start adding stuff
+		for property, valueObject of properties
+			if selectors.dynamic[name][property] and !overwrite then continue
+			selectors.dynamic[name][property] = valueObject
+
+		# Update this selector, or create it if necessary
+		@updateSelector name, false, selectors, false, true
+
 
 	# Generate a selector from its dynamic properties
 	regenerateSelector: (selector, properties, variables = FASHION.variables) ->
@@ -64,13 +93,13 @@ window.fashion.$run =
 
 		# Loop over every property in the selector
 		for property, valueObject of properties
-			if dynamicSelector or valueObject.dynamic is true
 
-				# Evaluate the current string value
-				val = @evaluate valueObject, undefined, variables
-				dynamicProps += "#{property}: #{val};"
+			# Evaluate the current string value
+			val = @evaluate valueObject, undefined, variables
+			dynamicProps += "#{property}: #{val};"
 
 		return dynamicProps + "}"
+
 
 	# Make sure any variables in a selector's name are expanded
 	expandVariables: (dynamicString,  variables = FASHION.variables) ->
