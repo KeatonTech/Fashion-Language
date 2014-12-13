@@ -591,10 +591,10 @@ window.fashion.$parser = {
   }
 };
 
-window.fashion.$parser.addVariable = function(parseTree, name, value) {
+window.fashion.$parser.addVariable = function(parseTree, name, value, scope) {
   var type, typedValue, unit, unittedValue, val, variableObject;
   value = $wf.$parser.parseSingleValue(value, "$" + name, parseTree);
-  variableObject = new Variable(name, value);
+  variableObject = new Variable(name, value, scope);
   parseTree.addVariable(variableObject);
   if (value instanceof Expression) {
     type = value.type;
@@ -712,6 +712,8 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
     if (segment[0] === "}") {
       selectorStack.pop();
       bracketDepth--;
+    } else if (segment[3] && segment[4]) {
+      topSel.addToBody(fashionText.substring(segment.index, lastIndex));
     } else if (segment[7]) {
       if (segment[7][0] === "&") {
         name = topSel.name + segment[7].substr(1);
@@ -744,7 +746,7 @@ window.fashion.$parser.createSelector = function(parseTree, name) {
     lastIndex = foundVar.index + foundVar[0].length;
     expander = $wf.$parser.expressionExpander.localVariable;
     vExpr = expander(foundVar[1], selector.index, parseTree);
-    isIndividualized |= vExpr.individualized;
+    isIndividualized |= vExpr['individualized'] || false;
     script += vExpr.script + "+";
   }
   if (name.length > lastIndex) {
@@ -776,7 +778,7 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
 window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseTree) {
   var linkId, name, property, regex, transition, value, _results;
   linkId = selector.index;
-  regex = /[\s]*([\w\-\s\$]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*(.*?)[\s]*(!important)?[;}\n]/g;
+  regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*(.*?)[\s]*(!important)?[;}\n]/g;
   _results = [];
   while (property = regex.exec(bodyString)) {
     if (property.length < 7) {
@@ -785,7 +787,7 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
     value = $wf.$parser.parsePropertyValues(property[6], linkId, parseTree);
     name = property[1];
     if (name[0] === "$") {
-      $wf.$parser.parseScopedVariable(name, value, properties, parseTree);
+      $wf.$parser.parseScopedVariable(name, value, property, selector.name, parseTree);
       continue;
     }
     if (property[3]) {
@@ -804,7 +806,7 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
   return _results;
 };
 
-window.fashion.$parser.parseScopedVariable = function(name, value, properties, parseTree) {
+window.fashion.$parser.parseScopedVariable = function(name, value, property, scope, parseTree) {
   if (typeof value === 'array' && typeof value[0] === 'array') {
     throw new Error("Variable declaration '" + name + "' cannot have comma separated values");
   }
@@ -814,7 +816,7 @@ window.fashion.$parser.parseScopedVariable = function(name, value, properties, p
   if (property[7]) {
     throw new Error("Variable declaration '" + name + "' cannot be !important");
   }
-  return $wf.$parser.addVariable(parseTree, segment[3], segment[4]);
+  return $wf.$parser.addVariable(parseTree, name, value, scope);
 };
 
 window.fashion.$parser.parsePropertyValues = function(value, linkId, parseTree) {
@@ -874,6 +876,9 @@ window.fashion.$parser.parsePropertyValue = function(value, linkId, parseTree, a
 };
 
 window.fashion.$parser.parseSingleValue = function(value, linkId, parseTree) {
+  if (!value || typeof value !== 'string') {
+    return value;
+  }
   if (value.match($wf.$parser.identifyExpression())) {
     return window.fashion.$parser.parseExpression(value, linkId, parseTree, window.fashion.$functions, window.fashion.$globals);
   }

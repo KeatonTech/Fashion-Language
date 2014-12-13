@@ -4,7 +4,7 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 	linkId = selector.index
 
 	regex = ///
-			[\s]*([\w\-\s\$]*)\:		# Property/Variable Name
+			[\s]*(\$?[\w\-\s]*)\:		# Property/Variable Name
 			[\s]*(\[([\w\-\$\@]*)		# Transition Name
 			[\s]*([\w\-\$\@\%]*)[\s]*	# Transition Duration (optional)
 			([\w\-\$\@\%]*)\]){0,1}		# Transition Delay (optional)
@@ -22,7 +22,7 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 		# Check to see if this is a variable declaration
 		name = property[1]
 		if name[0] == "$"
-			$wf.$parser.parseScopedVariable name, value, properties, parseTree
+			$wf.$parser.parseScopedVariable name, value, property, selector.name, parseTree
 			continue;
 
 		# Parse transition
@@ -42,7 +42,7 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 
 
 # Parse out variable declarations
-window.fashion.$parser.parseScopedVariable = (name, value, properties, parseTree) ->
+window.fashion.$parser.parseScopedVariable = (name, value, property, scope, parseTree) ->
 
 	if typeof value is 'array' and typeof value[0] is 'array'
 		throw new Error "Variable declaration '#{name}' cannot have comma separated values"
@@ -52,7 +52,7 @@ window.fashion.$parser.parseScopedVariable = (name, value, properties, parseTree
 	if property[7]
 		throw new Error "Variable declaration '#{name}' cannot be !important"
 
-	$wf.$parser.addVariable parseTree, segment[3], segment[4]
+	$wf.$parser.addVariable parseTree, name, value, scope
 
 
 # Splits a value up by commas if necessary and then evaluates it
@@ -116,6 +116,7 @@ window.fashion.$parser.parsePropertyValue =
 
 # Convert a property value into a linked object or expression, if necessary
 window.fashion.$parser.parseSingleValue = (value, linkId, parseTree) ->
+	if !value or typeof value isnt 'string' then return value
 
 	# Check to see if it's an expression
 	if value.match $wf.$parser.identifyExpression()

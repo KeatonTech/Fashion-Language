@@ -72,6 +72,10 @@ window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, las
 			selectorStack.pop()
 			bracketDepth--
 
+		# Pass in variable declarations.
+		else if segment[3] and segment[4]
+			topSel.addToBody fashionText.substring(segment.index, lastIndex)
+
 		# We need to go deeper.
 		else if segment[7]
 
@@ -119,7 +123,7 @@ window.fashion.$parser.createSelector = (parseTree, name) ->
 		vExpr = expander foundVar[1], selector.index, parseTree
 
 		# Use its results
-		isIndividualized |= vExpr.individualized
+		isIndividualized |= (vExpr['individualized'] || false)
 		script += vExpr.script + "+"
 
 	# Add the end of the string if necessary

@@ -18,13 +18,13 @@ window.fashion.$parser =
 
 
 # Adds a variable object
-window.fashion.$parser.addVariable = (parseTree, name, value) ->
+window.fashion.$parser.addVariable = (parseTree, name, value, scope) ->
 
 	# Parse the value into an expression if necessary
 	value = $wf.$parser.parseSingleValue(value, "$"+name, parseTree)
 
 	# Make a variable object
-	variableObject = new Variable name, value
+	variableObject = new Variable name, value, scope
 	parseTree.addVariable variableObject
 
 	# If the variable is an expression, just pull the types out of that

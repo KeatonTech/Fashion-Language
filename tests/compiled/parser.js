@@ -82,7 +82,7 @@
       expect(result.variables["copy"][0]["unit"]).toEqual(unit.Number.px);
       return expect(result.bindings.variables["main"][0]).toBe("$copy");
     });
-    return it("should allow variables to be expressions", function() {
+    it("should allow variables to be expressions", function() {
       var result, v;
       result = parse("$main: 10px;\n$offset: 3px;\n$height: $main / 2 + $offset;");
       expect(result.variables["main"][0]["value"]).toEqual(10);
@@ -111,6 +111,18 @@
       expect(result.variables["height"][0]["value"].evaluate(v)).toBe("15px");
       expect(result.bindings.variables["main"][0]).toBe("$height");
       return expect(result.bindings.variables["offset"][0]).toBe("$height");
+    });
+    it("should allow variables within selectors", function() {
+      var result;
+      result = parse(".menu {\n	$selected: 'main';\n}");
+      expect(result.variables["selected"][".menu"]["value"]).toEqual("main");
+      return expect(result.variables["selected"][".menu"]["type"]).toEqual(type.String);
+    });
+    return it("should allow variables within nested selectors", function() {
+      var result;
+      result = parse(".menu {\n	.main {\n		$isSelected: true;\n	}\n}");
+      expect(result.variables["isSelected"][".menu .main"]["value"]).toEqual("true");
+      return expect(result.variables["isSelected"][".menu .main"]["type"]).toEqual(type.Unknown);
     });
   };
 

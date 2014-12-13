@@ -124,3 +124,30 @@ window.fashiontests.parser.variables = () ->
 		expect(result.bindings.variables["main"][0]).toBe("$height");
 		expect(result.bindings.variables["offset"][0]).toBe("$height");
 
+
+	it "should allow variables within selectors", ()->
+
+		result = parse( """
+						.menu {
+							$selected: 'main';
+						}
+						""")
+
+		expect(result.variables["selected"][".menu"]["value"]).toEqual("main");
+		expect(result.variables["selected"][".menu"]["type"]).toEqual(type.String);
+
+
+	it "should allow variables within nested selectors", ()->
+
+		result = parse( """
+						.menu {
+							.main {
+								$isSelected: true;
+							}
+						}
+						""")
+
+		expect(result.variables["isSelected"][".menu .main"]["value"]).toEqual("true");
+		expect(result.variables["isSelected"][".menu .main"]["type"]).toEqual(type.Unknown);
+
+
