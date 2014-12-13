@@ -1,14 +1,17 @@
-# This is probably the most complicated file in FASHION, just a heads up
+# This is probably the most complicated file in Fashion, just a heads up
 # Its role is to disassemble an implicit expression in Fashion and then
 # piece it back together as valid Javascript, implying units as it goes.
 
 # Recursively convert an expression string into a parse tree
-window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top = true) ->
+window.fashion.$parser.parseExpression = 
+(expString, selector, parseTree, funcs, globals, top = true) ->
+
 	expander = $wf.$parser.expressionExpander
 	matchParens = window.fashion.$parser.matchParenthesis
+	id = selector.index
 
 	# Create some space
-	dependencies = []; functions = []; script = expString; 
+	script = expString; 
 	individualized = dynamic = false;
 
 	# Track the types and units of things included in the expression
@@ -41,8 +44,8 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 
 		# Pass off to the relevant expander functions
 		if section[2] then eObj = expander.relativeObject section[2], section[3]
-		else if section[4] then eObj = expander.localVariable section[4], vars
-		else if section[5] then eObj = expander.globalVariable section[5], globals
+		else if section[4] then eObj = expander.localVariable section[4], id, parseTree
+		else if section[5] then eObj = expander.globalVariable section[5], globals,parseTree
 		else if section[6] then eObj = expander.numberWithUnit section[6]
 		else if section[9]
 			{body: contained, unit: funit} = matchParens regex, expString, end
@@ -52,14 +55,12 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 
 			length += contained.length + 1
 			if funit then length += funit.length
-			eObj = expander.function section[9], contained, funit, vars, funcs, globals
+			eObj = expander.function(section[9], contained, funit, 
+				selector, parseTree, funcs, globals)
 
 		# Handle the expanded object (eObj)
 		if !eObj then continue
-
 		if eObj.script then replaceInScript start, length, eObj.script
-		if eObj.dependencies then dependencies.push.apply dependencies, eObj.dependencies
-		if eObj.functions then functions.push.apply functions, eObj.functions
 
 		if eObj.dynamic == true then dynamic = true
 		if eObj.individualized == true then individualized = true
@@ -93,13 +94,7 @@ window.fashion.$parser.parseExpression = (expString, vars, funcs, globals, top =
 	else script = "{value: #{script}, type: #{type}, unit: '#{unit}'}"
 	
 	# Return something useful for the parser
-	return {
-		type: type, unit: unit, 
-		dynamic: dynamic, individualized: individualized,
-		script: script, 
-		evaluate: evaluate,
-		dependencies: dependencies, functions: functions
-	}
+	return new Expression script, type, unit, dynamic, individualized
 
 
 # Helper function to splice a string into another string
@@ -153,23 +148,40 @@ window.fashion.$parser.determineExpressionType = (types, units) ->
 window.fashion.$parser.expressionExpander =
 
 	# Expand local variables
-	localVariable: (name, vars) ->
-		vObj = vars[name]
-		if !vObj then return console.log "[FASHION] Variable $#{name} does not exist."
+	localVariable: (name, selectorId, parseTree) ->
+		vars = parseTree.variables
+		selectors = vars[name]
+		if !selectors then return console.log "[FASHION] Variable $#{name} does not exist."
+
+		# Anything with a non-top-level variable needs to be individualized
+		isIndividualized = false
+		type = unit = -1
+		for selector, vObj of selectors
+			if selector isnt 0 then isIndividualized = false
+			type = vObj.type
+			unit = vObj.unit
+
+		# The script depends on whether it's individualized or not
+		if isIndividualized then script = "v.f('#{name}').value" # f for find
+		else script = "v.t.#{name}.value" # t for top
+
+		# Link this variable in the parse tree
+		parseTree.addVariableBinding selectorId, name
 
 		return {
-			type: vObj.type
-			unit: vObj.unit
-			dynamic: true
-			script: "v.#{name}.value"
-			dependencies: ["$#{name}"]
+			type: type, unit: unit
+			dynamic: true, individualized: isIndividualized
+			script: script
 		}
 
 	# Expand global variables
-	globalVariable: (name, globals) ->
+	globalVariable: (name, globals, parseTree) ->
 		name = name.toLowerCase()
 		vObj = globals[name]
 		if !vObj then return console.log "[FASHION] Variable $#{name} does not exist."
+
+		# Add a dependency
+		parseTree.addGlobalDependency name, vObj
 
 		return {
 			type: vObj.type
@@ -216,7 +228,8 @@ window.fashion.$parser.expressionExpander =
 		}
 
 	# Expand functions, which involves expanding any arguments of theirs into expressions
-	function: (name, argumentsString, inputUnit, vars, funcs, globals) ->
+	function: (name, argumentsString, inputUnit, selector, parseTree, funcs, globals) ->
+		vars = parseTree.variables
 
 		fObj = funcs[name]
 		if !fObj then return console.log "[FASHION] Function $#{name} does not exist."
@@ -225,20 +238,19 @@ window.fashion.$parser.expressionExpander =
 		if argumentsString.length > 1
 			args = window.fashion.$parser.splitByTopLevelCommas argumentsString
 			expressions = (for arg in args
-				window.fashion.$parser.parseExpression(arg, vars, funcs, globals, false)
+				window.fashion.$parser.parseExpression(
+					arg, selector, parseTree, funcs, globals, false)
 			)
 		else expressions = []
 
 		# Bundle everything together
-		dependencies = []; functions = [name]; scripts = ["t"]; 
+		scripts = ["t"]; 
 		individualized = fObj.individualized || false;
 		dynamic = fObj.dynamic || false;
 
 		for expression in expressions
 			if expression.dynamic is true then dynamic = true
 			if expression.individualized is true then individualized = true
-			dependencies.push.apply dependencies, expression.dependencies || []
-			functions.push.apply functions, expression.functions || []
 			scripts.push expression.script
 
 		# Figure out units and such
@@ -246,12 +258,13 @@ window.fashion.$parser.expressionExpander =
 		else if fObj.unitFrom isnt undefined then unit = expressions[fObj.unitFrom].unit
 		else unit = ""
 
+		# Add the dependency
+		parseTree.addFunctionDependency name, fObj
+
 		# Return a neat little package
 		return {
 			type: fObj.output, unit: inputUnit || unit,
 			script: "f['#{name}'].evaluate.call(#{scripts.join(',')})"
-			dependencies: dependencies,
-			functions: functions
 			dynamic: dynamic
 			individualized: individualized
 		}

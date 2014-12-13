@@ -2,13 +2,13 @@
 class Property
 	constructor: (name, value, transition) -> 
 		@name = name
+
 		if transition 
 			if typeof value isnt 'object'
 				@value = {value: value, transition: transition}
 			else
 				@value = value
 				@value.transition = transition
-
 		else @value = value
 
 

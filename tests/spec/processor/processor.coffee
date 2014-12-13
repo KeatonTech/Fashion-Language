@@ -1,8 +1,6 @@
 describe "Processor", ()->
 
-	# Test the variable parser
-	describe "Variables", window.fashiontests.processor.variables
+	# These existed and now they (temporarily) don't
 
 
 #@prepros-prepend ./processor-header.coffee
-#@prepros-prepend ./variables.coffee

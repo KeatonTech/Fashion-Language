@@ -10,12 +10,11 @@ window.fashiontests.parser.selectors = ()->
 						}
 						""")
 
-		console.log result.selectors
 		expect(result.selectors[0].name).toBe("*")
-		expect(result.selectors[0].properties['height']).toBe("30px")
+		expect(result.selectors[0].properties[0].value).toBe("30px")
 
 		expect(result.selectors[1].name).toBe("ul.test td:last-child")
-		expect(result.selectors[1].properties['background']).toBe("black")
+		expect(result.selectors[1].properties[0].value).toBe("black")
 
 
 	it "should parse nested selectors", ()->
@@ -32,15 +31,23 @@ window.fashiontests.parser.selectors = ()->
 						}
 						""")
 
+		# Check the name and order
+		expect(result.selectors[0].name).toBe(".outer")
+		expect(result.selectors[1].name).toBe(".outer .middle")
+		expect(result.selectors[2].name).toBe(".outer .middle .inner")
+		expect(result.selectors[3].name).toBe(".outer .middle.super")
+
 		# Check head values
-		expect(result.selectors['.outer']['opacity']).toBe("1.0")
-		expect(result.selectors['.outer .middle']['opacity']).toBe("0.5")
-		expect(result.selectors['.outer .middle .inner']['opacity']).toBe("0.0")
-		expect(result.selectors['.outer .middle.super']['opacity']).toBe("0.75")
+		expect(result.selectors[0].properties[0].value).toBe("1.0")
+		expect(result.selectors[1].properties[0].value).toBe("0.5")
+		expect(result.selectors[2].properties[0].value).toBe("0.0")
+		expect(result.selectors[3].properties[0].value).toBe("0.75")
 
 		# Check tail values
-		expect(result.selectors['.outer']['height']).toBe("100px")
-		expect(result.selectors['.outer .middle']['height']).toBe("50px")
+		# NOTE(keatontech): This is actually wrong because it rearranges selectors
+		# 	That aught to get fixed later.
+		expect(result.selectors[0].properties[1].value).toBe("100px")
+		expect(result.selectors[1].properties[1].value).toBe("50px")
 
 
 	it "should allow selectors to be variables", ()->
@@ -51,8 +58,17 @@ window.fashiontests.parser.selectors = ()->
 						}
 						""")
 
-		expect(result.selectors['.$contentDiv']['background']).toBe("black")
-		expect(result.variables.contentDiv.dependants).toEqual({".$contentDiv": [" "]})
+		# Make sure the properties are still getting read
+		expect(result.selectors[0].properties[0].value).toBe("black")
+
+		# Make sure the expression for the name works
+		nameExpression = result.selectors[0].name
+		v = {t: {contentDiv: {value: "content"}}}
+		expect(nameExpression.evaluate(v)).toBe(".content")
+
+		# Test linkback
+		expect(result.bindings.variables["contentDiv"].length).toBe(1)
+		expect(result.bindings.variables["contentDiv"][0]).toBe(0)
 
 
 	it "should allow variables to be part of selectors", ()->
@@ -64,9 +80,14 @@ window.fashiontests.parser.selectors = ()->
 						}
 						""")
 
-		expect(result.selectors['$contentDiv h3 $contentSub']['color']).toBe("black")
-		expect(result.variables.contentDiv.dependants).toEqual(
-			{"$contentDiv h3 $contentSub": [" "]})
-		expect(result.variables.contentSub.dependants).toEqual(
-			{"$contentDiv h3 $contentSub": [" "]})
+		# Make sure the expression for the name works
+		nameExpression = result.selectors[0].name
+		v = {t: {contentDiv: {value: ".content"}, contentSub: {value: "p"}}}
+		expect(nameExpression.evaluate(v)).toBe(".content h3 p")
+
+		# Test linkback
+		expect(result.bindings.variables["contentDiv"].length).toBe(1)
+		expect(result.bindings.variables["contentDiv"][0]).toBe(0)
+		expect(result.bindings.variables["contentSub"].length).toBe(1)
+		expect(result.bindings.variables["contentSub"][0]).toBe(0)
 	

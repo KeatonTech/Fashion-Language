@@ -1,8 +1,13 @@
 # Possibly the shortest file in all of Fashion
 class Expression
-	constructor: (script, isDynamic, isIndividualized) ->
+	constructor: (script, type, unit, isDynamic, isIndividualized) ->
 		@script = script
-		@evaluate = Function("v","g","f","t","e",script)
+		if script.indexOf "return" is 0
+			try @evaluate = Function("v","g","f","t","e",script)
+
+		@type = type
+		@unit = unit
+
 		@dynamic = isDynamic
 		@individualized = isIndividualized
 

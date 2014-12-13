@@ -6,10 +6,12 @@ class Variable
 
 	# This is basically all it has to do
 	constructor: (name, defaultValue, scope = 0) ->
+		if name[0] == "$" then name = name.substr(1)
 		@name = name
+
 		@raw = @value = defaultValue
 		@scope = scope
-		@topLevel = scope is undefined
+		@topLevel = scope is 0
 
 	# Add a type and unit to the variable
 	annotateWithType: (type, unit, typedValue) ->

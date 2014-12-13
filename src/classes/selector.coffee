@@ -5,6 +5,7 @@ class Selector
 	constructor: (name) -> 
 		@name = name
 		@properties = []
+		@index = -1
 
 	# Add a raw, unparsed body
 	addToBody: (bodyString) -> 

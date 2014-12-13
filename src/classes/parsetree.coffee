@@ -41,30 +41,25 @@ class ParseTree
 		@variables[vName][selectorScope] = variableObject
 		@bindings.variables[vName] = []
 
-	# Adds an array of selectors, which is generated for each top-level selector block
 	# As Fashion becomes more extensible, type checking should be added here.
 	# However, for now, that would just slow everything down
-	addSelectors: (newSelectors) -> 
-		selector.index = @selectors.length + i for i, selector of newSelectors
-		@selectors.push.apply @selectors, newSelectors
+	addSelector: (newSelector) -> 
+		newSelector.index = @selectors.length
+		@selectors.push newSelector
 
 	# Similar sugar methods for blocks and scripts
 	addScript: (newScript) -> @scripts.push newScript
 	addBlock: (newBlock) -> @blocks.push newBlock
 
 	# Methods to add a dependency to the tree
-	addBlockDependency: (moduleObject) -> 
-		if moduleObject in @dependencies.blocks then return
-		@dependencies.blocks.push moduleObject
-	addGlobalDependency: (moduleObject) -> 
-		if moduleObject in @dependencies.globals then return
-		@dependencies.globals.push moduleObject
-	addFunctionDependency: (moduleObject) -> 
-		if moduleObject in @dependencies.functions then return
-		@dependencies.functions.push moduleObject
-	addPropertyDependency: (moduleObject) -> 
-		if moduleObject in @dependencies.properties then return
-		@dependencies.properties.push moduleObject
+	addBlockDependency: (name, moduleObject) -> 
+		@dependencies.blocks[name] = moduleObject
+	addGlobalDependency: (name, moduleObject) -> 
+		@dependencies.globals[name] = moduleObject
+	addFunctionDependency: (name, moduleObject) -> 
+		@dependencies.functions[name] = moduleObject
+	addPropertyDependency: (name, moduleObject) -> 
+		@dependencies.properties[name] = moduleObject
 
 	# Variable bindings can only happen to variables that already exist
 	addVariableBinding: (selectorId, variableName) ->

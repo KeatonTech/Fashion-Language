@@ -17,7 +17,7 @@ window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 
 		# Parse out top-level variables
 		if segment[3] and segment[4]
-			parseTree.addVariable(new Variable segment[3], segment[4]) # Name, Value
+			$wf.$parser.addVariable parseTree, segment[3], segment[4]
 
 		# Parse blocks
 		else if segment[5]
@@ -27,15 +27,19 @@ window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 			if segment[6] then blockArgs = $wf.$parser.splitByTopLevelSpaces segment[6]
 			else blockArgs = []
 
+			# Add the block object
 			parseTree.addBlock
 				type: segment[5],
 				arguments: blockArgs,
 				body: window.fashion.$parser.parseBlock fashionText, regex, startIndex
 
+			# Add the block dependency
+			parseTree.addBlockDependency segment[5], $wf.$blocks[segment[5]]
+
 		# Parse selectors and add them to the parse tree
 		else if segment[7]
-			parseTree.addSelectors window.fashion.$parser.parseSelector(
-				fashionText, segment[7], regex, segment.index + segment[0].length)
+			window.fashion.$parser.parseSelector(parseTree, fashionText, segment[7],
+				regex, segment.index + segment[0].length)
 
 		# Otherwise we might have a problem
 		# TODO(keatontech): Better error handling here. Heh.
@@ -47,10 +51,10 @@ window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 
 # Separate nested selectors into a flat list of selectors
 # and retrieves their properties.
-window.fashion.$parser.parseSelector = (fashionText, name, regex, lastIndex) ->
+window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, lastIndex) ->
 
 	# This object will be populated with selectors & their bodies and returned
-	selectors = [new Selector(name)]
+	selectors = [$wf.$parser.createSelector(parseTree, name)]
 
 	bracketDepth = 1 	# Track how nested the current selector is.
 	selectorStack = [0] # Stack to track names and inheritance of nested selectors
@@ -78,7 +82,7 @@ window.fashion.$parser.parseSelector = (fashionText, name, regex, lastIndex) ->
 				name = topSel.name + " " + segment[7]
 
 			# Add this selector
-			selectors.push(new Selector(name))
+			selectors.push($wf.$parser.createSelector(parseTree, name))
 			selectorStack.push selectors.length - 1
 
 			# Selector segments include a bracket
@@ -86,6 +90,45 @@ window.fashion.$parser.parseSelector = (fashionText, name, regex, lastIndex) ->
 
 	# Return the selectors
 	return selectors
+
+
+# Make a new selector and parse the variables out of its name, if necessary
+window.fashion.$parser.createSelector = (parseTree, name) ->
+
+	# Create the selector and add it to the parse tree
+	selector = new Selector(name)
+	parseTree.addSelector selector
+
+	# If there are no variables, return here
+	if name.indexOf("$") == -1 then return selector
+
+	# Little mini expression generator going on here
+	isIndividualized = false; script = "return "; lastIndex = 0
+
+	# Search for variable names
+	regex = /\$([\w\-]+)/g
+	while foundVar = regex.exec name
+
+		# Add the previous piece to the expression
+		if foundVar.index > lastIndex
+			script += "'#{name.substring(lastIndex, foundVar.index)}'+"
+		lastIndex = foundVar.index + foundVar[0].length
+
+		# Create a variable sub-expression
+		expander = $wf.$parser.expressionExpander.localVariable
+		vExpr = expander foundVar[1], selector.index, parseTree
+
+		# Use its results
+		isIndividualized |= vExpr.individualized
+		script += vExpr.script + "+"
+
+	# Add the end of the string if necessary
+	if name.length > lastIndex then script += "'#{name.substr(lastIndex)}'+"
+
+	# Make an expression from this whole mess
+	trimmed = script.substr(0, script.length - 1)
+	selector.name = new Expression(trimmed, $wf.$type.String, 0, true, isIndividualized)
+	return selector
 
 
 # Get everything inside a block as text by counting brackets
