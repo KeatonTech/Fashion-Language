@@ -22,7 +22,8 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ##### Code to turn a text/x-fashion document into a useful parse tree
 
 * ***parser.coffee:*** Orchestrates the full parsing process and includes all of the other parsing files.
-* ***sections.coffee:*** Splits the full Fashion document into individual selectors, blocks and variable definitions
+* ***tree.coffee:*** Class that represents the parse tree. Objects of this class are utilized at all stages of the process.
+* ***sections.coffee:*** Splits the full Fashion document into individual selectors, blocks and variable definitions.
 * ***properties.coffee:*** Parses the inside of a selector into individual properties and values.
 * ***variables.coffee:*** Parses variable values and determines their type and units. Creates a dependants list of selectors that use each variable.
 * ***expressions.coffee:*** Validates inline fashion expressions and converts them to Javascript functions.
@@ -30,8 +31,10 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ### ./processor
 ##### Code to expand Fashion properties, blocks and selectors into a format closer to raw CSS and Javascript.
 
-* ***processor.coffee:*** Sets the parse tree up for processing and runs the functions for properties, blocks and selectors
+* ***processor.coffee:*** Sets the parse tree up for processing and runs the functions for properties, blocks and selectors.
 * ***properties.coffee:*** Goes through each selector in the parse tree to find properties associated with Fashion modules, and expand them.
+* ***blocks.coffee:*** Goes through each block and calls a module to expand its contents.
+* ***api.coffee:*** Defines functions that can be run by module funtions.
 
 ### ./actualizer
 ##### Code to turn the processed parse tree into standard CSS and Javascript text
@@ -57,6 +60,15 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***dom/individualized.coffee:*** Applies individualized properties to each element matching the selector.
 
 ***
+
+### ./classes
+##### Compilers aren't typically very object oriented, Fashion just uses these to define and enforce a standard data format
+
+* ***classes/parsetree.coffee:*** Class that represents the parse tree of a document. Includes all the other classes.
+* ***classes/variable.coffee:*** Class that represents a user-defined variable.
+* ***classes/selector.coffee:*** Class that represents a selector and its properties or its string body.
+* ***classes/property.coffee:*** Class that represents a CSS property, and a class that represents a CSS transition.
+* ***classes/expression.coffee:*** Class that represents an expression.
 
 ### ./built-in
 ##### Fashion is designed in a modular manner to allow developers to extend its functionality. This folder contains all of the built in modules.

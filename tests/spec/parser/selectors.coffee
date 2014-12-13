@@ -10,8 +10,12 @@ window.fashiontests.parser.selectors = ()->
 						}
 						""")
 
-		expect(result.selectors['*']['height']).toBe("30px")
-		expect(result.selectors['ul.test td:last-child']['background']).toBe("black")
+		console.log result.selectors
+		expect(result.selectors[0].name).toBe("*")
+		expect(result.selectors[0].properties['height']).toBe("30px")
+
+		expect(result.selectors[1].name).toBe("ul.test td:last-child")
+		expect(result.selectors[1].properties['background']).toBe("black")
 
 
 	it "should parse nested selectors", ()->

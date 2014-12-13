@@ -56,6 +56,7 @@ document.onreadystatechange = ()->
 # @prepros-append ./helpers/basic.coffee
 # @prepros-append ./helpers/dom.coffee
 # @prepros-append ./helpers/stringify.coffee
+# @prepros-append ./classes/parsetree.coffee
 # @prepros-append ./types/types.coffee
 
 # Include the actual functional JS files

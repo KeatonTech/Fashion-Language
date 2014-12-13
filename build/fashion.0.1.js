@@ -258,6 +258,197 @@ window.fashion.$stringifyArray = function(array) {
   }
   return "{" + (propStrings.join(',')) + "}";
 };
+var ParseTree,
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+ParseTree = (function() {
+  function ParseTree() {
+    this.variables = {};
+    this.selectors = [];
+    this.blocks = [];
+    this.scripts = [];
+    this.dependencies = {
+      blocks: {},
+      globals: {},
+      functions: {},
+      properties: {}
+    };
+    this.bindings = {
+      variables: {},
+      globals: {},
+      dom: []
+    };
+  }
+
+  ParseTree.prototype.addVariable = function(variableObject) {
+    var selectorScope, vName;
+    vName = variableObject.name;
+    selectorScope = variableObject.scope || 0;
+    if (!vName) {
+      throw new Error("Variables must be named");
+    }
+    if (!this.variables[vName]) {
+      this.variables[vName] = {};
+    }
+    this.variables[vName][selectorScope] = variableObject;
+    return this.bindings.variables[vName] = [];
+  };
+
+  ParseTree.prototype.addSelectors = function(newSelectors) {
+    var i, selector;
+    for (i in newSelectors) {
+      selector = newSelectors[i];
+      selector.index = this.selectors.length + i;
+    }
+    return this.selectors.push.apply(this.selectors, newSelectors);
+  };
+
+  ParseTree.prototype.addScript = function(newScript) {
+    return this.scripts.push(newScript);
+  };
+
+  ParseTree.prototype.addBlock = function(newBlock) {
+    return this.blocks.push(newBlock);
+  };
+
+  ParseTree.prototype.addBlockDependency = function(moduleObject) {
+    if (__indexOf.call(this.dependencies.blocks, moduleObject) >= 0) {
+      return;
+    }
+    return this.dependencies.blocks.push(moduleObject);
+  };
+
+  ParseTree.prototype.addGlobalDependency = function(moduleObject) {
+    if (__indexOf.call(this.dependencies.globals, moduleObject) >= 0) {
+      return;
+    }
+    return this.dependencies.globals.push(moduleObject);
+  };
+
+  ParseTree.prototype.addFunctionDependency = function(moduleObject) {
+    if (__indexOf.call(this.dependencies.functions, moduleObject) >= 0) {
+      return;
+    }
+    return this.dependencies.functions.push(moduleObject);
+  };
+
+  ParseTree.prototype.addPropertyDependency = function(moduleObject) {
+    if (__indexOf.call(this.dependencies.properties, moduleObject) >= 0) {
+      return;
+    }
+    return this.dependencies.properties.push(moduleObject);
+  };
+
+  ParseTree.prototype.addVariableBinding = function(selectorId, variableName) {
+    if (!this.bindings.variables[variableName]) {
+      throw new Error("Variable " + variableName + " does not exist or cannot be bound.");
+    }
+    return this.bindings.variables[variableName].push(selectorId);
+  };
+
+  ParseTree.prototype.addGlobalBinding = function(selectorId, globalName) {
+    if (!this.bindings.globals[globalName]) {
+      this.bindings.globals[globalName] = [];
+    }
+    return this.bindings.globals[globalName].push(selectorId);
+  };
+
+  ParseTree.prototype.addDOMBinding = function(selectorId, selector, boundSelector, boundProperty) {
+    return this.bindings.dom.push({
+      watch: [boundSelector, boundProperty],
+      rel: selector,
+      bind: selectorId
+    });
+  };
+
+  return ParseTree;
+
+})();
+var Variable;
+
+Variable = (function() {
+  function Variable(name, defaultValue, type, unit, scope) {
+    if (scope == null) {
+      scope = 0;
+    }
+    this.name = name;
+    this["default"] = defaultValue;
+    this.type = type;
+    this.unit = unit;
+    this.scope = scope;
+    this.topLevel = scope === void 0;
+  }
+
+  return Variable;
+
+})();
+var Selector;
+
+Selector = (function() {
+  function Selector(name) {
+    this.name = name;
+    this.properties = [];
+  }
+
+  Selector.prototype.setBody = function(bodyString) {
+    return this.body = bodyString;
+  };
+
+  Selector.prototype.addProperty = function(property) {
+    this.body = void 0;
+    return this.properties.push(property);
+  };
+
+  return Selector;
+
+})();
+var Property, PropertyTransition;
+
+Property = (function() {
+  function Property(name, value, transition) {
+    this.name = name;
+    if (transition) {
+      if (typeof value !== 'object') {
+        this.value = {
+          value: value,
+          transition: transition
+        };
+      } else {
+        this.value = value;
+        this.value.transition = transition;
+      }
+    } else {
+      this.value = value;
+    }
+  }
+
+  return Property;
+
+})();
+
+PropertyTransition = (function() {
+  function PropertyTransition(easing, duration, delay) {
+    this.easing = easing;
+    this.duration = duration;
+    this.delay = delay;
+  }
+
+  return PropertyTransition;
+
+})();
+var Expression;
+
+Expression = (function() {
+  function Expression(script, isDynamic, isIndividualized) {
+    this.script = script;
+    this.evaluate = Function("v", "g", "f", "t", "e", script);
+    this.dynamic = isDynamic;
+    this.individualized = isIndividualized;
+  }
+
+  return Expression;
+
+})();
 window.fashion.$type = {
   None: 0,
   Number: 1,
@@ -426,9 +617,9 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   return ret;
 };
 window.fashion.$parser.parseSections = function(fashionText) {
-  var blockArgs, blocks, newSels, regex, sObj, segment, selectors, startIndex, variables, _i, _len;
+  var blockArgs, blocks, regex, segment, selectors, startIndex, variables;
   variables = {};
-  selectors = {};
+  selectors = [];
   blocks = [];
   regex = /([\s]*(\$([\w\-]+)\:[\s]*(.*?)\;|\@([\w\-]+)[\s]*(.*?)[\s]*\{|(.*?)[\s]*?\{)|\{|\})/g;
   while (segment = regex.exec(fashionText)) {
@@ -452,15 +643,7 @@ window.fashion.$parser.parseSections = function(fashionText) {
         body: window.fashion.$parser.parseBlock(fashionText, regex, startIndex)
       });
     } else if (segment[7]) {
-      newSels = window.fashion.$parser.parseSelector(fashionText, segment[7], regex, segment.index + segment[0].length);
-      for (_i = 0, _len = newSels.length; _i < _len; _i++) {
-        sObj = newSels[_i];
-        if (selectors[sObj.name]) {
-          selectors[sObj.name] += sObj.value;
-        } else {
-          selectors[sObj.name] = sObj.value;
-        }
-      }
+      selectors.push.apply(selectors, window.fashion.$parser.parseSelector(fashionText, segment[7], regex, segment.index + segment[0].length));
     } else {
       console.log("There's a problem somewhere in your file. Sorry.");
     }
@@ -474,7 +657,7 @@ window.fashion.$parser.parseSections = function(fashionText) {
 };
 
 window.fashion.$parser.parseSelector = function(fashionText, name, regex, lastIndex) {
-  var bracketDepth, segment, sel, selectorStack, selectors, stackName, topSel, _i, _len;
+  var bracketDepth, segment, selectorStack, selectors, topSel;
   selectors = [
     {
       name: name,
@@ -482,18 +665,9 @@ window.fashion.$parser.parseSelector = function(fashionText, name, regex, lastIn
     }
   ];
   bracketDepth = 1;
-  selectorStack = [];
-  selectorStack = [];
-  selectorStack.push(name);
+  selectorStack = [0];
   while (bracketDepth > 0 && (segment = regex.exec(fashionText))) {
-    stackName = selectorStack[selectorStack.length - 1];
-    for (_i = 0, _len = selectors.length; _i < _len; _i++) {
-      sel = selectors[_i];
-      if (sel.name === stackName) {
-        topSel = sel;
-        break;
-      }
-    }
+    topSel = selectors[selectorStack[selectorStack.length - 1]];
     topSel.value += fashionText.substring(lastIndex, segment.index);
     lastIndex = segment.index + segment[0].length;
     if (segment[0] === "}") {
@@ -502,15 +676,15 @@ window.fashion.$parser.parseSelector = function(fashionText, name, regex, lastIn
     } else if (segment[7]) {
       name = void 0;
       if (segment[7][0] === "&") {
-        name = stackName + segment[7].substr(1);
+        name = topSel.name + segment[7].substr(1);
       } else {
-        name = stackName + " " + segment[7];
+        name = topSel.name + " " + segment[7];
       }
-      selectorStack.push(name);
       selectors.push({
         name: name,
         value: ""
       });
+      selectorStack.push(selectors.length - 1);
       bracketDepth++;
     }
   }
