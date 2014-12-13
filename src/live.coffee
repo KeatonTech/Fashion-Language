@@ -1,3 +1,6 @@
+# Wrap everything to prevent global leaks
+# @prepros-prepend ./helpers/prepros/wrap-header.coffee
+
 # Global fashion stuff
 # @prepros-prepend ./fashion.coffee
 
@@ -71,3 +74,6 @@ document.onreadystatechange = ()->
 # @prepros-append ./built-in/properties/properties.coffee
 # @prepros-append ./built-in/blocks/blocks.coffee
 # @prepros-append ./built-in/globals.coffee
+
+# Wrap everything to prevent globals from leaking
+# @prepros-append ./helpers/prepros/wrap-footer.coffee

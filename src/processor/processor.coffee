@@ -4,9 +4,8 @@ window.fashion.$processor =
 	# Entry point into the parser
 	process: (parseTree) ->
 
-		# Add a Javascript section to the parse tree
-		# Used to allow modules to inject extra JS code into the compiled output
-		parseTree["javascript"] = []
+		# Add type and unit information to each variable
+		parseTree.forEachVariable (variable)-> $wf.$processor.addTypeInformation(variable)
 
 		# Now that that's all done, list all of the module requirements for the parse tree
 		window.fashion.$processor.listRequirements parseTree
@@ -59,5 +58,6 @@ window.fashion.$processor =
 # @prepros-append ./api.coffee
 
 # Processors that run code for different extensions
+# @prepros-append ./variables.coffee
 # @prepros-append ./blocks.coffee
 # @prepros-append ./properties.coffee

@@ -4,26 +4,24 @@ window.fashion.$parser =
 	# Entry point into the parser
 	parse: (fashionText) ->
 
-		# Split the file into top-level sections
-		parsed = window.fashion.$parser.parseSections(fashionText)
+		parseTree = new ParseTree()
 
-		# Add type and unit information to each variable
-		for key, variable of parsed.variables
-			parsed.variables[key] = window.fashion.$parser.parseVariable(variable)
+		# Split the file into top-level sections
+		parseTree = window.fashion.$parser.parseSections(fashionText, parseTree)
 
 		# Parse the selector body into properties
-		for key, body of parsed.selectors
-			nb = window.fashion.$parser.parseSelectorBody(body, parsed.variables)
-			parsed.selectors[key] = nb
+		for key, body of parseTree.selectors
+			nb = window.fashion.$parser.parseSelectorBody(body, parseTree.variables)
+			parseTree.selectors[key] = nb
 
 			# Take the dependancies field and link it back to the variables
-			window.fashion.$parser.backlinkVariables(key, nb, parsed.variables)
+			window.fashion.$parser.backlinkVariables(key, nb, parseTree.variables)
 
 			# Add and link any globals
-			window.fashion.$parser.backlinkGlobals(parsed, key, nb, $wf.$globals)
+			window.fashion.$parser.backlinkGlobals(parseTree, key, nb, $wf.$globals)
 
 		# Return parse object
-		return parsed
+		return parseTree
 
 
 # Splits a string by commas, but only those not inside parenthesis

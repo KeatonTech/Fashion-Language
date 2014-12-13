@@ -5,10 +5,17 @@
 class Variable
 
 	# This is basically all it has to do
-	constructor: (name, defaultValue, type, unit, scope = 0) ->
+	constructor: (name, defaultValue, scope = 0) ->
 		@name = name
-		@default = defaultValue
-		@type = type
-		@unit = unit
+		@raw = @value = defaultValue
 		@scope = scope
 		@topLevel = scope is undefined
+
+	# Add a type and unit to the variable
+	annotateWithType: (type, unit, typedValue) ->
+		@type = type
+		@unit = unit
+		if typedValue then @value = typedValue
+		
+
+window.fashion.$class.Variable = Variable

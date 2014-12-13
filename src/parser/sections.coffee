@@ -1,9 +1,6 @@
 # Separate the text into a list of selectors
 # variables, and blocks
-window.fashion.$parser.parseSections = (fashionText) ->
-
-	# Everything needs to get put somewhere
-	variables = {}; selectors = []; blocks = []
+window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 
 	# Regex parses out the important bits, but doesn't count brackets
 	regex = ///(
@@ -18,9 +15,9 @@ window.fashion.$parser.parseSections = (fashionText) ->
 	while segment = regex.exec fashionText
 		if segment.length < 8 or !segment[0] then break # Sanity Check
 
-		# Parse out variables
+		# Parse out top-level variables
 		if segment[3] and segment[4]
-			variables[segment[3]] = {raw: segment[4]}
+			parseTree.addVariable(new Variable segment[3], segment[4]) # Name, Value
 
 		# Parse blocks
 		else if segment[5]
@@ -30,22 +27,22 @@ window.fashion.$parser.parseSections = (fashionText) ->
 			if segment[6] then blockArgs = $wf.$parser.splitByTopLevelSpaces segment[6]
 			else blockArgs = []
 
-			blocks.push
+			parseTree.addBlock
 				type: segment[5],
 				arguments: blockArgs,
 				body: window.fashion.$parser.parseBlock fashionText, regex, startIndex
 
 		# Parse selectors and add them to the parse tree
 		else if segment[7]
-			selectors.push.apply selectors, window.fashion.$parser.parseSelector(
+			parseTree.addSelectors window.fashion.$parser.parseSelector(
 				fashionText, segment[7], regex, segment.index + segment[0].length)
 
 		# Otherwise we might have a problem
-		# TODO(keatontech): Better error handling here
+		# TODO(keatontech): Better error handling here. Heh.
 		else console.log "There's a problem somewhere in your file. Sorry."
 
 	# Return something nice
-	return {variables: variables, selectors: selectors, blocks: blocks, globals: {}}
+	return parseTree
 
 
 # Separate nested selectors into a flat list of selectors
@@ -53,7 +50,7 @@ window.fashion.$parser.parseSections = (fashionText) ->
 window.fashion.$parser.parseSelector = (fashionText, name, regex, lastIndex) ->
 
 	# This object will be populated with selectors & their bodies and returned
-	selectors = [{name: name, value: ""}]
+	selectors = [new Selector(name)]
 
 	bracketDepth = 1 	# Track how nested the current selector is.
 	selectorStack = [0] # Stack to track names and inheritance of nested selectors
@@ -63,7 +60,7 @@ window.fashion.$parser.parseSelector = (fashionText, name, regex, lastIndex) ->
 
 		# Add the elapsed text to the top selector
 		topSel = selectors[selectorStack[selectorStack.length - 1]]
-		topSel.value += fashionText.substring(lastIndex, segment.index)
+		topSel.addToBody fashionText.substring(lastIndex, segment.index)
 		lastIndex = segment.index + segment[0].length
 
 		# Simple enough.
@@ -75,14 +72,13 @@ window.fashion.$parser.parseSelector = (fashionText, name, regex, lastIndex) ->
 		else if segment[7]
 
 			# Selectors that start with & don't have a space
-			name = undefined
 			if segment[7][0] is "&"
 				name = topSel.name + segment[7].substr(1)
 			else
 				name = topSel.name + " " + segment[7]
 
 			# Add this selector
-			selectors.push {name: name, value: ""}
+			selectors.push(new Selector(name))
 			selectorStack.push selectors.length - 1
 
 			# Selector segments include a bracket

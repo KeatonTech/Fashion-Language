@@ -18,3 +18,7 @@ class PropertyTransition
 		@easing = easing
 		@duration = duration
 		@delay = delay
+
+
+window.fashion.$class.Property = Property
+window.fashion.$class.PropertyTransition = PropertyTransition

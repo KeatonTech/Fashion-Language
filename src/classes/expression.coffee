@@ -5,3 +5,5 @@ class Expression
 		@evaluate = Function("v","g","f","t","e",script)
 		@dynamic = isDynamic
 		@individualized = isIndividualized
+
+window.fashion.$class.Expression = Expression

@@ -7,9 +7,14 @@ class Selector
 		@properties = []
 
 	# Add a raw, unparsed body
-	setBody: (bodyString) -> @body = bodyString
+	addToBody: (bodyString) -> 
+		if !@body then @body = ""
+		@body += bodyString
 
 	# When it's parsed, add a property
 	addProperty: (property) ->
 		@body = undefined # No longer needed
 		@properties.push property
+
+
+window.fashion.$class.Selector = Selector

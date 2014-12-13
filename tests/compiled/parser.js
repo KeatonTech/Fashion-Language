@@ -15,44 +15,22 @@
     it("should parse out string variables", function() {
       var result;
       result = parse("$singleQuote: 'string';\n$doubleQuote: \"quote\";");
-      expect(result.variables["singleQuote"]["type"]).toEqual(type.String);
-      expect(result.variables["doubleQuote"]["type"]).toEqual(type.String);
-      expect(result.variables["singleQuote"]["value"]).toEqual("string");
-      return expect(result.variables["doubleQuote"]["value"]).toEqual("quote");
+      expect(result.variables["singleQuote"][0].value).toEqual("string");
+      return expect(result.variables["doubleQuote"][0].value).toEqual("quote");
     });
     it("should parse out numerical variables", function() {
       var result;
       result = parse("$noUnit: 10;\n$pxUnit: 20px;\n$decimalEmUnit: .1em;\n$negativeMsUnit: -20ms;");
-      expect(result.variables["noUnit"]["type"]).toEqual(type.Number);
-      expect(result.variables["pxUnit"]["type"]).toEqual(type.Number);
-      expect(result.variables["decimalEmUnit"]["type"]).toEqual(type.Number);
-      expect(result.variables["negativeMsUnit"]["type"]).toEqual(type.Number);
-      expect(result.variables["noUnit"]["unit"]).toEqual(false);
-      expect(result.variables["pxUnit"]["unit"]).toEqual(unit.Number.px);
-      expect(result.variables["decimalEmUnit"]["unit"]).toEqual(unit.Number.em);
-      expect(result.variables["negativeMsUnit"]["unit"]).toEqual(unit.Number.ms);
-      expect(result.variables["noUnit"]["value"]).toEqual(10);
-      expect(result.variables["pxUnit"]["value"]).toEqual(20);
-      expect(result.variables["decimalEmUnit"]["value"]).toEqual(0.1);
-      return expect(result.variables["negativeMsUnit"]["value"]).toEqual(-20);
-    });
-    it("should parse out color variables", function() {
-      var result;
-      result = parse("$colorConst: red;\n$colorHex: #da0;\n$colorRGB: rgb(200,100,50);\n$colorRGBA: rgba(200,100,50,0.5);");
-      expect(result.variables["colorConst"]["type"]).toEqual(type.Color);
-      expect(result.variables["colorHex"]["type"]).toEqual(type.Color);
-      expect(result.variables["colorRGB"]["type"]).toEqual(type.Color);
-      expect(result.variables["colorRGBA"]["type"]).toEqual(type.Color);
-      expect(result.variables["colorConst"]["unit"]).toEqual(unit.Color.Const);
-      expect(result.variables["colorHex"]["unit"]).toEqual(unit.Color.Hex);
-      expect(result.variables["colorRGB"]["unit"]).toEqual(unit.Color.RGB);
-      return expect(result.variables["colorRGBA"]["unit"]).toEqual(unit.Color.RGBA);
+      expect(result.variables["noUnit"][0]["value"]).toEqual(10);
+      expect(result.variables["pxUnit"][0]["value"]).toEqual(20);
+      expect(result.variables["decimalEmUnit"][0]["value"]).toEqual(0.1);
+      return expect(result.variables["negativeMsUnit"][0]["value"]).toEqual(-20);
     });
     return it("should allow multiple variables per line", function() {
       var result;
       result = parse("$singleQuote: 's1';$doubleQuote: \"s2\";");
-      expect(result.variables["singleQuote"]["value"]).toEqual("s1");
-      return expect(result.variables["doubleQuote"]["value"]).toEqual("s2");
+      expect(result.variables["singleQuote"][0]["value"]).toEqual("s1");
+      return expect(result.variables["doubleQuote"][0]["value"]).toEqual("s2");
     });
   };
 

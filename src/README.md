@@ -25,13 +25,13 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***tree.coffee:*** Class that represents the parse tree. Objects of this class are utilized at all stages of the process.
 * ***sections.coffee:*** Splits the full Fashion document into individual selectors, blocks and variable definitions.
 * ***properties.coffee:*** Parses the inside of a selector into individual properties and values.
-* ***variables.coffee:*** Parses variable values and determines their type and units. Creates a dependants list of selectors that use each variable.
 * ***expressions.coffee:*** Validates inline fashion expressions and converts them to Javascript functions.
 
 ### ./processor
 ##### Code to expand Fashion properties, blocks and selectors into a format closer to raw CSS and Javascript.
 
 * ***processor.coffee:*** Sets the parse tree up for processing and runs the functions for properties, blocks and selectors.
+* ***variables.coffee:*** Determines the types and units for each variable. Handles selector linking.
 * ***properties.coffee:*** Goes through each selector in the parse tree to find properties associated with Fashion modules, and expand them.
 * ***blocks.coffee:*** Goes through each block and calls a module to expand its contents.
 * ***api.coffee:*** Defines functions that can be run by module funtions.
@@ -81,10 +81,14 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ##### Equivalent to C++ typedefs, useful standardizations
 
 * ***types.coffee:*** List of singular, constant and composite data types in a numbered enum format.
-* ***units.coffee:*** List of numerical and color units
+* ***units.coffee:*** List of numerical and color units.
 * ***constants.coffee:*** List of allowed values for constant types like display, align, and built-in colors.
 
 ### ./helpers
 ##### Some extra stuff that might be useful
 
-* ***dom.coffee:*** Functions to create, find and populate different DOM elements
+* ***dom.coffee:*** Functions to create, find and populate different DOM elements.
+* ***basic.coffee:*** Simple array and object operations that come in handy.
+* ***stringify.coffee:*** Alternate implementation of JSON.stringify that includes functions.
+* ***prepros/wrap-header.coffee:*** Allows fashion to be placed in an isolate scope (top of function).
+* ***prepros/wrap-footer.coffee:*** Allows fashion to be placed in an isolate scope (bottom of function).

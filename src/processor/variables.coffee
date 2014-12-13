@@ -1,29 +1,24 @@
 # Convert a raw variable object into one with a little more info
-window.fashion.$parser.parseVariable = (variableObject) ->
+window.fashion.$processor.addTypeInformation = (variableObject) ->
 
 	# Make sure the variable has a value
 	val = variableObject.raw || variableObject.value
 	if !val then return {}
 
 	# Add a type
-	typ = variableObject.type = window.fashion.$run.determineType(val, 
-		window.fashion.$type, window.fashion.$typeConstants)
+	type = window.fashion.$run.determineType(val, $wf.$type, $wf.$typeConstants)
 
 	# Add units, if necessary
-	unittedValue = window.fashion.$run.getUnit(
-		val, typ, window.fashion.$type, window.fashion.$unit)
-	variableObject.value = unittedValue['value']
-	variableObject.unit = unittedValue['unit']
+	unittedValue = window.fashion.$run.getUnit(val, type, $wf.$type, $wf.$unit)
+	typedValue = unittedValue['value']
+	unit = unittedValue['unit']
 
-	# Add a dependents list
-	variableObject.dependants = {}
-
-	# Return the new variable object
-	return variableObject
+	# Update the variable object
+	variableObject.annotateWithType type, unit, typedValue
 
 
 # Link dependencies back to a variable's dependants field
-window.fashion.$parser.backlinkVariables = (selector, properties, variables) ->
+window.fashion.$processor.backlinkVariables = (selector, properties, variables) ->
 
 	# Go through each dependancy variable
 	linkDependenciesList = (list, propertyName) ->
@@ -64,7 +59,7 @@ window.fashion.$parser.backlinkVariables = (selector, properties, variables) ->
 
 
 # Create a list of globals and their dependants
-window.fashion.$parser.backlinkGlobals = (parseTree, selector, properties, globals) ->
+window.fashion.$processor.backlinkGlobals = (parseTree, selector, properties, globals) ->
 	for k, p of properties when p['dependencies']
 		for varName in p['dependencies'] when varName[0] is "@"
 			varName = varName.substr 1

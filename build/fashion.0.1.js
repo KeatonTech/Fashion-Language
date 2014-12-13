@@ -1,3 +1,5 @@
+(function() {;
+
 
 /*
 
@@ -283,7 +285,9 @@ ParseTree = (function() {
   ParseTree.prototype.addVariable = function(variableObject) {
     var selectorScope, vName;
     vName = variableObject.name;
+    delete variableObject.name;
     selectorScope = variableObject.scope || 0;
+    delete variableObject.scope;
     if (!vName) {
       throw new Error("Variables must be named");
     }
@@ -361,27 +365,58 @@ ParseTree = (function() {
     });
   };
 
+  ParseTree.prototype.forEachVariable = function(run) {
+    var name, scope, scopes, variable, _ref, _results;
+    _ref = this.variables;
+    _results = [];
+    for (name in _ref) {
+      scopes = _ref[name];
+      _results.push((function() {
+        var _results1;
+        _results1 = [];
+        for (scope in scopes) {
+          variable = scopes[scope];
+          _results1.push(run.call(variable, variable, scope));
+        }
+        return _results1;
+      })());
+    }
+    return _results;
+  };
+
   return ParseTree;
 
 })();
+
+window.fashion.$class = {};
+
+window.fashion.$class.ParseTree = ParseTree;
 var Variable;
 
 Variable = (function() {
-  function Variable(name, defaultValue, type, unit, scope) {
+  function Variable(name, defaultValue, scope) {
     if (scope == null) {
       scope = 0;
     }
     this.name = name;
-    this["default"] = defaultValue;
-    this.type = type;
-    this.unit = unit;
+    this.raw = this.value = defaultValue;
     this.scope = scope;
     this.topLevel = scope === void 0;
   }
 
+  Variable.prototype.annotateWithType = function(type, unit, typedValue) {
+    this.type = type;
+    this.unit = unit;
+    if (typedValue) {
+      return this.value = typedValue;
+    }
+  };
+
   return Variable;
 
 })();
+
+window.fashion.$class.Variable = Variable;
 var Selector;
 
 Selector = (function() {
@@ -390,8 +425,11 @@ Selector = (function() {
     this.properties = [];
   }
 
-  Selector.prototype.setBody = function(bodyString) {
-    return this.body = bodyString;
+  Selector.prototype.addToBody = function(bodyString) {
+    if (!this.body) {
+      this.body = "";
+    }
+    return this.body += bodyString;
   };
 
   Selector.prototype.addProperty = function(property) {
@@ -402,6 +440,8 @@ Selector = (function() {
   return Selector;
 
 })();
+
+window.fashion.$class.Selector = Selector;
 var Property, PropertyTransition;
 
 Property = (function() {
@@ -436,6 +476,10 @@ PropertyTransition = (function() {
   return PropertyTransition;
 
 })();
+
+window.fashion.$class.Property = Property;
+
+window.fashion.$class.PropertyTransition = PropertyTransition;
 var Expression;
 
 Expression = (function() {
@@ -449,6 +493,8 @@ Expression = (function() {
   return Expression;
 
 })();
+
+window.fashion.$class.Expression = Expression;
 window.fashion.$type = {
   None: 0,
   Number: 1,
@@ -540,22 +586,21 @@ window.fashion.$loader = {
 };
 window.fashion.$parser = {
   parse: function(fashionText) {
-    var body, key, nb, parsed, variable, _ref, _ref1;
-    parsed = window.fashion.$parser.parseSections(fashionText);
-    _ref = parsed.variables;
+    var body, key, nb, parseTree, _ref;
+    parseTree = new ParseTree();
+    parseTree = window.fashion.$parser.parseSections(fashionText, parseTree);
+    _ref = parseTree.selectors;
     for (key in _ref) {
-      variable = _ref[key];
-      parsed.variables[key] = window.fashion.$parser.parseVariable(variable);
+      body = _ref[key];
+      nb = window.fashion.$parser.parseSelectorBody(body, parseTree.variables);
+      parseTree.selectors[key] = nb;
+      window.fashion.$parser.backlinkVariables(key, nb, parseTree.variables);
+      window.fashion.$parser.backlinkGlobals(parseTree, key, nb, $wf.$globals);
     }
-    _ref1 = parsed.selectors;
-    for (key in _ref1) {
-      body = _ref1[key];
-      nb = window.fashion.$parser.parseSelectorBody(body, parsed.variables);
-      parsed.selectors[key] = nb;
-      window.fashion.$parser.backlinkVariables(key, nb, parsed.variables);
-      window.fashion.$parser.backlinkGlobals(parsed, key, nb, $wf.$globals);
-    }
-    return parsed;
+    parseTree.forEachVariable(function(variable) {
+      return $wf.$parser.addTypeInformation(variable);
+    });
+    return parseTree;
   }
 };
 
@@ -616,20 +661,15 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   ret.push(acc);
   return ret;
 };
-window.fashion.$parser.parseSections = function(fashionText) {
-  var blockArgs, blocks, regex, segment, selectors, startIndex, variables;
-  variables = {};
-  selectors = [];
-  blocks = [];
+window.fashion.$parser.parseSections = function(fashionText, parseTree) {
+  var blockArgs, regex, segment, startIndex;
   regex = /([\s]*(\$([\w\-]+)\:[\s]*(.*?)\;|\@([\w\-]+)[\s]*(.*?)[\s]*\{|(.*?)[\s]*?\{)|\{|\})/g;
   while (segment = regex.exec(fashionText)) {
     if (segment.length < 8 || !segment[0]) {
       break;
     }
     if (segment[3] && segment[4]) {
-      variables[segment[3]] = {
-        raw: segment[4]
-      };
+      parseTree.addVariable(new Variable(segment[3], segment[4]));
     } else if (segment[5]) {
       startIndex = segment.index + segment[0].length;
       if (segment[6]) {
@@ -637,53 +677,39 @@ window.fashion.$parser.parseSections = function(fashionText) {
       } else {
         blockArgs = [];
       }
-      blocks.push({
+      parseTree.addBlock({
         type: segment[5],
         "arguments": blockArgs,
         body: window.fashion.$parser.parseBlock(fashionText, regex, startIndex)
       });
     } else if (segment[7]) {
-      selectors.push.apply(selectors, window.fashion.$parser.parseSelector(fashionText, segment[7], regex, segment.index + segment[0].length));
+      parseTree.addSelectors(window.fashion.$parser.parseSelector(fashionText, segment[7], regex, segment.index + segment[0].length));
     } else {
       console.log("There's a problem somewhere in your file. Sorry.");
     }
   }
-  return {
-    variables: variables,
-    selectors: selectors,
-    blocks: blocks,
-    globals: {}
-  };
+  return parseTree;
 };
 
 window.fashion.$parser.parseSelector = function(fashionText, name, regex, lastIndex) {
   var bracketDepth, segment, selectorStack, selectors, topSel;
-  selectors = [
-    {
-      name: name,
-      value: ""
-    }
-  ];
+  selectors = [new Selector(name)];
   bracketDepth = 1;
   selectorStack = [0];
   while (bracketDepth > 0 && (segment = regex.exec(fashionText))) {
     topSel = selectors[selectorStack[selectorStack.length - 1]];
-    topSel.value += fashionText.substring(lastIndex, segment.index);
+    topSel.addToBody(fashionText.substring(lastIndex, segment.index));
     lastIndex = segment.index + segment[0].length;
     if (segment[0] === "}") {
       selectorStack.pop();
       bracketDepth--;
     } else if (segment[7]) {
-      name = void 0;
       if (segment[7][0] === "&") {
         name = topSel.name + segment[7].substr(1);
       } else {
         name = topSel.name + " " + segment[7];
       }
-      selectors.push({
-        name: name,
-        value: ""
-      });
+      selectors.push(new Selector(name));
       selectorStack.push(selectors.length - 1);
       bracketDepth++;
     }
@@ -711,18 +737,17 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
 };
 var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-window.fashion.$parser.parseVariable = function(variableObject) {
-  var typ, unittedValue, val;
+window.fashion.$parser.addTypeInformation = function(variableObject) {
+  var type, typedValue, unit, unittedValue, val;
   val = variableObject.raw || variableObject.value;
   if (!val) {
     return {};
   }
-  typ = variableObject.type = window.fashion.$run.determineType(val, window.fashion.$type, window.fashion.$typeConstants);
-  unittedValue = window.fashion.$run.getUnit(val, typ, window.fashion.$type, window.fashion.$unit);
-  variableObject.value = unittedValue['value'];
-  variableObject.unit = unittedValue['unit'];
-  variableObject.dependants = {};
-  return variableObject;
+  type = window.fashion.$run.determineType(val, $wf.$type, $wf.$typeConstants);
+  unittedValue = window.fashion.$run.getUnit(val, type, $wf.$type, $wf.$unit);
+  typedValue = unittedValue['value'];
+  unit = unittedValue['unit'];
+  return variableObject.annotateWithType(type, unit, typedValue);
 };
 
 window.fashion.$parser.backlinkVariables = function(selector, properties, variables) {
@@ -2626,3 +2651,5 @@ window.fashion.$globals = {
     }
   }
 };
+}());
+

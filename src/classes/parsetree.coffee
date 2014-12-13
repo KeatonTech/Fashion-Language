@@ -30,10 +30,12 @@ class ParseTree
 			globals: {}
 			dom: []
 
+	# CREATE
+
 	# Add a variable, includes the name of its selector for non-global ones
 	addVariable: (variableObject) ->
-		vName = variableObject.name
-		selectorScope = variableObject.scope || 0
+		vName = variableObject.name; delete variableObject.name
+		selectorScope = variableObject.scope || 0; delete variableObject.scope
 		if !vName then throw new Error "Variables must be named"
 		if !@variables[vName] then @variables[vName] = {}
 		@variables[vName][selectorScope] = variableObject
@@ -83,6 +85,19 @@ class ParseTree
 			watch: [boundSelector, boundProperty]
 			rel: selector
 			bind: selectorId
+
+
+	# ITERATE
+
+	forEachVariable: (run) ->
+		for name, scopes of @variables
+			for scope, variable of scopes
+				run.call(variable, variable, scope)
+
+
+# Make sure all of this is neatly accessible from the outside too
+window.fashion.$class = {}
+window.fashion.$class.ParseTree = ParseTree
 
 #@prepros-append ./variable.coffee
 #@prepros-append ./selector.coffee
