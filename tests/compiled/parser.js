@@ -8,7 +8,8 @@
 }).call(this);
 (function() {
   window.fashiontests.parser.variables = function() {
-    var parse, type, unit;
+    var $wf, parse, type, unit;
+    $wf = window.fashion;
     parse = window.fashion.$parser.parse;
     type = window.fashion.$type;
     unit = window.fashion.$unit;
@@ -36,9 +37,9 @@
       expect(result.variables["decimalEmUnit"][0]["value"]).toEqual(0.1);
       return expect(result.variables["negativeMsUnit"][0]["value"]).toEqual(-20);
     });
-    return it("should parse out color variables", function() {
-      var result;
-      result = parse("$colorConst: red;\n$colorHex: #da0;\n$colorRGB: rgb(200,100,50);\n$colorRGBA: rgba(200,100,50,0.5);");
+    it("should parse out color variables", function() {
+      var result, rgbExpression, rgbaExpression;
+      result = parse("$colorConst: red;\n$colorHex: #da0;\n$colorRGB: rgb(200,100,50.4);\n$colorRGBA: rgba(200,100.01,50,0.5);");
       expect(result.variables["colorConst"][0]["type"]).toEqual(type.Color);
       expect(result.variables["colorHex"][0]["type"]).toEqual(type.Color);
       expect(result.variables["colorRGB"][0]["type"]).toEqual(type.Color);
@@ -46,7 +47,70 @@
       expect(result.variables["colorConst"][0]["unit"]).toEqual(unit.Color.Const);
       expect(result.variables["colorHex"][0]["unit"]).toEqual(unit.Color.Hex);
       expect(result.variables["colorRGB"][0]["unit"]).toEqual(unit.Color.RGB);
-      return expect(result.variables["colorRGBA"][0]["unit"]).toEqual(unit.Color.RGBA);
+      expect(result.variables["colorRGBA"][0]["unit"]).toEqual(unit.Color.RGBA);
+      expect(result.variables["colorConst"][0]["value"]).toEqual("red");
+      expect(result.variables["colorHex"][0]["value"]).toEqual("#da0");
+      rgbExpression = result.variables["colorRGB"][0].value.evaluate;
+      expect(rgbExpression(0, 0, $wf.$functions)).toEqual("rgb(200,100,50)");
+      rgbaExpression = result.variables["colorRGBA"][0].value.evaluate;
+      return expect(rgbaExpression(0, 0, $wf.$functions)).toEqual("rgba(200,100,50,0.5)");
+    });
+    it("should allow variables to rely on other variables", function() {
+      var result, v;
+      result = parse("$main: 10px;\n$copy: $main;");
+      expect(result.variables["main"][0]["value"]).toEqual(10);
+      expect(result.variables["copy"][0]["value"].script).toBeDefined();
+      v = {
+        t: {
+          main: {
+            value: 10
+          }
+        }
+      };
+      expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("10px");
+      v = {
+        t: {
+          main: {
+            value: 20
+          }
+        }
+      };
+      expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("20px");
+      expect(result.variables["main"][0]["type"]).toEqual(type.Number);
+      expect(result.variables["copy"][0]["type"]).toEqual(type.Number);
+      expect(result.variables["main"][0]["unit"]).toEqual(unit.Number.px);
+      expect(result.variables["copy"][0]["unit"]).toEqual(unit.Number.px);
+      return expect(result.bindings.variables["main"][0]).toBe("$copy");
+    });
+    return it("should allow variables to be expressions", function() {
+      var result, v;
+      result = parse("$main: 10px;\n$offset: 3px;\n$height: $main / 2 + $offset;");
+      expect(result.variables["main"][0]["value"]).toEqual(10);
+      expect(result.variables["offset"][0]["value"]).toEqual(3);
+      v = {
+        t: {
+          main: {
+            value: 10
+          },
+          offset: {
+            value: 3
+          }
+        }
+      };
+      expect(result.variables["height"][0]["value"].evaluate(v)).toBe("8px");
+      v = {
+        t: {
+          main: {
+            value: 20
+          },
+          offset: {
+            value: 5
+          }
+        }
+      };
+      expect(result.variables["height"][0]["value"].evaluate(v)).toBe("15px");
+      expect(result.bindings.variables["main"][0]).toBe("$height");
+      return expect(result.bindings.variables["offset"][0]).toBe("$height");
     });
   };
 
@@ -183,7 +247,6 @@
       props = result.selectors[0].properties;
       height = props[0].value;
       width = props[1].value;
-      console.log(width.transition);
       expect(height.transition.easing).toBe("ease-out");
       expect(height.transition.duration).toBe("1s");
       return expect(width.transition.easing).toBe("ease-in-out");

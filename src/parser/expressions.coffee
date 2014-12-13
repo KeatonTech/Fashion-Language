@@ -4,11 +4,10 @@
 
 # Recursively convert an expression string into a parse tree
 window.fashion.$parser.parseExpression = 
-(expString, selector, parseTree, funcs, globals, top = true) ->
+(expString, linkId, parseTree, funcs, globals, top = true) ->
 
 	expander = $wf.$parser.expressionExpander
 	matchParens = window.fashion.$parser.matchParenthesis
-	id = selector.index
 
 	# Create some space
 	script = expString; 
@@ -44,7 +43,7 @@ window.fashion.$parser.parseExpression =
 
 		# Pass off to the relevant expander functions
 		if section[2] then eObj = expander.relativeObject section[2], section[3]
-		else if section[4] then eObj = expander.localVariable section[4], id, parseTree
+		else if section[4] then eObj = expander.localVariable section[4], linkId, parseTree
 		else if section[5] then eObj = expander.globalVariable section[5], globals,parseTree
 		else if section[6] then eObj = expander.numberWithUnit section[6]
 		else if section[9]
@@ -56,7 +55,7 @@ window.fashion.$parser.parseExpression =
 			length += contained.length + 1
 			if funit then length += funit.length
 			eObj = expander.function(section[9], contained, funit, 
-				selector, parseTree, funcs, globals)
+				linkId, parseTree, funcs, globals)
 
 		# Handle the expanded object (eObj)
 		if !eObj then continue
@@ -78,12 +77,12 @@ window.fashion.$parser.parseExpression =
 	# Top level returns a string, for the property
 	# Other levels return an object, for function calls
 	if top
-		if unit then script = "return (#{script}) + '#{unit}'" 
+		if unit and typeof unit is "string" then script = "return (#{script}) + '#{unit}'"
 		else script = "return #{script}" 
 
 		# Attempt to make this function
 		try
-			# Function(variables, globals, functions, function execution environment, element)
+			# Function(variables, globals, functions, execution environment, element)
 			# "e" is only actually available for individualized expressions
 			evaluate = Function("v","g","f","t","e",script)
 		catch e
@@ -132,7 +131,7 @@ window.fashion.$parser.determineExpressionType = (types, units) ->
 				return {}
 
 		# Figure out the expression's unit
-		if type is $wf.$type.Number
+		if type is $wf.$type.Number or type is $wf.$type.Color
 			unit = units[i]
 			if unit is "" then continue
 			if !topUnit then topUnit = unit
@@ -228,7 +227,7 @@ window.fashion.$parser.expressionExpander =
 		}
 
 	# Expand functions, which involves expanding any arguments of theirs into expressions
-	function: (name, argumentsString, inputUnit, selector, parseTree, funcs, globals) ->
+	function: (name, argumentsString, inputUnit, linkId, parseTree, funcs, globals) ->
 		vars = parseTree.variables
 
 		fObj = funcs[name]
@@ -239,7 +238,7 @@ window.fashion.$parser.expressionExpander =
 			args = window.fashion.$parser.splitByTopLevelCommas argumentsString
 			expressions = (for arg in args
 				window.fashion.$parser.parseExpression(
-					arg, selector, parseTree, funcs, globals, false)
+					arg, linkId, parseTree, funcs, globals, false)
 			)
 		else expressions = []
 

@@ -1,6 +1,7 @@
 
 # Convert a raw variable object into one with a little more info
 window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
+	linkId = selector.index
 
 	regex = ///
 			[\s]*([\w\-\s\$]*)\:		# Property/Variable Name
@@ -16,7 +17,7 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 		if property.length < 7 then continue # Sanity check
 
 		# Create a value object
-		value = $wf.$parser.parsePropertyValues property[6], selector, parseTree
+		value = $wf.$parser.parsePropertyValues property[6], linkId, parseTree
 
 		# Check to see if this is a variable declaration
 		name = property[1]
@@ -27,9 +28,9 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 		# Parse transition
 		if property[3]
 			transition = new PropertyTransition( # Easing, Duration, Delay
-				$wf.$parser.parsePropertyValue(property[3], selector, parseTree, false),
-				$wf.$parser.parsePropertyValue(property[4], selector, parseTree, false),
-				$wf.$parser.parsePropertyValue(property[5], selector, parseTree, false))
+				$wf.$parser.parsePropertyValue(property[3], linkId, parseTree, false),
+				$wf.$parser.parsePropertyValue(property[4], linkId, parseTree, false),
+				$wf.$parser.parsePropertyValue(property[5], linkId, parseTree, false))
 
 		# Note the important flag
 		if property[7] is "!important"
@@ -55,7 +56,7 @@ window.fashion.$parser.parseScopedVariable = (name, value, properties, parseTree
 
 
 # Splits a value up by commas if necessary and then evaluates it
-window.fashion.$parser.parsePropertyValues = (value, selector, parseTree) ->
+window.fashion.$parser.parsePropertyValues = (value, linkId, parseTree) ->
 
 	# Commas mean array
 	if value.indexOf(',') isnt -1
@@ -63,18 +64,18 @@ window.fashion.$parser.parsePropertyValues = (value, selector, parseTree) ->
 
 		# False alarm
 		if value.length is 1
-			return window.fashion.$parser.parsePropertyValue(value[0], selector, parseTree)
+			return window.fashion.$parser.parsePropertyValue(value[0], linkId, parseTree)
 
 		# Build an array of processed values
 		else
 			value[i] = item.trim() for i,item of value
 			for i,item of value
 				value[i] = window.fashion.$parser.parsePropertyValue(
-					item, selector, parseTree, true, true)
+					item, linkId, parseTree, true, true)
 			return value
 
 	# Just process the one value
-	else return window.fashion.$parser.parsePropertyValue(value, selector, parseTree)
+	else return window.fashion.$parser.parsePropertyValue(value, linkId, parseTree)
 
 
 # Shared regex used to identify expressions
@@ -90,11 +91,11 @@ window.fashion.$parser.identifyExpression = () ->
 
 # Convert a property value into a linked object or expression, if necessary
 window.fashion.$parser.parsePropertyValue = 
-	(value, selector, parseTree, allowExpression = true, forceArray = false) ->
+	(value, linkId, parseTree, allowExpression = true, forceArray = false) ->
 
 		# Pass expressions through
 		if allowExpression and value.match $wf.$parser.identifyExpression()
-			return window.fashion.$parser.parseSingleValue value, selector, parseTree, true
+			return window.fashion.$parser.parseSingleValue value, linkId, parseTree, true
 
 		# Check to see if we have a multi-piece property
 		if forceArray or (typeof value is "string" and value.indexOf(" ") isnt -1)
@@ -102,23 +103,23 @@ window.fashion.$parser.parsePropertyValue =
 
 			# False alarm!
 			if !forceArray and parts.length is 1 then return (
-				window.fashion.$parser.parseSingleValue value, selector, parseTree)
+				window.fashion.$parser.parseSingleValue value, linkId, parseTree)
 
 			# Accumulate all of the single values into an array.
 			return (for piece in parts
-				window.fashion.$parser.parseSingleValue piece, selector, parseTree
+				window.fashion.$parser.parseSingleValue piece, linkId, parseTree
 			)
 
 		# We have a single-piece property
-		else window.fashion.$parser.parseSingleValue value, selector, parseTree
+		else window.fashion.$parser.parseSingleValue value, linkId, parseTree
 
 
 # Convert a property value into a linked object or expression, if necessary
-window.fashion.$parser.parseSingleValue = (value, selector, parseTree) ->
+window.fashion.$parser.parseSingleValue = (value, linkId, parseTree) ->
 
 	# Check to see if it's an expression
 	if value.match $wf.$parser.identifyExpression()
-		return window.fashion.$parser.parseExpression(value, selector, parseTree,
+		return window.fashion.$parser.parseExpression(value, linkId, parseTree,
 			window.fashion.$functions, window.fashion.$globals)
 
 	# Nope, this is just a normal property

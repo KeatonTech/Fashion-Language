@@ -1,5 +1,6 @@
 window.fashiontests.parser.variables = () ->
 
+	$wf = window.fashion
 	parse = window.fashion.$parser.parse
 	type = window.fashion.$type
 	unit = window.fashion.$unit
@@ -47,8 +48,8 @@ window.fashiontests.parser.variables = () ->
 		result = parse( """
 						$colorConst: red;
 						$colorHex: #da0;
-						$colorRGB: rgb(200,100,50);
-						$colorRGBA: rgba(200,100,50,0.5);
+						$colorRGB: rgb(200,100,50.4);
+						$colorRGBA: rgba(200,100.01,50,0.5);
 						""")
 
 		# Check types
@@ -62,4 +63,64 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["colorHex"][0]["unit"]).toEqual(unit.Color.Hex);
 		expect(result.variables["colorRGB"][0]["unit"]).toEqual(unit.Color.RGB);
 		expect(result.variables["colorRGBA"][0]["unit"]).toEqual(unit.Color.RGBA);
+
+		# Check values
+		expect(result.variables["colorConst"][0]["value"]).toEqual("red");
+		expect(result.variables["colorHex"][0]["value"]).toEqual("#da0");
+
+		rgbExpression = result.variables["colorRGB"][0].value.evaluate
+		expect(rgbExpression(0,0,$wf.$functions)).toEqual("rgb(200,100,50)");
+
+		rgbaExpression = result.variables["colorRGBA"][0].value.evaluate
+		expect(rgbaExpression(0,0,$wf.$functions)).toEqual("rgba(200,100,50,0.5)");
+
+
+	it "should allow variables to rely on other variables", ()->
+		result = parse( """
+						$main: 10px;
+						$copy: $main;
+						""")
+
+
+		# Check values
+		expect(result.variables["main"][0]["value"]).toEqual(10);
+		expect(result.variables["copy"][0]["value"].script).toBeDefined();
+
+		v = {t: {main: {value: 10}}}
+		expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("10px");
+		v = {t: {main: {value: 20}}}
+		expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("20px");
+
+		# Check types
+		expect(result.variables["main"][0]["type"]).toEqual(type.Number);
+		expect(result.variables["copy"][0]["type"]).toEqual(type.Number);
+
+		# Check units
+		expect(result.variables["main"][0]["unit"]).toEqual(unit.Number.px);
+		expect(result.variables["copy"][0]["unit"]).toEqual(unit.Number.px);
+
+		# Check link
+		expect(result.bindings.variables["main"][0]).toBe("$copy");
+		
+
+	it "should allow variables to be expressions", ()->
+		result = parse( """
+						$main: 10px;
+						$offset: 3px;
+						$height: $main / 2 + $offset;
+						""")
+
+
+		# Check values
+		expect(result.variables["main"][0]["value"]).toEqual(10);
+		expect(result.variables["offset"][0]["value"]).toEqual(3);
+
+		v = {t: {main: {value: 10}, offset: {value: 3}}}
+		expect(result.variables["height"][0]["value"].evaluate(v)).toBe("8px");
+		v = {t: {main: {value: 20}, offset: {value: 5}}}
+		expect(result.variables["height"][0]["value"].evaluate(v)).toBe("15px");
+
+		# Check link
+		expect(result.bindings.variables["main"][0]).toBe("$height");
+		expect(result.bindings.variables["offset"][0]).toBe("$height");
 

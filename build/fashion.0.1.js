@@ -593,16 +593,22 @@ window.fashion.$parser = {
 
 window.fashion.$parser.addVariable = function(parseTree, name, value) {
   var type, typedValue, unit, unittedValue, val, variableObject;
+  value = $wf.$parser.parseSingleValue(value, "$" + name, parseTree);
   variableObject = new Variable(name, value);
   parseTree.addVariable(variableObject);
-  val = variableObject.raw || variableObject.value;
-  if (!val) {
-    return {};
+  if (value instanceof Expression) {
+    type = value.type;
+    unit = value.unit;
+  } else {
+    val = variableObject.raw || variableObject.value;
+    if (!val) {
+      return;
+    }
+    type = window.fashion.$run.determineType(val, $wf.$type, $wf.$typeConstants);
+    unittedValue = window.fashion.$run.getUnit(val, type, $wf.$type, $wf.$unit);
+    typedValue = unittedValue['value'];
+    unit = unittedValue['unit'];
   }
-  type = window.fashion.$run.determineType(val, $wf.$type, $wf.$typeConstants);
-  unittedValue = window.fashion.$run.getUnit(val, type, $wf.$type, $wf.$unit);
-  typedValue = unittedValue['value'];
-  unit = unittedValue['unit'];
   return variableObject.annotateWithType(type, unit, typedValue);
 };
 
@@ -768,21 +774,22 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
   return fashionText.substring(startIndex, endIndex - 1).trim();
 };
 window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseTree) {
-  var name, property, regex, transition, value, _results;
+  var linkId, name, property, regex, transition, value, _results;
+  linkId = selector.index;
   regex = /[\s]*([\w\-\s\$]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*(.*?)[\s]*(!important)?[;}\n]/g;
   _results = [];
   while (property = regex.exec(bodyString)) {
     if (property.length < 7) {
       continue;
     }
-    value = $wf.$parser.parsePropertyValues(property[6], selector, parseTree);
+    value = $wf.$parser.parsePropertyValues(property[6], linkId, parseTree);
     name = property[1];
     if (name[0] === "$") {
       $wf.$parser.parseScopedVariable(name, value, properties, parseTree);
       continue;
     }
     if (property[3]) {
-      transition = new PropertyTransition($wf.$parser.parsePropertyValue(property[3], selector, parseTree, false), $wf.$parser.parsePropertyValue(property[4], selector, parseTree, false), $wf.$parser.parsePropertyValue(property[5], selector, parseTree, false));
+      transition = new PropertyTransition($wf.$parser.parsePropertyValue(property[3], linkId, parseTree, false), $wf.$parser.parsePropertyValue(property[4], linkId, parseTree, false), $wf.$parser.parsePropertyValue(property[5], linkId, parseTree, false));
     }
     if (property[7] === "!important") {
       if (typeof value === "string") {
@@ -810,12 +817,12 @@ window.fashion.$parser.parseScopedVariable = function(name, value, properties, p
   return $wf.$parser.addVariable(parseTree, segment[3], segment[4]);
 };
 
-window.fashion.$parser.parsePropertyValues = function(value, selector, parseTree) {
+window.fashion.$parser.parsePropertyValues = function(value, linkId, parseTree) {
   var i, item;
   if (value.indexOf(',') !== -1) {
     value = window.fashion.$parser.splitByTopLevelCommas(value);
     if (value.length === 1) {
-      return window.fashion.$parser.parsePropertyValue(value[0], selector, parseTree);
+      return window.fashion.$parser.parsePropertyValue(value[0], linkId, parseTree);
     } else {
       for (i in value) {
         item = value[i];
@@ -823,12 +830,12 @@ window.fashion.$parser.parsePropertyValues = function(value, selector, parseTree
       }
       for (i in value) {
         item = value[i];
-        value[i] = window.fashion.$parser.parsePropertyValue(item, selector, parseTree, true, true);
+        value[i] = window.fashion.$parser.parsePropertyValue(item, linkId, parseTree, true, true);
       }
       return value;
     }
   } else {
-    return window.fashion.$parser.parsePropertyValue(value, selector, parseTree);
+    return window.fashion.$parser.parsePropertyValue(value, linkId, parseTree);
   }
 };
 
@@ -836,7 +843,7 @@ window.fashion.$parser.identifyExpression = function() {
   return /(([\s][\+\-\/\*\=][\s])|[\(\)\[\]]|\@|\$)/g;
 };
 
-window.fashion.$parser.parsePropertyValue = function(value, selector, parseTree, allowExpression, forceArray) {
+window.fashion.$parser.parsePropertyValue = function(value, linkId, parseTree, allowExpression, forceArray) {
   var parts, piece;
   if (allowExpression == null) {
     allowExpression = true;
@@ -845,41 +852,40 @@ window.fashion.$parser.parsePropertyValue = function(value, selector, parseTree,
     forceArray = false;
   }
   if (allowExpression && value.match($wf.$parser.identifyExpression())) {
-    return window.fashion.$parser.parseSingleValue(value, selector, parseTree, true);
+    return window.fashion.$parser.parseSingleValue(value, linkId, parseTree, true);
   }
   if (forceArray || (typeof value === "string" && value.indexOf(" ") !== -1)) {
     parts = value.match(/(["'][^'"]*["']|[\S]+)/g);
     if (!forceArray && parts.length === 1) {
-      return window.fashion.$parser.parseSingleValue(value, selector, parseTree);
+      return window.fashion.$parser.parseSingleValue(value, linkId, parseTree);
     }
     return (function() {
       var _i, _len, _results;
       _results = [];
       for (_i = 0, _len = parts.length; _i < _len; _i++) {
         piece = parts[_i];
-        _results.push(window.fashion.$parser.parseSingleValue(piece, selector, parseTree));
+        _results.push(window.fashion.$parser.parseSingleValue(piece, linkId, parseTree));
       }
       return _results;
     })();
   } else {
-    return window.fashion.$parser.parseSingleValue(value, selector, parseTree);
+    return window.fashion.$parser.parseSingleValue(value, linkId, parseTree);
   }
 };
 
-window.fashion.$parser.parseSingleValue = function(value, selector, parseTree) {
+window.fashion.$parser.parseSingleValue = function(value, linkId, parseTree) {
   if (value.match($wf.$parser.identifyExpression())) {
-    return window.fashion.$parser.parseExpression(value, selector, parseTree, window.fashion.$functions, window.fashion.$globals);
+    return window.fashion.$parser.parseExpression(value, linkId, parseTree, window.fashion.$functions, window.fashion.$globals);
   }
   return value;
 };
-window.fashion.$parser.parseExpression = function(expString, selector, parseTree, funcs, globals, top) {
-  var contained, dynamic, e, eObj, end, evaluate, expander, funit, id, individualized, length, matchParens, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, type, types, unit, units, _ref, _ref1;
+window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, funcs, globals, top) {
+  var contained, dynamic, e, eObj, end, evaluate, expander, funit, individualized, length, matchParens, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, type, types, unit, units, _ref, _ref1;
   if (top == null) {
     top = true;
   }
   expander = $wf.$parser.expressionExpander;
   matchParens = window.fashion.$parser.matchParenthesis;
-  id = selector.index;
   script = expString;
   individualized = dynamic = false;
   types = [];
@@ -898,7 +904,7 @@ window.fashion.$parser.parseExpression = function(expString, selector, parseTree
     if (section[2]) {
       eObj = expander.relativeObject(section[2], section[3]);
     } else if (section[4]) {
-      eObj = expander.localVariable(section[4], id, parseTree);
+      eObj = expander.localVariable(section[4], linkId, parseTree);
     } else if (section[5]) {
       eObj = expander.globalVariable(section[5], globals, parseTree);
     } else if (section[6]) {
@@ -913,7 +919,7 @@ window.fashion.$parser.parseExpression = function(expString, selector, parseTree
       if (funit) {
         length += funit.length;
       }
-      eObj = expander["function"](section[9], contained, funit, selector, parseTree, funcs, globals);
+      eObj = expander["function"](section[9], contained, funit, linkId, parseTree, funcs, globals);
     }
     if (!eObj) {
       continue;
@@ -935,7 +941,7 @@ window.fashion.$parser.parseExpression = function(expString, selector, parseTree
     unit = void 0;
   }
   if (top) {
-    if (unit) {
+    if (unit && typeof unit === "string") {
       script = "return (" + script + ") + '" + unit + "'";
     } else {
       script = "return " + script;
@@ -997,7 +1003,7 @@ window.fashion.$parser.determineExpressionType = function(types, units) {
         return {};
       }
     }
-    if (type === $wf.$type.Number) {
+    if (type === $wf.$type.Number || type === $wf.$type.Color) {
       unit = units[i];
       if (unit === "") {
         continue;
@@ -1101,7 +1107,7 @@ window.fashion.$parser.expressionExpander = {
       individualized: true
     };
   },
-  "function": function(name, argumentsString, inputUnit, selector, parseTree, funcs, globals) {
+  "function": function(name, argumentsString, inputUnit, linkId, parseTree, funcs, globals) {
     var arg, args, dynamic, expression, expressions, fObj, individualized, scripts, unit, vars, _i, _len;
     vars = parseTree.variables;
     fObj = funcs[name];
@@ -1115,7 +1121,7 @@ window.fashion.$parser.expressionExpander = {
         _results = [];
         for (_i = 0, _len = args.length; _i < _len; _i++) {
           arg = args[_i];
-          _results.push(window.fashion.$parser.parseExpression(arg, selector, parseTree, funcs, globals, false));
+          _results.push(window.fashion.$parser.parseExpression(arg, linkId, parseTree, funcs, globals, false));
         }
         return _results;
       })();
@@ -2258,6 +2264,24 @@ $wf.$extend(window.fashion.$functions, {
       matched = this.querySelector(selector.value);
       style = this.getComputedStyle(matched);
       return style[property.value];
+    }
+  }
+});
+$wf.$extend(window.fashion.$functions, {
+  "rgb": {
+    output: $wf.$type.Color,
+    unit: $wf.$unit.Color.RGB,
+    dynamic: true,
+    evaluate: function(r, g, b) {
+      return "rgb(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + ")";
+    }
+  },
+  "rgba": {
+    output: $wf.$type.Color,
+    unit: $wf.$unit.Color.RGBA,
+    dynamic: true,
+    evaluate: function(r, g, b, a) {
+      return "rgba(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + "," + a.value + ")";
     }
   }
 });

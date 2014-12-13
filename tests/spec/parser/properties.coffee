@@ -114,7 +114,6 @@ window.fashiontests.parser.properties = ()->
 		props = result.selectors[0].properties
 		height = props[0].value
 		width = props[1].value
-		console.log width.transition
 
 		# Test a basic transition (height)
 		expect(height.transition.easing).toBe("ease-out")

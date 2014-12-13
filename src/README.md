@@ -22,7 +22,6 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ##### Code to turn a text/x-fashion document into a useful parse tree
 
 * ***parser.coffee:*** Orchestrates the full parsing process and includes all of the other parsing files.
-* ***tree.coffee:*** Class that represents the parse tree. Objects of this class are utilized at all stages of the process.
 * ***sections.coffee:*** Splits the full Fashion document into individual selectors, blocks and variable definitions.
 * ***properties.coffee:*** Parses the inside of a selector into individual properties and values.
 * ***expressions.coffee:*** Validates inline fashion expressions and converts them to Javascript functions.
