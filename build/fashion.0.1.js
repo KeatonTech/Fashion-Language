@@ -939,7 +939,7 @@ window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, 
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]{0,1}\d+|\d+(\.\d*)?)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\(|\)([\S]*))/g;
+  regex = /(\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\(|\)([\S]*))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
     start = section.index;
@@ -1088,7 +1088,7 @@ window.fashion.$parser.expressionExpander = {
     return new Expression(script, type, unit, mode);
   },
   globalVariable: function(name, globals, parseTree) {
-    var dynamicMode, vObj;
+    var dynamicMode, script, vObj;
     name = name.toLowerCase();
     vObj = globals[name];
     if (!vObj) {
@@ -1096,7 +1096,8 @@ window.fashion.$parser.expressionExpander = {
     }
     parseTree.addGlobalDependency(name, vObj);
     dynamicMode = $wf.$runtimeMode.dynamic;
-    return new Expression("g." + name + ".get()", vObj.type, vObj.unit, dynamicMode);
+    script = "g." + name + ".get()";
+    return new Expression(script, vObj.type, vObj.unit, dynamicMode);
   },
   numberWithUnit: function(value) {
     var numberType, staticMode, unittedValue;
@@ -1363,11 +1364,11 @@ window.fashion.$run = {
     if (this.determineType(value) !== vObj.type) {
       return this.throwError("Cannot change type of '$" + name + "'");
     }
-    vObj.raw = value;
     unittedValue = this.getUnit(value, vObj.type, types);
     if (unittedValue.unit && unittedValue.unit !== vObj.unit) {
-      vObj.unit = unittedValue.unit;
+      return this.throwError("Cannot change the unit of '$" + name + "'");
     }
+    vObj.raw = value;
     if (unittedValue.value) {
       vObj.value = unittedValue.value;
     } else {

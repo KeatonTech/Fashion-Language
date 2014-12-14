@@ -31,8 +31,8 @@ window.fashion.$parser.parseExpression =
 			\$([\w\-]+)|			# Defined variable
 			\@([\w\-]+)|			# Global variable
 			([\-]{0,1}				# Number with unit (negative)
-			([\.]{0,1}\d+|			# Number with unit (decimal at beginning)
-			\d+(\.\d*)?)			# Number with unit (decimal in middle)
+			([\.]\d+|				# Number with unit (decimal at beginning)
+			\d+(\.\d+)*)			# Number with unit (decimal in middle)
 			[a-zA-Z]{1,4})|			# Number with unit (unit)
 			([\w\-\@\$]*)\(|		# Function definition
 			\(|\)([\S]*)			# Track depth and pull out function units
@@ -47,10 +47,12 @@ window.fashion.$parser.parseExpression =
 		if section[2] then eObj = expander.relativeObject section[2], section[3]
 
 		# Local variable (top-level or scoped)
-		else if section[4] then eObj = expander.localVariable section[4], linkId, parseTree
+		else if section[4]
+			eObj = expander.localVariable section[4], linkId, parseTree
 
 		# Global variable
-		else if section[5] then eObj = expander.globalVariable section[5], globals,parseTree
+		else if section[5]
+			eObj = expander.globalVariable section[5], globals, parseTree
 
 		# Number with unit (constant)
 		else if section[6] then eObj = expander.numberWithUnit section[6]
@@ -193,7 +195,8 @@ window.fashion.$parser.expressionExpander =
 		parseTree.addGlobalDependency name, vObj
 
 		dynamicMode = $wf.$runtimeMode.dynamic
-		return new Expression "g.#{name}.get()", vObj.type, vObj.unit, dynamicMode
+		script = "g.#{name}.get()"
+		return new Expression script, vObj.type, vObj.unit, dynamicMode
 
 
 	# Expand numbers with units

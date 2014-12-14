@@ -18,11 +18,13 @@ window.fashion.$run =
 			return @throwError "Cannot change type of '$#{name}'"
 
 		# Check to see if the unit changed
-		vObj.raw = value
 		unittedValue = @getUnit value, vObj.type, types
 		if unittedValue.unit and unittedValue.unit != vObj.unit
-			vObj.unit = unittedValue.unit
+			# In the future, this may trigger some other conversion routine
+			return @throwError "Cannot change the unit of '$#{name}'"
 
+		# Make sure the unit didn't change
+		vObj.raw = value
 		if unittedValue.value then vObj.value = unittedValue.value
 		else vObj.value = vObj.raw
 
