@@ -1,5 +1,6 @@
 window.fashiontests.parser.selectors = ()->
 
+	$wf = window.fashion
 	parse = window.fashion.$parser.parse
 
 	it "should parse complex selectors", ()->
@@ -43,6 +44,9 @@ window.fashiontests.parser.selectors = ()->
 		expect(result.selectors[2].properties[0].value).toBe("0.0")
 		expect(result.selectors[3].properties[0].value).toBe("0.75")
 
+		# Make sure the properties are static
+		expect(result.selectors[0].properties[0].mode).toBe($wf.$runtimeMode.static)
+
 		# Check tail values
 		# NOTE(keatontech): This is actually wrong because it rearranges selectors
 		# 	That aught to get fixed later.
@@ -52,18 +56,20 @@ window.fashiontests.parser.selectors = ()->
 
 	it "should allow selectors to be variables", ()->
 		result = parse("""
-						$contentDiv: content;
-						.$contentDiv {
+						$contentDiv: '.content';
+						$contentDiv {
 							background: black;
 						}
 						""")
 
 		# Make sure the properties are still getting read
 		expect(result.selectors[0].properties[0].value).toBe("black")
+		expect(result.selectors[0].properties[0].mode).toBe($wf.$runtimeMode.dynamic)
+		expect(result.selectors[0].mode).toBe($wf.$runtimeMode.dynamic)
 
 		# Make sure the expression for the name works
 		nameExpression = result.selectors[0].name
-		v = {t: {contentDiv: {value: "content"}}}
+		v = (name) -> if name is "contentDiv" then ".content"
 		expect(nameExpression.evaluate(v)).toBe(".content")
 
 		# Test linkback
@@ -80,9 +86,14 @@ window.fashiontests.parser.selectors = ()->
 						}
 						""")
 
+		# Make sure the properties are marked as dynamic
+		expect(result.selectors[0].properties[0].mode).toBe($wf.$runtimeMode.dynamic)
+
 		# Make sure the expression for the name works
 		nameExpression = result.selectors[0].name
-		v = {t: {contentDiv: {value: ".content"}, contentSub: {value: "p"}}}
+		v = (name) -> switch name 
+			when "contentDiv" then ".content"
+			when "contentSub" then "p"
 		expect(nameExpression.evaluate(v)).toBe(".content h3 p")
 
 		# Test linkback

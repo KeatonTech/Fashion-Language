@@ -7,6 +7,10 @@ class Selector
 		@properties = []
 		@index = -1
 
+		# Selectors with variables in the name are dynamic
+		if name instanceof Expression then @mode = $wf.$runtimeMode.dynamic
+		else @mode = $wf.$runtimeMode.static
+
 	# Add a raw, unparsed body
 	addToBody: (bodyString) -> 
 		if !@body then @body = ""

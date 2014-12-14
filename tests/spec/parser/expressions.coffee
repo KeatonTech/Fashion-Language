@@ -17,10 +17,9 @@ window.fashiontests.parser.expressions = ()->
 
 		expression = result.selectors[0].properties[0].value
 		pExpression = result.selectors[1].properties[0].value
-		v = {t: {fullHeight: {value: 30}}}
+		v = (name) -> return 30
 
-		expect(expression.dynamic).toBe(true)
-		expect(expression.individualized).toBe(false)
+		expect(expression.mode).toBe($wf.$runtimeMode.dynamic)
 		expect(expression.unit).toBe("px")
 
 		# Run the function and make sure it calculates the right value
@@ -28,7 +27,7 @@ window.fashiontests.parser.expressions = ()->
 		expect(pExpression.evaluate(v)).toBe("6px")
 
 		# Change the value and try again
-		v.t.fullHeight.value = 60
+		v = (name) -> return 60
 		expect(expression.evaluate(v)).toBe("20px")
 		expect(pExpression.evaluate(v)).toBe("16px")
 
@@ -47,15 +46,14 @@ window.fashiontests.parser.expressions = ()->
 						""")
 
 		expression = result.selectors[0].properties[0].value
-		expect(expression.dynamic).toBe(true)
-		expect(expression.individualized).toBe(false)
+		expect(expression.mode).toBe($wf.$runtimeMode.dynamic)
 		expect(expression.unit).toBe("px")
 
 		# Test the expression
-		v = {t: {heightDivisor: {value: 3}}}
+		v = (name) -> return 3
 		expect(expression.evaluate(v)).toBe("10px")
 
-		v = {t: {heightDivisor: {value: 10}}}
+		v = (name) -> return 10
 		expect(expression.evaluate(v)).toBe("3px")
 
 		# Test the backlink
@@ -70,6 +68,7 @@ window.fashiontests.parser.expressions = ()->
 						""")
 
 		expression = result.selectors[0].properties[0].value
+		expect(expression.mode).toBe($wf.$functions.random.mode || 0)
 
 		# Test the expression
 		expressionResult = expression.evaluate {}, {}, $wf.$functions
@@ -108,7 +107,7 @@ window.fashiontests.parser.expressions = ()->
 		expression = result.selectors[0].properties[0].value
 
 		# Test the expression
-		locals = {t: {maxHeight: {value: 300}}}
+		locals = (name) -> if name is "maxHeight" then return 300
 		globals = {height: {get: () -> 400}}
 		expressionResult = expression.evaluate locals, globals, $wf.$functions
 		expect(expressionResult).toBe("300px")
@@ -129,7 +128,7 @@ window.fashiontests.parser.expressions = ()->
 		expression = result.selectors[0].properties[0].value
 
 		# Test the expression
-		locals = {t: {maxHeight: {value: 100}}}
+		locals = ()-> return 100
 		globals = {height: {get: () -> 400}}
 		expressionResult = expression.evaluate locals, globals, $wf.$functions
 		expect(expressionResult).toBe("200px")
@@ -149,7 +148,10 @@ window.fashiontests.parser.expressions = ()->
 						""")
 
 		expression = result.selectors[0].properties[0].value
-		locals = {t: {maxHeight: {value: 300}, minHeight: {value: 100}}}
+		locals = (name) -> switch name 
+			when "maxHeight" then 300
+			when "minHeight" then 100
+
 
 		globals = {height: {get: () -> 50}}
 		expressionResult = expression.evaluate locals, globals, $wf.$functions
@@ -187,7 +189,7 @@ window.fashiontests.parser.expressions = ()->
 		expect(expression.evaluate({},{},$wf.$functions,thisObj)).toBe("10px")
 
 		expect(bindSpy).toHaveBeenCalledWith("#sidebar")
-	###
+	
 
 	it "should allow alternate-property bindings in expressions", ()->
 		result = parse( """
@@ -195,6 +197,7 @@ window.fashiontests.parser.expressions = ()->
 							height: @('#sidebar', 'width')px;
 						}
 						""")
+		console.log result
 
 		bindSpy = jasmine.createSpy('spy').and.returnValue({})
 		thisObj = {
@@ -203,12 +206,12 @@ window.fashiontests.parser.expressions = ()->
 		}
 
 		expression = result.selectors[0].properties[0].value
-		expect(expression.dynamic).toBe(true)
-		expect(expression.individualized).toBe(false)
+		expect(expression.mode).toBe($wf.$runtimeMode.dynamic)
 		expect(expression.unit).toBe("px")
-		expect(expression.evaluate({},{},$wf.$functions,thisObj)).toBe("20px")
+		expect(expression.evaluate({},{},$wf.$functions)).toBe("20px")
 
-		expect(bindSpy).toHaveBeenCalledWith("#sidebar")
+		expect(bindSpy).toHaveBeenCalledWith("#sidebar", 'width')
+	###
 
 
 	it "should allow !important on expressions", ()->
@@ -220,9 +223,9 @@ window.fashiontests.parser.expressions = ()->
 						""")
 
 		expression = result.selectors[0].properties[0].value
-		expect(expression.evaluate({t: {fullHeight: {value: 30}}})).toBe("10px")
+		expect(expression.evaluate(() -> return 30)).toBe("10px")
 		expect(expression.important).toBe(true)
-		expect(expression.individualized).toBe(false)
+		expect(expression.mode).toBe($wf.$runtimeMode.dynamic)
 		expect(expression.unit).toBe("px")
 
 
@@ -234,7 +237,7 @@ window.fashiontests.parser.expressions = ()->
 						""")
 
 		expression = result.selectors[0].properties[0].value
-		expect(expression.individualized).toBe(true)
+		expect(expression.mode).toBe($wf.$runtimeMode.individual)
 		expect(expression.unit).toBe("px")
 
 
@@ -247,7 +250,7 @@ window.fashiontests.parser.expressions = ()->
 						""")
 
 		expression = result.selectors[0].properties[0].value
-		expect(expression.individualized).toBe(true)
+		expect(expression.mode).toBe($wf.$runtimeMode.individual)
 		expect(expression.type).toBe($wf.$type.String);
 		expect(expression.unit).toBe(undefined);
 
@@ -260,6 +263,7 @@ window.fashiontests.parser.expressions = ()->
 						""")
 
 		expression = result.selectors[0].properties[0].value
-		expect(expression.individualized).toBe(true)
+		expect(expression.mode).toBe($wf.$runtimeMode.individual)
 		expect(expression.type).toBe($wf.$type.Number);
 		expect(expression.unit).toBe("px");
+		

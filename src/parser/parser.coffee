@@ -75,7 +75,8 @@ window.fashion.$parser.splitByTopLevelCommas = (value) ->
 	return ret
 
 
-# Splits a string by commas, but only those not inside parenthesis
+# Splits a string by commas, but only those not inside parenthesis or quotes
+# or those that are part of expressions
 window.fashion.$parser.splitByTopLevelSpaces = (value) ->
 	depth = 0
 	sq = dq = bt = false
@@ -83,14 +84,24 @@ window.fashion.$parser.splitByTopLevelSpaces = (value) ->
 	ret = []
 
 	# Go through, counting the depth
-	regex = /(\(|\)|\"|\'|\`|\s|[^\(\)\"\'\`\s]+)/g
+	regex = ///(
+			[^\(\)\"\'\`\s]*\(|	# Match function calls
+			\)|\"|\'|\`|		# Match quotes and parenthesis to track depth
+			([^\(\)\"\'\`\s]+	# Match the beginning of an operation ({x} + y)
+			(\s+[\+\-\/\*\=]\s+ # Match the operator (x{ + }y)
+			|[\+\-\/\*\=])		# Match the operator (x{+}y)
+			)+[^\(\)\"\'\`\s]+	# Match the end of an operation or repeat (x + {y})
+			|\s|				# Split on these spaces
+			[^\(\)\"\'\`\s]+	# Get the stuff in between to accumulate it
+			)///g
+
 	while token = regex.exec value
 		if token[0] is " " and depth is 0 and !sq and !dq and !bt
 			ret.push acc
 			acc = ""
 			continue;
 
-		if token[0] is "(" then depth++
+		if token[0][token[0].length - 1] is "(" then depth++
 		if token[0] is ")" then depth--
 
 		if token[0] is "'" and !dq and !bt then sq = !sq

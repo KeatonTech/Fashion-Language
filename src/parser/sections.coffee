@@ -131,7 +131,9 @@ window.fashion.$parser.createSelector = (parseTree, name) ->
 
 	# Make an expression from this whole mess
 	trimmed = script.substr(0, script.length - 1)
+	selector.mode = $wf.$runtimeMode.dynamic
 	selector.name = new Expression(trimmed, $wf.$type.String, 0, true, isIndividualized)
+	selector.name.generate()
 	return selector
 
 

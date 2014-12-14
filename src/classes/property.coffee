@@ -1,7 +1,8 @@
 # Represents a CSS property inside a selector
 class Property
-	constructor: (name, value, transition) -> 
+	constructor: (name, value, runtimeMode = $wf.$runtimeMode.static, transition) -> 
 		@name = name
+		@mode = runtimeMode
 
 		if transition 
 			if typeof value isnt 'object'

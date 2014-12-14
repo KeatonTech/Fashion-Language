@@ -82,6 +82,7 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***types.coffee:*** List of singular, constant and composite data types in a numbered enum format.
 * ***units.coffee:*** List of numerical and color units.
 * ***constants.coffee:*** List of allowed values for constant types like display, align, and built-in colors.
+* ***runtime-modes.coffee:*** List of modes that can be applied to properties, variables and modules to define runtime behavior.
 
 ### ./helpers
 ##### Some extra stuff that might be useful

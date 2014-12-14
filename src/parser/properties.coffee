@@ -38,7 +38,8 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 			if typeof value is "object" then value.important = true
 
 		# Add the property to the properties object
-		selector.addProperty(new Property name, value, transition)
+		mode = (selector.mode | value.mode) || 0
+		selector.addProperty(new Property name, value, mode, transition)
 
 
 # Parse out variable declarations
@@ -78,6 +79,28 @@ window.fashion.$parser.parsePropertyValues = (value, linkId, parseTree) ->
 	else return window.fashion.$parser.parsePropertyValue(value, linkId, parseTree)
 
 
+# Convert a property value into a linked object or expression, if necessary
+window.fashion.$parser.parsePropertyValue = 
+	(value, linkId, parseTree, allowExpression = true, forceArray = false) ->
+
+		# Check to see if we have a multi-piece property
+		if forceArray or (typeof value is "string" and value.indexOf(" ") isnt -1)
+			parts = $wf.$parser.splitByTopLevelSpaces value
+
+			# False alarm!
+			if !forceArray and parts.length is 1
+				return window.fashion.$parser.parseSingleValue value, linkId, parseTree
+
+			# Accumulate all of the single values into an array and calculate the mode
+			values = ($wf.$parser.parseSingleValue(val, linkId, parseTree) for val in parts)
+			values.mode = 0
+			(values.mode |= (val.mode || 0)) for val in values
+			return values
+
+		# We have a single-piece property
+		else window.fashion.$parser.parseSingleValue value, linkId, parseTree
+
+
 # Shared regex used to identify expressions
 # This doesn't consider whether or not they're within a string
 # TODO(keatontech): Fix that
@@ -87,31 +110,6 @@ window.fashion.$parser.identifyExpression = () ->
 	[\(\)\[\]]|				# Parenthesis and brackets: definitely
 	\@|\$ 					# Variables and globals
 	)///g
-
-
-# Convert a property value into a linked object or expression, if necessary
-window.fashion.$parser.parsePropertyValue = 
-	(value, linkId, parseTree, allowExpression = true, forceArray = false) ->
-
-		# Pass expressions through
-		if allowExpression and value.match $wf.$parser.identifyExpression()
-			return window.fashion.$parser.parseSingleValue value, linkId, parseTree, true
-
-		# Check to see if we have a multi-piece property
-		if forceArray or (typeof value is "string" and value.indexOf(" ") isnt -1)
-			parts = value.match /(["'][^'"]*["']|[\S]+)/g
-
-			# False alarm!
-			if !forceArray and parts.length is 1 then return (
-				window.fashion.$parser.parseSingleValue value, linkId, parseTree)
-
-			# Accumulate all of the single values into an array.
-			return (for piece in parts
-				window.fashion.$parser.parseSingleValue piece, linkId, parseTree
-			)
-
-		# We have a single-piece property
-		else window.fashion.$parser.parseSingleValue value, linkId, parseTree
 
 
 # Convert a property value into a linked object or expression, if necessary

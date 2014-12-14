@@ -60,19 +60,15 @@
       result = parse("$main: 10px;\n$copy: $main;");
       expect(result.variables["main"][0]["value"]).toEqual(10);
       expect(result.variables["copy"][0]["value"].script).toBeDefined();
-      v = {
-        t: {
-          main: {
-            value: 10
-          }
+      v = function(name) {
+        if (name === "main") {
+          return 10;
         }
       };
       expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("10px");
-      v = {
-        t: {
-          main: {
-            value: 20
-          }
+      v = function(name) {
+        if (name === "main") {
+          return 20;
         }
       };
       expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("20px");
@@ -87,25 +83,19 @@
       result = parse("$main: 10px;\n$offset: 3px;\n$height: $main / 2 + $offset;");
       expect(result.variables["main"][0]["value"]).toEqual(10);
       expect(result.variables["offset"][0]["value"]).toEqual(3);
-      v = {
-        t: {
-          main: {
-            value: 10
-          },
-          offset: {
-            value: 3
-          }
+      v = function(name) {
+        if (name === "main") {
+          return 10;
+        } else if ("offset") {
+          return 3;
         }
       };
       expect(result.variables["height"][0]["value"].evaluate(v)).toBe("8px");
-      v = {
-        t: {
-          main: {
-            value: 20
-          },
-          offset: {
-            value: 5
-          }
+      v = function(name) {
+        if (name === "main") {
+          return 20;
+        } else if ("offset") {
+          return 5;
         }
       };
       expect(result.variables["height"][0]["value"].evaluate(v)).toBe("15px");
@@ -129,7 +119,8 @@
 }).call(this);
 (function() {
   window.fashiontests.parser.selectors = function() {
-    var parse;
+    var $wf, parse;
+    $wf = window.fashion;
     parse = window.fashion.$parser.parse;
     it("should parse complex selectors", function() {
       var result;
@@ -150,19 +141,20 @@
       expect(result.selectors[1].properties[0].value).toBe("0.5");
       expect(result.selectors[2].properties[0].value).toBe("0.0");
       expect(result.selectors[3].properties[0].value).toBe("0.75");
+      expect(result.selectors[0].properties[0].mode).toBe($wf.$runtimeMode["static"]);
       expect(result.selectors[0].properties[1].value).toBe("100px");
       return expect(result.selectors[1].properties[1].value).toBe("50px");
     });
     it("should allow selectors to be variables", function() {
       var nameExpression, result, v;
-      result = parse("$contentDiv: content;\n.$contentDiv {\n	background: black;\n}");
+      result = parse("$contentDiv: '.content';\n$contentDiv {\n	background: black;\n}");
       expect(result.selectors[0].properties[0].value).toBe("black");
+      expect(result.selectors[0].properties[0].mode).toBe($wf.$runtimeMode.dynamic);
+      expect(result.selectors[0].mode).toBe($wf.$runtimeMode.dynamic);
       nameExpression = result.selectors[0].name;
-      v = {
-        t: {
-          contentDiv: {
-            value: "content"
-          }
+      v = function(name) {
+        if (name === "contentDiv") {
+          return ".content";
         }
       };
       expect(nameExpression.evaluate(v)).toBe(".content");
@@ -172,15 +164,14 @@
     return it("should allow variables to be part of selectors", function() {
       var nameExpression, result, v;
       result = parse("$contentDiv: .content;\n$contentSub: p;\n$contentDiv h3 $contentSub {\n	color: black;\n}");
+      expect(result.selectors[0].properties[0].mode).toBe($wf.$runtimeMode.dynamic);
       nameExpression = result.selectors[0].name;
-      v = {
-        t: {
-          contentDiv: {
-            value: ".content"
-          },
-          contentSub: {
-            value: "p"
-          }
+      v = function(name) {
+        switch (name) {
+          case "contentDiv":
+            return ".content";
+          case "contentSub":
+            return "p";
         }
       };
       expect(nameExpression.evaluate(v)).toBe(".content h3 p");
@@ -194,7 +185,8 @@
 }).call(this);
 (function() {
   window.fashiontests.parser.properties = function() {
-    var parse;
+    var $wf, parse;
+    $wf = window.fashion;
     parse = window.fashion.$parser.parse;
     it("should allow properties with no semi-colon", function() {
       var props, result;
@@ -202,8 +194,10 @@
       props = result.selectors[0].properties;
       expect(props[0].name).toBe("height");
       expect(props[0].value).toBe("100px");
+      expect(props[0].mode).toBe($wf.$runtimeMode["static"]);
       expect(props[1].name).toBe("width");
-      return expect(props[1].value).toBe("200px");
+      expect(props[1].value).toBe("200px");
+      return expect(props[1].mode).toBe($wf.$runtimeMode["static"]);
     });
     it("should allow one-line properties", function() {
       var result;
@@ -217,6 +211,37 @@
       props = result.selectors[0].properties;
       expectedProperty = ['2px', 'solid', 'black'];
       return expect(props[0].value).toEqual(expectedProperty);
+    });
+    it("should allow variables in multipart properties", function() {
+      var props, result, v;
+      result = parse("$borderWidth: 2px;\np {\n	border: $borderWidth solid black;\n}");
+      props = result.selectors[0].properties;
+      expect(props[0].mode).toBe($wf.$runtimeMode.dynamic);
+      v = function(name) {
+        return 2;
+      };
+      return expect(props[0].value[0].evaluate(v)).toBe("2px");
+    });
+    it("should allow expressions in multipart properties", function() {
+      var props, result, v;
+      result = parse("$borderWidth: 2px;\np {\n	box-shadow: $borderWidth / 2 -$borderWidth $borderWidth*2 black;\n}");
+      props = result.selectors[0].properties;
+      expect(props[0].mode).toBe($wf.$runtimeMode.dynamic);
+      v = function(name) {
+        return 2;
+      };
+      expect(props[0].value[0].evaluate(v)).toBe("1px");
+      expect(props[0].value[1].evaluate(v)).toBe("-2px");
+      expect(props[0].value[2].evaluate(v)).toBe("4px");
+      return expect(props[0].value[3]).toBe("black");
+    });
+    it("should allow relative values in multipart properties", function() {
+      var props, result;
+      result = parse("p {\n	box-shadow: 0px @self.depth @self.depth black;\n}");
+      props = result.selectors[0].properties;
+      expect(props[0].mode).toBe($wf.$runtimeMode.individual);
+      expect(props[0].value[0]).toBe("0px");
+      return expect(props[0].value[3]).toBe("black");
     });
     it("should account for strings in multipart properties", function() {
       var expectedProperty, props, result;
@@ -251,7 +276,8 @@
       var props, result;
       result = parse("$height: 100px;\np {\n	height: $height !important\n}");
       props = result.selectors[0].properties;
-      return expect(props[0].value.important).toBe(true);
+      expect(props[0].value.important).toBe(true);
+      return expect(props[0].mode).toBe($wf.$runtimeMode.dynamic);
     });
     return it("should parse transitions", function() {
       var height, props, result, width;
@@ -276,19 +302,16 @@
       result = parse("$fullHeight: 30px;\ndiv {\n	height: $fullHeight / 3;\n\n	p {\n		height: $fullHeight / 3 - 4;\n	}\n}");
       expression = result.selectors[0].properties[0].value;
       pExpression = result.selectors[1].properties[0].value;
-      v = {
-        t: {
-          fullHeight: {
-            value: 30
-          }
-        }
+      v = function(name) {
+        return 30;
       };
-      expect(expression.dynamic).toBe(true);
-      expect(expression.individualized).toBe(false);
+      expect(expression.mode).toBe($wf.$runtimeMode.dynamic);
       expect(expression.unit).toBe("px");
       expect(expression.evaluate(v)).toBe("10px");
       expect(pExpression.evaluate(v)).toBe("6px");
-      v.t.fullHeight.value = 60;
+      v = function(name) {
+        return 60;
+      };
       expect(expression.evaluate(v)).toBe("20px");
       expect(pExpression.evaluate(v)).toBe("16px");
       expect(result.bindings.variables["fullHeight"].length).toBe(2);
@@ -299,23 +322,14 @@
       var expression, result, v;
       result = parse("$heightDivisor: 3;\ndiv {\n	height: 30px / $heightDivisor;\n}");
       expression = result.selectors[0].properties[0].value;
-      expect(expression.dynamic).toBe(true);
-      expect(expression.individualized).toBe(false);
+      expect(expression.mode).toBe($wf.$runtimeMode.dynamic);
       expect(expression.unit).toBe("px");
-      v = {
-        t: {
-          heightDivisor: {
-            value: 3
-          }
-        }
+      v = function(name) {
+        return 3;
       };
       expect(expression.evaluate(v)).toBe("10px");
-      v = {
-        t: {
-          heightDivisor: {
-            value: 10
-          }
-        }
+      v = function(name) {
+        return 10;
       };
       expect(expression.evaluate(v)).toBe("3px");
       return expect(result.bindings.variables["heightDivisor"][0]).toBe(0);
@@ -324,6 +338,7 @@
       var expression, expressionResult, result;
       result = parse("div {\n	height: random();\n}");
       expression = result.selectors[0].properties[0].value;
+      expect(expression.mode).toBe($wf.$functions.random.mode || 0);
       expressionResult = expression.evaluate({}, {}, $wf.$functions);
       expect(parseFloat(expressionResult)).toBeGreaterThan(0);
       expect(parseFloat(expressionResult)).toBeLessThan(1);
@@ -341,11 +356,9 @@
       var expression, expressionResult, globals, locals, result;
       result = parse("$maxHeight: 300px;\ndiv {\n	height: min($maxHeight, @height);\n}");
       expression = result.selectors[0].properties[0].value;
-      locals = {
-        t: {
-          maxHeight: {
-            value: 300
-          }
+      locals = function(name) {
+        if (name === "maxHeight") {
+          return 300;
         }
       };
       globals = {
@@ -364,12 +377,8 @@
       var expression, expressionResult, globals, locals, result;
       result = parse("$maxHeight: 300px;\ndiv {\n	height: min($maxHeight * 2, @height);\n}");
       expression = result.selectors[0].properties[0].value;
-      locals = {
-        t: {
-          maxHeight: {
-            value: 100
-          }
-        }
+      locals = function() {
+        return 100;
       };
       globals = {
         height: {
@@ -387,14 +396,12 @@
       var expression, expressionResult, globals, locals, result;
       result = parse("$maxHeight: 300px;\n$minHeight: 100px;\ndiv {\n	height: max(min($maxHeight, @height), $minHeight);\n}");
       expression = result.selectors[0].properties[0].value;
-      locals = {
-        t: {
-          maxHeight: {
-            value: 300
-          },
-          minHeight: {
-            value: 100
-          }
+      locals = function(name) {
+        switch (name) {
+          case "maxHeight":
+            return 300;
+          case "minHeight":
+            return 100;
         }
       };
       globals = {
@@ -447,53 +454,52 @@
     		expect(expression.evaluate({},{},$wf.$functions,thisObj)).toBe("10px")
     
     		expect(bindSpy).toHaveBeenCalledWith("#sidebar")
+    	
+    
+    	it "should allow alternate-property bindings in expressions", ()->
+    		result = parse( """
+    						div {
+    							height: @('#sidebar', 'width')px;
+    						}
+    						""")
+    		console.log result
+    
+    		bindSpy = jasmine.createSpy('spy').and.returnValue({})
+    		thisObj = {
+    			querySelector: bindSpy
+    			getComputedStyle: ()-> {width: 20}
+    		}
+    
+    		expression = result.selectors[0].properties[0].value
+    		expect(expression.mode).toBe($wf.$runtimeMode.dynamic)
+    		expect(expression.unit).toBe("px")
+    		expect(expression.evaluate({},{},$wf.$functions)).toBe("20px")
+    
+    		expect(bindSpy).toHaveBeenCalledWith("#sidebar", 'width')
      */
-    it("should allow alternate-property bindings in expressions", function() {
-      var bindSpy, expression, result, thisObj;
-      result = parse("div {\n	height: @('#sidebar', 'width')px;\n}");
-      bindSpy = jasmine.createSpy('spy').and.returnValue({});
-      thisObj = {
-        querySelector: bindSpy,
-        getComputedStyle: function() {
-          return {
-            width: 20
-          };
-        }
-      };
-      expression = result.selectors[0].properties[0].value;
-      expect(expression.dynamic).toBe(true);
-      expect(expression.individualized).toBe(false);
-      expect(expression.unit).toBe("px");
-      expect(expression.evaluate({}, {}, $wf.$functions, thisObj)).toBe("20px");
-      return expect(bindSpy).toHaveBeenCalledWith("#sidebar");
-    });
     it("should allow !important on expressions", function() {
       var expression, result;
       result = parse("$fullHeight: 30px;\ndiv {\n	height: $fullHeight / 3 !important;\n}");
       expression = result.selectors[0].properties[0].value;
-      expect(expression.evaluate({
-        t: {
-          fullHeight: {
-            value: 30
-          }
-        }
+      expect(expression.evaluate(function() {
+        return 30;
       })).toBe("10px");
       expect(expression.important).toBe(true);
-      expect(expression.individualized).toBe(false);
+      expect(expression.mode).toBe($wf.$runtimeMode.dynamic);
       return expect(expression.unit).toBe("px");
     });
     it("should recognize expressions that need to be individualized", function() {
       var expression, result;
       result = parse("div {\n	height: @('', 'width', @self)px / 1.5;\n}");
       expression = result.selectors[0].properties[0].value;
-      expect(expression.individualized).toBe(true);
+      expect(expression.mode).toBe($wf.$runtimeMode.individual);
       return expect(expression.unit).toBe("px");
     });
     it("should recognize setter expressions", function() {
       var expression, result;
       result = parse("$selected: \"divName\";\ndiv {\n	on-click: $selected = @self.id;\n}");
       expression = result.selectors[0].properties[0].value;
-      expect(expression.individualized).toBe(true);
+      expect(expression.mode).toBe($wf.$runtimeMode.individual);
       expect(expression.type).toBe($wf.$type.String);
       return expect(expression.unit).toBe(void 0);
     });
@@ -501,7 +507,7 @@
       var expression, result;
       result = parse("div {\n	width: @self.width;\n}");
       expression = result.selectors[0].properties[0].value;
-      expect(expression.individualized).toBe(true);
+      expect(expression.mode).toBe($wf.$runtimeMode.individual);
       expect(expression.type).toBe($wf.$type.Number);
       return expect(expression.unit).toBe("px");
     });
