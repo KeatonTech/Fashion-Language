@@ -14,7 +14,7 @@ $wf.$extend window.fashion.$properties, new class then constructor: ->
 		return new Function "element", "value", "evaluate", body
 
 	for evt in events
-		@["on-#{evt}"] = 
+		@["on-#{evt}"] = new PropertyModule
 			replace: true
-			individualized: true
+			mode: $wf.$runtimeMode.individual
 			"apply": applyForEvent(evt)

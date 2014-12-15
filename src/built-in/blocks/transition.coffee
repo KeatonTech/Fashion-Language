@@ -1,4 +1,4 @@
-window.fashion.$blocks["transition"] = 
+window.fashion.$blocks["transition"] = new BlockModule
 
 	# Compile the block (acts as a parser mostly)
 	compile: (args, body) ->
@@ -128,10 +128,9 @@ window.fashion.$blocks["transition"] =
 			return csstext
 
 
-window.fashion.$functions["trigger"] = 
+window.fashion.$functions["trigger"] = new FunctionModule
 	output: $wf.$type.None
 	unit: ''
-	dynamic: false
-	individualized: true
+	mode: $wf.$runtimeMode.individual
 	evaluate: (name, duration, element) ->
 		w.FASHION.blocks.transition.trigger.call this, name.value, duration, element

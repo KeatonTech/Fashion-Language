@@ -51,18 +51,13 @@ window.fashiontests.parser.variables = () ->
 						$colorRGB: rgb(200,100,50.4);
 						$colorRGBA: rgba(200,100.01,50,0.5);
 						""")
+		console.log result
 
 		# Check types
 		expect(result.variables["colorConst"][0]["type"]).toEqual(type.Color);
 		expect(result.variables["colorHex"][0]["type"]).toEqual(type.Color);
 		expect(result.variables["colorRGB"][0]["type"]).toEqual(type.Color);
 		expect(result.variables["colorRGBA"][0]["type"]).toEqual(type.Color);
-
-		# Check units
-		expect(result.variables["colorConst"][0]["unit"]).toEqual(unit.Color.Const);
-		expect(result.variables["colorHex"][0]["unit"]).toEqual(unit.Color.Hex);
-		expect(result.variables["colorRGB"][0]["unit"]).toEqual(unit.Color.RGB);
-		expect(result.variables["colorRGBA"][0]["unit"]).toEqual(unit.Color.RGBA);
 
 		# Check values
 		expect(result.variables["colorConst"][0]["value"]).toEqual("red");

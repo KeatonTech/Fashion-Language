@@ -70,7 +70,7 @@ Here, the @height variable is the total height of the window. Fashion intelligen
 * *ScrollX:* The user's current scroll position, in pixels from the left of the page
 * *ScrollY:* The user's current scroll position, in pixels from the top of the page
 * *MouseX:* The user's current mouse position, in pixels from the left of the page
-* *MouseY:* The user's current moust position, in pixels from the top of the page
+* *MouseY:* The user's current mouse position, in pixels from the top of the page
 
 ### Transitions & Animations
 

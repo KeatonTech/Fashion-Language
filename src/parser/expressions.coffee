@@ -254,7 +254,7 @@ window.fashion.$parser.expressionExpander =
 			scripts.push expr.script
 
 		# Figure out the return units of the function
-		if fObj.unit isnt undefined then unit = fObj.unit
+		if fObj.unit isnt "" then unit = fObj.unit
 		else if fObj.unitFrom isnt undefined then unit = expressions[fObj.unitFrom].unit
 		else unit = ""
 
@@ -262,5 +262,5 @@ window.fashion.$parser.expressionExpander =
 		parseTree.addFunctionDependency name, fObj
 
 		# Return a neat little package
-		script = "f['#{name}'].evaluate.call(#{scripts.join(',')})"
-		return new Expression script, fObj.output, inputUnit || unit, mode
+		script = "f['#{name}'].get.call(#{scripts.join(',')})"
+		return new Expression script, fObj.type, inputUnit || unit, mode

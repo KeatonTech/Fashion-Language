@@ -1,6 +1,6 @@
 $wf.$extend window.fashion.$functions, 
 	
-	"@":
+	"@": new FunctionModule
 		output: $wf.$type.Number
 		unit: ''
 		dynamic: true

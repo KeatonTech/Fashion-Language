@@ -1,6 +1,6 @@
 $wf.$extend window.fashion.$properties,
 
-	pin:
+	pin: new PropertyModule
 		replace: true
 		compile: (values)->
 

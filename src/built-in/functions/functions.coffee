@@ -1,16 +1,15 @@
 window.fashion.$functions =
 
-	random:
+	random: new FunctionModule
 		output: $wf.$type.Number
-		unit: ''
 		evaluate: () -> Math.random()
 
-	round:
+	round: new FunctionModule
 		output: $wf.$type.Number
 		unitFrom: 0
 		evaluate: (n) -> Math.round n.value
 
-	min:
+	min: new FunctionModule
 		output: $wf.$type.Number
 		unitFrom: 0
 		evaluate: () ->
@@ -19,7 +18,7 @@ window.fashion.$functions =
 				if arg.value < minSoFar then minSoFar = arg.value
 			return minSoFar
 
-	max:
+	max: new FunctionModule
 		output: $wf.$type.Number
 		unitFrom: 0
 		evaluate: () ->

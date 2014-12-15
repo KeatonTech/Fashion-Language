@@ -39,17 +39,17 @@ $wf = window.fashion = {
 wait = function(d, f) {
   return setTimeout(f, d);
 };
-window.fashion.addProperty = function(name, propertyObject, force) {
+window.fashion.addProperty = function(name, propertyModule, force) {
   if (force == null) {
     force = false;
   }
-  if (!globalObject.compile && !globalObject.apply) {
-    return new Error("Property objects must have either a 'compile' or 'apply' function");
+  if (!(propertyModule instanceof PropertyModule)) {
+    return new Error("" + name + " must be passed as a PropertyModule instance");
   }
   if (!force && window.fashion.$properties[name]) {
     return new Error("There is already a property named " + name);
   }
-  return window.fashion.$properties[name] = globalObject;
+  return window.fashion.$properties[name] = propertyModule;
 };
 
 window.fashion.addProperties = function(obj, force) {
@@ -65,17 +65,17 @@ window.fashion.addProperties = function(obj, force) {
   return _results;
 };
 
-window.fashion.addFunction = function(name, functionObject, force) {
+window.fashion.addFunction = function(name, functionModule, force) {
   if (force == null) {
     force = false;
   }
-  if (!functionObject.output || !functionObject.evaluate) {
-    return new Error("Function objects must have 'output' and 'evaluate' properties");
+  if (!(functionModule instanceof FunctionModule)) {
+    return new Error("" + name + " must be passed as a FunctionModule instance");
   }
   if (!force && window.fashion.$functions[name]) {
     return new Error("There is already a function named " + name);
   }
-  return window.fashion.$functions[name] = functionObject;
+  return window.fashion.$functions[name] = functionModule;
 };
 
 window.fashion.addFunctions = function(obj, force) {
@@ -91,23 +91,17 @@ window.fashion.addFunctions = function(obj, force) {
   return _results;
 };
 
-window.fashion.addGlobal = function(name, globalObject, force) {
+window.fashion.addGlobal = function(name, globalModule, force) {
   if (force == null) {
     force = false;
   }
-  if (!globalObject.type || !globalObject.unit) {
-    return new Error("Global objects must specify type and unit properties");
-  }
-  if (!globalObject.get) {
-    return new Error("Global objects must have a 'get' function");
-  }
-  if (!globalObject.watch) {
-    return new Error("Global objects must have a 'watch' function");
+  if (!(globalModule instanceof GlobalModule)) {
+    return new Error("" + name + " must be passed as a GlobalModule instance");
   }
   if (!force && window.fashion.$globals[name]) {
     return new Error("There is already a global named " + name);
   }
-  return window.fashion.$globals[name] = globalObject;
+  return window.fashion.$globals[name] = globalModule;
 };
 
 window.fashion.addGlobals = function(obj, force) {
@@ -502,6 +496,94 @@ Expression = (function() {
 })();
 
 window.fashion.$class.Expression = Expression;
+var BlockModule, FunctionModule, GlobalModule, Module, PropertyModule, ReturnValueModule,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+Module = (function() {
+  function Module(args) {
+    this.mode = args.mode || args.runtimeMode || $wf.$runtimeMode["static"];
+    if (args.watcherFunction) {
+      if (!(this.mode | $wf.$runtimeMode.dynamic) || (this.mode | $wf.$runtimeMode.live)) {
+        console.log("[FASHION] Static/live modules cannot have watcher functions.");
+      } else {
+        this.watch = args.watcherFunction;
+      }
+    }
+  }
+
+  return Module;
+
+})();
+
+ReturnValueModule = (function(_super) {
+  __extends(ReturnValueModule, _super);
+
+  function ReturnValueModule(args) {
+    this.type = args.type || args.output || args.outputType || $wf.$type.String;
+    this.unit = args.unit || '';
+    this.get = args.get || args.evaluate;
+    ReturnValueModule.__super__.constructor.call(this, args);
+  }
+
+  return ReturnValueModule;
+
+})(Module);
+
+GlobalModule = (function(_super) {
+  __extends(GlobalModule, _super);
+
+  function GlobalModule(args) {
+    GlobalModule.__super__.constructor.call(this, args);
+  }
+
+  return GlobalModule;
+
+})(ReturnValueModule);
+
+FunctionModule = (function(_super) {
+  __extends(FunctionModule, _super);
+
+  function FunctionModule(args) {
+    if (args.unitFrom !== void 0) {
+      this.unitFrom = args.unitFrom;
+      delete args.unit;
+    }
+    FunctionModule.__super__.constructor.call(this, args);
+  }
+
+  return FunctionModule;
+
+})(ReturnValueModule);
+
+BlockModule = (function(_super) {
+  __extends(BlockModule, _super);
+
+  function BlockModule(args) {
+    this.compile = args.compileFunction || args.compile;
+    this.runtimeObject = args.runtimeObject || args.runtime;
+  }
+
+  return BlockModule;
+
+})(Module);
+
+PropertyModule = (function(_super) {
+  __extends(PropertyModule, _super);
+
+  function PropertyModule(args) {
+    this.compile = args.compileFunction || args.compile;
+    this.apply = args.applyFunction || args.apply;
+    if (this.apply) {
+      args.mode = $wf.$runtimeMode.individual;
+    }
+    this.replace = args.replace;
+    this.runtimeObject = args.runtimeObject || args.runtime;
+  }
+
+  return PropertyModule;
+
+})(Module);
 window.fashion.$type = {
   None: 0,
   Number: 1,
@@ -541,16 +623,6 @@ window.fashion.$unit = {
     "vmax": "vmax",
     "ms": "ms",
     "s": "s"
-  },
-  Color: {
-    Const: 0,
-    Hex: 1,
-    RGB: 2,
-    RGBA: 3,
-    HSB: 4,
-    HSBA: 5,
-    HSL: 6,
-    HSLA: 7
   }
 };
 window.fashion.$typeConstants = {
@@ -1157,7 +1229,7 @@ window.fashion.$parser.expressionExpander = {
       mode |= expr.mode;
       scripts.push(expr.script);
     }
-    if (fObj.unit !== void 0) {
+    if (fObj.unit !== "") {
       unit = fObj.unit;
     } else if (fObj.unitFrom !== void 0) {
       unit = expressions[fObj.unitFrom].unit;
@@ -1165,8 +1237,8 @@ window.fashion.$parser.expressionExpander = {
       unit = "";
     }
     parseTree.addFunctionDependency(name, fObj);
-    script = "f['" + name + "'].evaluate.call(" + (scripts.join(',')) + ")";
-    return new Expression(script, fObj.output, inputUnit || unit, mode);
+    script = "f['" + name + "'].get.call(" + (scripts.join(',')) + ")";
+    return new Expression(script, fObj.type, inputUnit || unit, mode);
   }
 };
 window.fashion.$processor = {
@@ -1609,7 +1681,7 @@ window.fashion.$run.determineType = function(value, types, constants) {
   }
 };
 window.fashion.$run.getUnit = function(rawValue, varType, type, unit) {
-  var getColorUnit, getNumberUnit;
+  var getNumberUnit;
   if (type == null) {
     type = FASHION.type;
   }
@@ -1645,35 +1717,8 @@ window.fashion.$run.getUnit = function(rawValue, varType, type, unit) {
       unit: unit
     };
   };
-  getColorUnit = function() {
-    if (rawValue[0] === "#") {
-      return {
-        value: rawValue,
-        unit: unit.Color.Hex
-      };
-    }
-    if (rawValue.toLowerCase().indexOf("rgba") === 0) {
-      return {
-        value: rawValue,
-        unit: unit.Color.RGBA
-      };
-    }
-    if (rawValue.toLowerCase().indexOf("rgb") === 0) {
-      return {
-        value: rawValue,
-        unit: unit.Color.RGB
-      };
-    }
-    return {
-      value: rawValue,
-      unit: unit.Color.Const
-    };
-  };
   if (varType === type.Number) {
     return getNumberUnit();
-  }
-  if (varType === type.Color) {
-    return getColorUnit();
   } else if (varType === type.String) {
     if (rawValue[0] === "'" || rawValue[0] === "\"") {
       rawValue = rawValue.substring(1, rawValue.length - 1);
@@ -2217,21 +2262,20 @@ window.fashion.$blueprint = {
   }
 };
 window.fashion.$functions = {
-  random: {
+  random: new FunctionModule({
     output: $wf.$type.Number,
-    unit: '',
     evaluate: function() {
       return Math.random();
     }
-  },
-  round: {
+  }),
+  round: new FunctionModule({
     output: $wf.$type.Number,
     unitFrom: 0,
     evaluate: function(n) {
       return Math.round(n.value);
     }
-  },
-  min: {
+  }),
+  min: new FunctionModule({
     output: $wf.$type.Number,
     unitFrom: 0,
     evaluate: function() {
@@ -2245,8 +2289,8 @@ window.fashion.$functions = {
       }
       return minSoFar;
     }
-  },
-  max: {
+  }),
+  max: new FunctionModule({
     output: $wf.$type.Number,
     unitFrom: 0,
     evaluate: function() {
@@ -2260,10 +2304,10 @@ window.fashion.$functions = {
       }
       return maxSoFar;
     }
-  }
+  })
 };
 $wf.$extend(window.fashion.$functions, {
-  "@": {
+  "@": new FunctionModule({
     output: $wf.$type.Number,
     unit: '',
     dynamic: true,
@@ -2276,28 +2320,24 @@ $wf.$extend(window.fashion.$functions, {
       style = this.getComputedStyle(matched);
       return style[property.value];
     }
-  }
+  })
 });
 $wf.$extend(window.fashion.$functions, {
-  "rgb": {
+  "rgb": new FunctionModule({
     output: $wf.$type.Color,
-    unit: $wf.$unit.Color.RGB,
-    dynamic: true,
     evaluate: function(r, g, b) {
       return "rgb(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + ")";
     }
-  },
-  "rgba": {
+  }),
+  "rgba": new FunctionModule({
     output: $wf.$type.Color,
-    unit: $wf.$unit.Color.RGBA,
-    dynamic: true,
     evaluate: function(r, g, b, a) {
       return "rgba(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + "," + a.value + ")";
     }
-  }
+  })
 });
 window.fashion.$properties = {
-  "text-style": {
+  "text-style": new PropertyModule({
     replace: true,
     compile: function(values) {
       var compileSingleValue, families, v, _i, _len;
@@ -2346,10 +2386,10 @@ window.fashion.$properties = {
       }
       return this.setProperty("font-family", families.join(", "));
     }
-  }
+  })
 };
 $wf.$extend(window.fashion.$properties, {
-  pin: {
+  pin: new PropertyModule({
     replace: true,
     compile: function(values) {
       var bottomExpr, leftExpr, processPosition, rightExpr, topExpr;
@@ -2396,7 +2436,7 @@ $wf.$extend(window.fashion.$properties, {
         return this.setProperty("bottom", this.parseValue(bottomExpr));
       }
     }
-  }
+  })
 });
 $wf.$extend(window.fashion.$properties, new ((function() {
   function _Class() {
@@ -2409,11 +2449,11 @@ $wf.$extend(window.fashion.$properties, new ((function() {
     };
     for (_i = 0, _len = events.length; _i < _len; _i++) {
       evt = events[_i];
-      this["on-" + evt] = {
+      this["on-" + evt] = new PropertyModule({
         replace: true,
-        individualized: true,
+        mode: $wf.$runtimeMode.individual,
         "apply": applyForEvent(evt)
-      };
+      });
     }
   }
 
@@ -2421,7 +2461,7 @@ $wf.$extend(window.fashion.$properties, new ((function() {
 
 })()));
 window.fashion.$blocks = {};
-window.fashion.$blocks["transition"] = {
+window.fashion.$blocks["transition"] = new BlockModule({
   compile: function(args, body) {
     var acc, count, currentKeyframe, depth, keyframe, keyframes, lastAcc, name, regex, segment, transition;
     name = args[0];
@@ -2538,19 +2578,18 @@ window.fashion.$blocks["transition"] = {
       return csstext;
     }
   }
-};
+});
 
-window.fashion.$functions["trigger"] = {
+window.fashion.$functions["trigger"] = new FunctionModule({
   output: $wf.$type.None,
   unit: '',
-  dynamic: false,
-  individualized: true,
+  mode: $wf.$runtimeMode.individual,
   evaluate: function(name, duration, element) {
     return w.FASHION.blocks.transition.trigger.call(this, name.value, duration, element);
   }
-};
+});
 window.fashion.$globals = {
-  width: {
+  width: new GlobalModule({
     type: $wf.$type.Number,
     unit: "px",
     get: function() {
@@ -2559,8 +2598,8 @@ window.fashion.$globals = {
     watch: function(onchange) {
       return window.addEventListener("resize", onchange, false);
     }
-  },
-  height: {
+  }),
+  height: new GlobalModule({
     type: $wf.$type.Number,
     unit: "px",
     get: function() {
@@ -2569,8 +2608,8 @@ window.fashion.$globals = {
     watch: function(onchange) {
       return window.addEventListener("resize", onchange, false);
     }
-  },
-  scrolly: {
+  }),
+  scrolly: new GlobalModule({
     type: $wf.$type.Number,
     unit: "px",
     get: function() {
@@ -2579,8 +2618,8 @@ window.fashion.$globals = {
     watch: function(onchange) {
       return window.addEventListener("onscroll", onchange);
     }
-  },
-  scrollx: {
+  }),
+  scrollx: new GlobalModule({
     type: $wf.$type.Number,
     unit: "px",
     get: function() {
@@ -2589,8 +2628,8 @@ window.fashion.$globals = {
     watch: function(onchange) {
       return window.addEventListener("onscroll", onchange);
     }
-  },
-  mousey: {
+  }),
+  mousey: new GlobalModule({
     type: $wf.$type.Number,
     unit: "px",
     get: function() {
@@ -2602,8 +2641,8 @@ window.fashion.$globals = {
         return onchange();
       });
     }
-  },
-  mousex: {
+  }),
+  mousex: new GlobalModule({
     type: $wf.$type.Number,
     unit: "px",
     get: function() {
@@ -2615,7 +2654,7 @@ window.fashion.$globals = {
         return onchange();
       });
     }
-  }
+  })
 };
 }());
 
