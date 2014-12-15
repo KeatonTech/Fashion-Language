@@ -30,7 +30,6 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ##### Code to expand Fashion properties, blocks and selectors into a format closer to raw CSS and Javascript.
 
 * ***processor.coffee:*** Sets the parse tree up for processing and runs the functions for properties, blocks and selectors.
-* ***variables.coffee:*** Determines the types and units for each variable. Handles selector linking.
 * ***properties.coffee:*** Goes through each selector in the parse tree to find properties associated with Fashion modules, and expand them.
 * ***blocks.coffee:*** Goes through each block and calls a module to expand its contents.
 * ***api.coffee:*** Defines functions that can be run by module funtions.
@@ -63,6 +62,7 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ### ./classes
 ##### Compilers aren't typically very object oriented, Fashion just uses these to define and enforce a standard data format
 
+* ***classes/modules.coffee:*** Classes that represent different Fashion extension modules.
 * ***classes/parsetree.coffee:*** Class that represents the parse tree of a document. Includes all the other classes.
 * ***classes/variable.coffee:*** Class that represents a user-defined variable.
 * ***classes/selector.coffee:*** Class that represents a selector and its properties or its string body.
@@ -80,7 +80,7 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ##### Equivalent to C++ typedefs, useful standardizations
 
 * ***types.coffee:*** List of singular, constant and composite data types in a numbered enum format.
-* ***units.coffee:*** List of numerical and color units.
+* ***units.coffee:*** List of numerical units.
 * ***constants.coffee:*** List of allowed values for constant types like display, align, and built-in colors.
 * ***runtime-modes.coffee:*** List of modes that can be applied to properties, variables and modules to define runtime behavior.
 

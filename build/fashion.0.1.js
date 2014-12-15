@@ -1243,69 +1243,9 @@ window.fashion.$parser.expressionExpander = {
 };
 window.fashion.$processor = {
   process: function(parseTree) {
-    parseTree.forEachVariable(function(variable) {
-      return $wf.$processor.addTypeInformation(variable);
-    });
-    window.fashion.$processor.listRequirements(parseTree);
     parseTree = window.fashion.$processor.blocks(parseTree, $wf.$blocks);
     parseTree = window.fashion.$processor.properties(parseTree, $wf.$properties);
     return parseTree;
-  },
-  listRequirements: function(parseTree) {
-    var bName, block, fName, gName, properties, property, req, selector, vName, value, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3, _results;
-    parseTree.requirements = {
-      globals: {},
-      functions: {},
-      blocks: {},
-      properties: {}
-    };
-    req = parseTree.requirements;
-    _ref = parseTree.selectors;
-    for (selector in _ref) {
-      properties = _ref[selector];
-      for (property in properties) {
-        value = properties[property];
-        if (!(typeof value === "object")) {
-          continue;
-        }
-        if ($wf.$properties[property]) {
-          req.properties[property] = $wf.$properties[property];
-        }
-        if (value.dependencies) {
-          _ref1 = value.dependencies;
-          for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-            vName = _ref1[_i];
-            if (vName[0] === "@") {
-              gName = vName.substr(1);
-              if ($wf.$globals[gName]) {
-                req.globals[gName] = $wf.$globals[property];
-              }
-            }
-          }
-        }
-        if (value.functions) {
-          _ref2 = value.functions;
-          for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
-            fName = _ref2[_j];
-            if ($wf.$functions[fName]) {
-              req.functions[fName] = $wf.$functions[fName];
-            }
-          }
-        }
-      }
-    }
-    _ref3 = parseTree.blocks;
-    _results = [];
-    for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-      block = _ref3[_k];
-      bName = block.type;
-      if ($wf.$blocks[bName]) {
-        _results.push(req.blocks[bName] = $wf.$blocks[bName]["runtimeObject"]);
-      } else {
-        _results.push(void 0);
-      }
-    }
-    return _results;
   }
 };
 window.fashion.$processor.api = {
