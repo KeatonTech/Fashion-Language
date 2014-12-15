@@ -8,7 +8,7 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 			[\s]*(\[([\w\-\$\@]*)		# Transition Name
 			[\s]*([\w\-\$\@\%]*)[\s]*	# Transition Duration (optional)
 			([\w\-\$\@\%]*)\]){0,1}		# Transition Delay (optional)
-			[\s]*(.*?)					# Property/Variable Value or Expression
+			[\s]*([^;}\n]*?)			# Property/Variable Value or Expression
 			[\s]*(!important)?			# Important flag
 			[;}\n]						# Ending
 			///g

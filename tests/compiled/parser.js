@@ -40,7 +40,6 @@
     it("should parse out color variables", function() {
       var result, rgbExpression, rgbaExpression;
       result = parse("$colorConst: red;\n$colorHex: #da0;\n$colorRGB: rgb(200,100,50.4);\n$colorRGBA: rgba(200,100.01,50,0.5);");
-      console.log(result);
       expect(result.variables["colorConst"][0]["type"]).toEqual(type.Color);
       expect(result.variables["colorHex"][0]["type"]).toEqual(type.Color);
       expect(result.variables["colorRGB"][0]["type"]).toEqual(type.Color);

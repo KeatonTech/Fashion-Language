@@ -62,11 +62,13 @@ class BlockModule extends Module
 		#		addScript(javascript): Injects javascript into the compiled results
 		# }
 		# Returns an error if the block could not be added
-		@compile = args.compileFunction || args.compile # (args, body, self) ->
+		if typeof args is 'function' then @compile = args
+		else 
+			@compile = args.compileFunction || args.compile # (args, body, self) ->
 
-		# Adds an object to the compiled Javascript
-		# This object will be made available as w.FASHION.blocks.[name of block]
-		@runtimeObject = args.runtimeObject || args.runtime
+			# Adds an object to the compiled Javascript
+			# This object will be made available as w.FASHION.blocks.[name of block]
+			@runtimeObject = args.runtimeObject || args.runtime
 
 
 # Adds a new CSS property to Fashion
@@ -85,18 +87,27 @@ class PropertyModule extends Module
 		#		getSelector(): Returns the name of the current selector
 		# }
 		# Returns an error if the property could not be added
-		@compile = args.compileFunction || args.compile # (value, self) ->
+		if typeof args is 'function' then @compile = args
+		else
+			@compile = args.compileFunction || args.compile # (value, self) ->
 
-		# Occurs during runtime for each matched element
-		# evaluateExpression() is passed if value is an expression
-		# It is pre-bound so it takes no arguments
-		# Adding this property implies that the property needs to run in individual mode
-		@apply = args.applyFunction || args.apply # (element, value, evaluateExpression) ->
-		if @apply then args.mode = $wf.$runtimeMode.individual
+			# Occurs during runtime for each matched element
+			# evaluateExpression() is passed if value is an expression
+			# It is pre-bound so it takes no arguments
+			# Adding this property implies that the property needs to run in individual mode
+			@apply = args.applyFunction || args.apply # (element, value, evaluateExpr) ->
+			if @apply then args.mode = $wf.$runtimeMode.individual
 
-		# True if the property should be entirely removed from the original CSS
-		@replace = args.replace
+			# True if the property should be entirely removed from the original CSS
+			@replace = args.replace || false
 
-		# Optionally add functions to the compiled fashion runtime
-		# Put whatever you want in here
-		@runtimeObject = args.runtimeObject || args.runtime
+			# Optionally add functions to the compiled fashion runtime
+			# Put whatever you want in here
+			@runtimeObject = args.runtimeObject || args.runtime
+
+# Make these accessible from the outside
+if !window.fashion.$class then window.fashion.$class = {}
+window.fashion.$class.GlobalModule = GlobalModule
+window.fashion.$class.FunctionModule = FunctionModule
+window.fashion.$class.BlockModule = BlockModule
+window.fashion.$class.PropertyModule = PropertyModule

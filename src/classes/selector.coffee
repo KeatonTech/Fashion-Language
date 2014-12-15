@@ -21,5 +21,17 @@ class Selector
 		@body = undefined # No longer needed
 		@properties.push property
 
+	# Insert a new property in at a given index
+	insertProperty: (property, index) ->
+		@body = undefined # No longer needed
+		@properties.splice index, 0, property
+
+	# ITERATION
+	# Run a function for each property with a given name
+	forEachPropertyNamed: (name, run)->
+		for property in @properties
+			if property.name is name
+				if run.call(this, property) is false then return
+
 
 window.fashion.$class.Selector = Selector

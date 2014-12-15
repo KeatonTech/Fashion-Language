@@ -87,11 +87,16 @@ class ParseTree
 	forEachVariable: (run) ->
 		for name, scopes of @variables
 			for scope, variable of scopes
-				run.call(variable, variable, scope)
+				if run.call(variable, variable, scope) is false then return
+
+	forEachMatchingSelector: (selectorString, run) ->
+		for selector in @selectors
+			if selector.name is selectorString
+				if run.call(this, selector) is false then return
 
 
 # Make sure all of this is neatly accessible from the outside too
-window.fashion.$class = {}
+if !window.fashion.$class then window.fashion.$class = {}
 window.fashion.$class.ParseTree = ParseTree
 
 #@prepros-append ./variable.coffee

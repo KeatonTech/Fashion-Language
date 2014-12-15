@@ -44,7 +44,7 @@ window.fashion.addProperty = function(name, propertyModule, force) {
     force = false;
   }
   if (!(propertyModule instanceof PropertyModule)) {
-    return new Error("" + name + " must be passed as a PropertyModule instance");
+    propertyModule = new PropertyModule(propertyModule);
   }
   if (!force && window.fashion.$properties[name]) {
     return new Error("There is already a property named " + name);
@@ -70,7 +70,7 @@ window.fashion.addFunction = function(name, functionModule, force) {
     force = false;
   }
   if (!(functionModule instanceof FunctionModule)) {
-    return new Error("" + name + " must be passed as a FunctionModule instance");
+    functionModule = new FunctionModule(functionModule);
   }
   if (!force && window.fashion.$functions[name]) {
     return new Error("There is already a function named " + name);
@@ -96,7 +96,7 @@ window.fashion.addGlobal = function(name, globalModule, force) {
     force = false;
   }
   if (!(globalModule instanceof GlobalModule)) {
-    return new Error("" + name + " must be passed as a GlobalModule instance");
+    globalModule = new GlobalModule(globalModule);
   }
   if (!force && window.fashion.$globals[name]) {
     return new Error("There is already a global named " + name);
@@ -113,6 +113,32 @@ window.fashion.addGlobals = function(obj, force) {
   for (v = _i = 0, _len = obj.length; _i < _len; v = ++_i) {
     k = obj[v];
     _results.push(window.fashion.addGlobal(k, v, force));
+  }
+  return _results;
+};
+
+window.fashion.addBlock = function(name, blockModule, force) {
+  if (force == null) {
+    force = false;
+  }
+  if (!(blockModule instanceof BlockModule)) {
+    blockModule = new BlockModule(blockModule);
+  }
+  if (!force && window.fashion.$blocks[name]) {
+    return new Error("There is already a block named " + name);
+  }
+  return window.fashion.$blocks[name] = blockModule;
+};
+
+window.fashion.addBlocks = function(obj, force) {
+  var k, v, _i, _len, _results;
+  if (force == null) {
+    force = false;
+  }
+  _results = [];
+  for (v = _i = 0, _len = obj.length; _i < _len; v = ++_i) {
+    k = obj[v];
+    _results.push(window.fashion.addBlock(k, v, force));
   }
   return _results;
 };
@@ -343,29 +369,39 @@ ParseTree = (function() {
   };
 
   ParseTree.prototype.forEachVariable = function(run) {
-    var name, scope, scopes, variable, _ref, _results;
+    var name, scope, scopes, variable, _ref;
     _ref = this.variables;
-    _results = [];
     for (name in _ref) {
       scopes = _ref[name];
-      _results.push((function() {
-        var _results1;
-        _results1 = [];
-        for (scope in scopes) {
-          variable = scopes[scope];
-          _results1.push(run.call(variable, variable, scope));
+      for (scope in scopes) {
+        variable = scopes[scope];
+        if (run.call(variable, variable, scope) === false) {
+          return;
         }
-        return _results1;
-      })());
+      }
     }
-    return _results;
+  };
+
+  ParseTree.prototype.forEachMatchingSelector = function(selectorString, run) {
+    var selector, _i, _len, _ref;
+    _ref = this.selectors;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      selector = _ref[_i];
+      if (selector.name === selectorString) {
+        if (run.call(this, selector) === false) {
+          return;
+        }
+      }
+    }
   };
 
   return ParseTree;
 
 })();
 
-window.fashion.$class = {};
+if (!window.fashion.$class) {
+  window.fashion.$class = {};
+}
 
 window.fashion.$class.ParseTree = ParseTree;
 var Variable;
@@ -421,6 +457,24 @@ Selector = (function() {
   Selector.prototype.addProperty = function(property) {
     this.body = void 0;
     return this.properties.push(property);
+  };
+
+  Selector.prototype.insertProperty = function(property, index) {
+    this.body = void 0;
+    return this.properties.splice(index, 0, property);
+  };
+
+  Selector.prototype.forEachPropertyNamed = function(name, run) {
+    var property, _i, _len, _ref;
+    _ref = this.properties;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      property = _ref[_i];
+      if (property.name === name) {
+        if (run.call(this, property) === false) {
+          return;
+        }
+      }
+    }
   };
 
   return Selector;
@@ -560,8 +614,12 @@ BlockModule = (function(_super) {
   __extends(BlockModule, _super);
 
   function BlockModule(args) {
-    this.compile = args.compileFunction || args.compile;
-    this.runtimeObject = args.runtimeObject || args.runtime;
+    if (typeof args === 'function') {
+      this.compile = args;
+    } else {
+      this.compile = args.compileFunction || args.compile;
+      this.runtimeObject = args.runtimeObject || args.runtime;
+    }
   }
 
   return BlockModule;
@@ -572,27 +630,39 @@ PropertyModule = (function(_super) {
   __extends(PropertyModule, _super);
 
   function PropertyModule(args) {
-    this.compile = args.compileFunction || args.compile;
-    this.apply = args.applyFunction || args.apply;
-    if (this.apply) {
-      args.mode = $wf.$runtimeMode.individual;
+    if (typeof args === 'function') {
+      this.compile = args;
+    } else {
+      this.compile = args.compileFunction || args.compile;
+      this.apply = args.applyFunction || args.apply;
+      if (this.apply) {
+        args.mode = $wf.$runtimeMode.individual;
+      }
+      this.replace = args.replace || false;
+      this.runtimeObject = args.runtimeObject || args.runtime;
     }
-    this.replace = args.replace;
-    this.runtimeObject = args.runtimeObject || args.runtime;
   }
 
   return PropertyModule;
 
 })(Module);
+
+if (!window.fashion.$class) {
+  window.fashion.$class = {};
+}
+
+window.fashion.$class.GlobalModule = GlobalModule;
+
+window.fashion.$class.FunctionModule = FunctionModule;
+
+window.fashion.$class.BlockModule = BlockModule;
+
+window.fashion.$class.PropertyModule = PropertyModule;
 window.fashion.$type = {
   None: 0,
   Number: 1,
   String: 2,
   Color: 3,
-  C2Number: 50,
-  C4Number: 51,
-  CBorder: 52,
-  CShadow: 53,
   KGeneric: 100,
   KDisplay: 101,
   KCenter: 102,
@@ -885,7 +955,7 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
 window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseTree) {
   var linkId, mode, name, property, regex, transition, value, _results;
   linkId = selector.index;
-  regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*(.*?)[\s]*(!important)?[;}\n]/g;
+  regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*([^;}\n]*?)[\s]*(!important)?[;}\n]/g;
   _results = [];
   while (property = regex.exec(bodyString)) {
     if (property.length < 7) {
@@ -1252,64 +1322,59 @@ window.fashion.$processor.api = {
   throwError: function(property, error) {
     return console.log("[FASHION: " + property + "] " + error);
   },
-  setProperty: function(parseTree, selector, insertIndex, name, value) {
-    var index, k, properties, v, _i, _len;
-    properties = parseTree.selectors[selector];
-    if (!properties) {
-      return false;
-    }
-    index = 0;
-    for (v = _i = 0, _len = properties.length; _i < _len; v = ++_i) {
-      k = properties[v];
-      index++;
-      if (index < insertIndex) {
-        continue;
-      }
-      if (k === name) {
+  setProperty: function(selector, insertIndex, mode, name, value) {
+    var property;
+    property = new Property(name, value, mode);
+    return selector.insertProperty(property, insertIndex + 1);
+  },
+  getProperty: function(parseTree, selectorName, propertyName) {
+    var rval;
+    rval = void 0;
+    parseTree.forEachMatchingSelector(selectorName, function(selector) {
+      selector.forEachPropertyNamed(propertyName, function(property) {
+        if (rval) {
+          return false;
+        }
+        return rval = property.value;
+      });
+      if (rval) {
         return false;
       }
-    }
-    return properties[name] = value;
+    });
+    return rval;
   },
-  getProperty: function(parseTree, selector, property) {
-    var properties;
-    properties = parseTree.selectors[selector];
-    if (!properties) {
-      return false;
-    }
-    return properties[property];
-  },
-  addRule: function(parseTree, selector, properties) {
-    if (parseTree.selectors[selector]) {
-      return $wf.$extend(parseTree.selectors[selector], properties);
-    } else {
-      return parseTree.selectors[selector] = properties;
-    }
+  addRule: function(parseTree, selectorName, body) {
+    var selector;
+    selector = $wf.$parser.createSelector(parseTree, selectorName);
+    return $wf.$parser.parseSelectorBody(body + "\n", selector, parseTree);
   },
   addScript: function(parseTree, script) {
-    if (!parseTree["javascript"]) {
-      parseTree["javascript"] = [];
-    }
-    return parseTree.javascript.push(script);
+    return parseTree.addScript(script);
   },
   parseValue: function(value) {
     if (!value || typeof value !== "string") {
       return "";
     }
     return $wf.$parser.parseSingleValue(value);
+  },
+  determineType: function(value) {
+    if (value.type) {
+      return value.type;
+    } else if (typeof value === 'string') {
+      return window.fashion.$run.determineType(value, $wf.$type, $wf.$typeConstants);
+    } else {
+      return $wf.$type.Unknown;
+    }
+  },
+  determineUnit: function(value) {
+    if (value.unit) {
+      return value.unit;
+    } else if (typeof value === 'string') {
+      return window.fashion.$run.getUnit(value, $wf.$type.Number, $wf.$type, $wf.$unit).unit;
+    } else {
+      return '';
+    }
   }
-};
-window.fashion.$processor.addTypeInformation = function(variableObject) {
-  var type, typedValue, unit, unittedValue, val;
-  val = variableObject.raw || variableObject.value;
-  if (!val) {
-    return {};
-  }
-  type = window.fashion.$run.determineType(val, $wf.$type, $wf.$typeConstants);
-  unittedValue = window.fashion.$run.getUnit(val, type, $wf.$type, $wf.$unit);
-  typedValue = unittedValue['value'];
-  unit = unittedValue['unit'];
-  return variableObject.annotateWithType(type, unit, typedValue);
 };
 window.fashion.$processor.blocks = function(parseTree, blocks) {
   var API, block, blockObj, funcs, _i, _len, _ref;
@@ -1323,35 +1388,40 @@ window.fashion.$processor.blocks = function(parseTree, blocks) {
     }
     API = {
       throwError: funcs.throwError.bind(0, block.type),
-      addRule: funcs.setProperty.bind(0, parseTree),
-      getProperty: funcs.setProperty.bind(0, parseTree),
+      addRule: funcs.addRule.bind(0, parseTree),
       addScript: funcs.addScript.bind(0, parseTree),
       parseValue: funcs.parseValue,
       parse: $wf.$parser.parse,
-      runtimeObject: parseTree.requirements.blocks[block.type]
+      runtimeObject: parseTree.dependencies.blocks[block.type].runtimeObject
     };
     blockObj.compile.call(API, block["arguments"], block.body);
   }
   return parseTree;
 };
-window.fashion.$processor.properties = function(parseTree, properties) {
-  var API, funcs, index, property, selector, selectorProperties, value, _ref;
+window.fashion.$processor.properties = function(parseTree, propertyModules) {
+  var API, funcs, index, property, selector, _i, _j, _len, _len1, _ref, _ref1;
   funcs = window.fashion.$processor.api;
   _ref = parseTree.selectors;
-  for (selector in _ref) {
-    selectorProperties = _ref[selector];
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    selector = _ref[_i];
     index = -1;
-    for (property in selectorProperties) {
-      value = selectorProperties[property];
+    _ref1 = selector.properties;
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      property = _ref1[_j];
       index++;
-      if (properties[property] && properties[property]['compile']) {
+      if (propertyModules[property.name] && propertyModules[property.name]['compile']) {
         API = {
           throwError: funcs.throwError.bind(0, property),
-          setProperty: funcs.setProperty.bind(0, parseTree, selector, index),
-          getProperty: funcs.setProperty.bind(0, parseTree, selector),
-          parseValue: funcs.parseValue
+          setProperty: funcs.setProperty.bind(0, selector, index, property.mode),
+          getProperty: funcs.getProperty.bind(0, parseTree, selector.name),
+          parseValue: funcs.parseValue,
+          determineType: funcs.determineType,
+          determineUnit: funcs.determineUnit
         };
-        properties[property].compile.call(API, value);
+        propertyModules[property.name].compile.call(API, property.value);
+        if (propertyModules[property.name].replace) {
+          selector.properties.splice(index--, 1);
+        }
       }
     }
   }
@@ -1581,7 +1651,7 @@ window.fashion.$run.evaluate = function(valueObject, element, variables, types, 
 var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 window.fashion.$run.determineType = function(value, types, constants) {
-  var compositeTypeMap, determineCompositeType, determineConstantType, determineSinglePartType;
+  var determineConstantType, determineSinglePartType;
   if (types == null) {
     types = FASHION.type;
   }
@@ -1604,21 +1674,14 @@ window.fashion.$run.determineType = function(value, types, constants) {
     return determineConstantType(value) || window.fashion.$type.Unknown;
   };
   determineConstantType = function(value) {
-    if (__indexOf.call(constants.colors, value) >= 0) {
+    if (!constants) {
+      return types.Unknown;
+    }
+    if (constants.colors && __indexOf.call(constants.colors, value) >= 0) {
       return types.Color;
     }
   };
-  compositeTypeMap = {
-    C2Number: [0, 0],
-    C4Number: [0, 0, 0, 0],
-    CBorder: [[0, 103, 2], [104, 0, 103, 2]]
-  };
-  determineCompositeType = function(value) {};
-  if (value.indexOf(" ") === -1) {
-    return determineSinglePartType(value);
-  } else {
-    return determineCompositeType(value);
-  }
+  return determineSinglePartType(value);
 };
 window.fashion.$run.getUnit = function(rawValue, varType, type, unit) {
   var getNumberUnit;

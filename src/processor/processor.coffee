@@ -19,6 +19,5 @@ window.fashion.$processor =
 # @prepros-append ./api.coffee
 
 # Processors that run code for different extensions
-# @prepros-append ./variables.coffee
 # @prepros-append ./blocks.coffee
 # @prepros-append ./properties.coffee

@@ -6,9 +6,8 @@
 # Properties ===============================================================================
 
 window.fashion.addProperty = (name, propertyModule, force = false) ->
-
 	if !(propertyModule instanceof PropertyModule)
-		return new Error "#{name} must be passed as a PropertyModule instance"
+		propertyModule = new PropertyModule propertyModule
 
 	if !force and window.fashion.$properties[name]
 		return new Error "There is already a property named #{name}"
@@ -22,9 +21,8 @@ window.fashion.addProperties = (obj, force = false) ->
 # Functions ================================================================================
 
 window.fashion.addFunction = (name, functionModule, force = false) ->
-
 	if !(functionModule instanceof FunctionModule)
-		return new Error "#{name} must be passed as a FunctionModule instance"
+		functionModule = new FunctionModule functionModule
 
 	if !force and window.fashion.$functions[name]
 		return new Error "There is already a function named #{name}"
@@ -38,9 +36,8 @@ window.fashion.addFunctions = (obj, force = false) ->
 # Globals ==================================================================================
 
 window.fashion.addGlobal = (name, globalModule, force = false) ->
-
 	if !(globalModule instanceof GlobalModule)
-		return new Error "#{name} must be passed as a GlobalModule instance"
+	 	globalModule = new GlobalModule globalModule
 
 	if !force and window.fashion.$globals[name]
 		return new Error "There is already a global named #{name}"
@@ -50,3 +47,17 @@ window.fashion.addGlobal = (name, globalModule, force = false) ->
 window.fashion.addGlobals = (obj, force = false) ->
 	window.fashion.addGlobal(k,v,force) for k,v in obj
 
+# Blocks ===================================================================================
+
+window.fashion.addBlock = (name, blockModule, force = false) ->
+	if !(blockModule instanceof BlockModule)
+		blockModule = new BlockModule blockModule
+
+	if !force and window.fashion.$blocks[name]
+		return new Error "There is already a block named #{name}"
+
+	window.fashion.$blocks[name] = blockModule
+
+window.fashion.addBlocks = (obj, force = false) ->
+	window.fashion.addBlock(k,v,force) for k,v in obj
+	

@@ -51,7 +51,6 @@ window.fashiontests.parser.variables = () ->
 						$colorRGB: rgb(200,100,50.4);
 						$colorRGBA: rgba(200,100.01,50,0.5);
 						""")
-		console.log result
 
 		# Check types
 		expect(result.variables["colorConst"][0]["type"]).toEqual(type.Color);
