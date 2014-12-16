@@ -90,10 +90,14 @@ window.fashiontests.processor.properties = function() {
     expect(compileSpy).toHaveBeenCalled();
     value = compileSpy.calls.mostRecent().args[0];
     expect(value.evaluate(function() {
-      return 10;
+      return {
+        value: 10
+      };
     })).toBe("10px");
     return expect(value.evaluate(function() {
-      return 20;
+      return {
+        value: 20
+      };
     })).toBe("20px");
   });
   it("should be able to determine the type and unit of arguments", function() {

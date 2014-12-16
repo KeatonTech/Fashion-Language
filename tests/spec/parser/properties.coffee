@@ -50,7 +50,7 @@ window.fashiontests.parser.properties = ()->
 		props = result.selectors[0].properties
 		expect(props[0].mode).toBe($wf.$runtimeMode.dynamic)
 
-		v = (name) -> 2
+		v = (name) -> value: 2
 		expect(props[0].value[0].evaluate(v)).toBe("2px")
 		
 
@@ -65,7 +65,7 @@ window.fashiontests.parser.properties = ()->
 		props = result.selectors[0].properties
 		expect(props[0].mode).toBe($wf.$runtimeMode.dynamic)
 
-		v = (name) -> 2
+		v = (name) -> value: 2
 		expect(props[0].value[0].evaluate(v)).toBe("1px")
 		expect(props[0].value[1].evaluate(v)).toBe("-2px")
 		expect(props[0].value[2].evaluate(v)).toBe("4px")

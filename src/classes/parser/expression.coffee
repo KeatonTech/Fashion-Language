@@ -2,6 +2,7 @@
 class Expression
 	constructor: (script, type, unit, runtimeMode) ->
 		@script = script.toString()
+		@setter = @script.indexOf("=") isnt -1
 		@mode = runtimeMode
 		@type = type
 		@unit = unit

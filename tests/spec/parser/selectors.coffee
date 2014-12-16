@@ -69,7 +69,7 @@ window.fashiontests.parser.selectors = ()->
 
 		# Make sure the expression for the name works
 		nameExpression = result.selectors[0].name
-		v = (name) -> if name is "contentDiv" then ".content"
+		v = (name) -> if name is "contentDiv" then value: ".content"
 		expect(nameExpression.evaluate(v)).toBe(".content")
 
 		# Test linkback
@@ -92,8 +92,8 @@ window.fashiontests.parser.selectors = ()->
 		# Make sure the expression for the name works
 		nameExpression = result.selectors[0].name
 		v = (name) -> switch name 
-			when "contentDiv" then ".content"
-			when "contentSub" then "p"
+			when "contentDiv" then value: ".content"
+			when "contentSub" then value: "p"
 		expect(nameExpression.evaluate(v)).toBe(".content h3 p")
 
 		# Test linkback

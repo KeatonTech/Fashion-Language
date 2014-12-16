@@ -39,6 +39,9 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 
 * ***actualizer.coffee:*** Imports everything else, orchestrate the process on a high level.
 * ***regrouper.coffee:*** Rearranges properties within a selector based on their mode, splits each selector up to have homogenous properties.
+* ***runtime-data.coffee:*** Converts the parse tree into a different data format more useful to the JS runtime.
+* ***capabilities.coffee:*** Figures out which capabilities of the Fashion runtime need to be included in the JS.
+* ***create-css.coffee:*** Create the text of a CSS file based on the homogenous selectors and runtime data.
 
 ### ./shared
 ##### Code used to deal with variables and expressions that is used by both the compiler and the outputted code

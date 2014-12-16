@@ -535,6 +535,7 @@ var Expression;
 Expression = (function() {
   function Expression(script, type, unit, runtimeMode) {
     this.script = script.toString();
+    this.setter = this.script.indexOf("=") !== -1;
     this.mode = runtimeMode;
     this.type = type;
     this.unit = unit;
@@ -1231,7 +1232,7 @@ window.fashion.$parser.expressionExpander = {
       unit = vObj.unit;
     }
     parseTree.addVariableBinding(selectorId, name);
-    script = "v('" + name + "',v,g,f,t" + (isIndividual ? ',e' : '') + ")";
+    script = "v('" + name + "',v,g,f,t" + (isIndividual ? ',e' : '') + ").value";
     mode = $wf.$runtimeMode.generate(true, isIndividual);
     return new Expression(script, type, unit, mode);
   },
@@ -1584,9 +1585,11 @@ window.fashion.$run.evaluate = function(valueObject, element, variables, globals
   runtime = window.FASHION ? w.FASHION.runtime : $wf.$run;
   varLookup = function(varName) {
     if (variables[varName]["default"]) {
-      return variables[varName]["default"];
-    } else if (variables[varName][0].value) {
-      return variables[varName][0].value;
+      return {
+        value: variables[varName]["default"]
+      };
+    } else if (variables[varName][0]) {
+      return variables[varName][0];
     }
   };
   evaluateSingleValue = function(valueObject) {

@@ -17,7 +17,7 @@ window.fashiontests.parser.expressions = ()->
 
 		expression = result.selectors[0].properties[0].value
 		pExpression = result.selectors[1].properties[0].value
-		v = (name) -> return 30
+		v = (name) -> return value: 30
 
 		expect(expression.mode).toBe($wf.$runtimeMode.dynamic)
 		expect(expression.unit).toBe("px")
@@ -27,7 +27,7 @@ window.fashiontests.parser.expressions = ()->
 		expect(pExpression.evaluate(v)).toBe("6px")
 
 		# Change the value and try again
-		v = (name) -> return 60
+		v = (name) -> return value: 60
 		expect(expression.evaluate(v)).toBe("20px")
 		expect(pExpression.evaluate(v)).toBe("16px")
 
@@ -50,10 +50,10 @@ window.fashiontests.parser.expressions = ()->
 		expect(expression.unit).toBe("px")
 
 		# Test the expression
-		v = (name) -> return 3
+		v = (name) -> return value: 3
 		expect(expression.evaluate(v)).toBe("10px")
 
-		v = (name) -> return 10
+		v = (name) -> return value: 10
 		expect(expression.evaluate(v)).toBe("3px")
 
 		# Test the backlink
@@ -107,7 +107,7 @@ window.fashiontests.parser.expressions = ()->
 		expression = result.selectors[0].properties[0].value
 
 		# Test the expression
-		locals = (name) -> if name is "maxHeight" then return 300
+		locals = (name) -> if name is "maxHeight" then return value: 300
 		globals = {height: {get: () -> 400}}
 		expressionResult = expression.evaluate locals, globals, $wf.$functions
 		expect(expressionResult).toBe("300px")
@@ -128,7 +128,7 @@ window.fashiontests.parser.expressions = ()->
 		expression = result.selectors[0].properties[0].value
 
 		# Test the expression
-		locals = ()-> return 100
+		locals = ()-> return value: 100
 		globals = {height: {get: () -> 400}}
 		expressionResult = expression.evaluate locals, globals, $wf.$functions
 		expect(expressionResult).toBe("200px")
@@ -149,8 +149,8 @@ window.fashiontests.parser.expressions = ()->
 
 		expression = result.selectors[0].properties[0].value
 		locals = (name) -> switch name 
-			when "maxHeight" then 300
-			when "minHeight" then 100
+			when "maxHeight" then value: 300
+			when "minHeight" then value: 100
 
 
 		globals = {height: {get: () -> 50}}
@@ -223,7 +223,7 @@ window.fashiontests.parser.expressions = ()->
 						""")
 
 		expression = result.selectors[0].properties[0].value
-		expect(expression.evaluate(() -> return 30)).toBe("10px")
+		expect(expression.evaluate(() -> return value: 30)).toBe("10px")
 		expect(expression.important).toBe(true)
 		expect(expression.mode).toBe($wf.$runtimeMode.dynamic)
 		expect(expression.unit).toBe("px")
@@ -239,6 +239,7 @@ window.fashiontests.parser.expressions = ()->
 		expression = result.selectors[0].properties[0].value
 		expect(expression.mode).toBe($wf.$runtimeMode.individual)
 		expect(expression.unit).toBe("px")
+		expect(expression.setter).toBe(false);
 
 
 	it "should recognize setter expressions", ()->
@@ -253,6 +254,7 @@ window.fashiontests.parser.expressions = ()->
 		expect(expression.mode).toBe($wf.$runtimeMode.individual)
 		expect(expression.type).toBe($wf.$type.String);
 		expect(expression.unit).toBe(undefined);
+		expect(expression.setter).toBe(true);
 
 
 	it "should apply units to relative variables", ()->

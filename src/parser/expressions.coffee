@@ -180,7 +180,7 @@ window.fashion.$parser.expressionExpander =
 		parseTree.addVariableBinding selectorId, name
 
 		# Has to account for the fact that variables can also be expressions
-		script = "v('#{name}',v,g,f,t#{if isIndividual then ',e' else ''})"
+		script = "v('#{name}',v,g,f,t#{if isIndividual then ',e' else ''}).value"
 		mode = $wf.$runtimeMode.generate(true, isIndividual)
 		return new Expression script, type, unit, mode
 

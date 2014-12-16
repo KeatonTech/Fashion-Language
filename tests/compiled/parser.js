@@ -58,13 +58,17 @@
       expect(result.variables["copy"][0]["value"].script).toBeDefined();
       v = function(name) {
         if (name === "main") {
-          return 10;
+          return {
+            value: 10
+          };
         }
       };
       expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("10px");
       v = function(name) {
         if (name === "main") {
-          return 20;
+          return {
+            value: 20
+          };
         }
       };
       expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("20px");
@@ -81,17 +85,25 @@
       expect(result.variables["offset"][0]["value"]).toEqual(3);
       v = function(name) {
         if (name === "main") {
-          return 10;
+          return {
+            value: 10
+          };
         } else if ("offset") {
-          return 3;
+          return {
+            value: 3
+          };
         }
       };
       expect(result.variables["height"][0]["value"].evaluate(v)).toBe("8px");
       v = function(name) {
         if (name === "main") {
-          return 20;
+          return {
+            value: 20
+          };
         } else if ("offset") {
-          return 5;
+          return {
+            value: 5
+          };
         }
       };
       expect(result.variables["height"][0]["value"].evaluate(v)).toBe("15px");
@@ -150,7 +162,9 @@
       nameExpression = result.selectors[0].name;
       v = function(name) {
         if (name === "contentDiv") {
-          return ".content";
+          return {
+            value: ".content"
+          };
         }
       };
       expect(nameExpression.evaluate(v)).toBe(".content");
@@ -165,9 +179,13 @@
       v = function(name) {
         switch (name) {
           case "contentDiv":
-            return ".content";
+            return {
+              value: ".content"
+            };
           case "contentSub":
-            return "p";
+            return {
+              value: "p"
+            };
         }
       };
       expect(nameExpression.evaluate(v)).toBe(".content h3 p");
@@ -214,7 +232,9 @@
       props = result.selectors[0].properties;
       expect(props[0].mode).toBe($wf.$runtimeMode.dynamic);
       v = function(name) {
-        return 2;
+        return {
+          value: 2
+        };
       };
       return expect(props[0].value[0].evaluate(v)).toBe("2px");
     });
@@ -224,7 +244,9 @@
       props = result.selectors[0].properties;
       expect(props[0].mode).toBe($wf.$runtimeMode.dynamic);
       v = function(name) {
-        return 2;
+        return {
+          value: 2
+        };
       };
       expect(props[0].value[0].evaluate(v)).toBe("1px");
       expect(props[0].value[1].evaluate(v)).toBe("-2px");
@@ -299,14 +321,18 @@
       expression = result.selectors[0].properties[0].value;
       pExpression = result.selectors[1].properties[0].value;
       v = function(name) {
-        return 30;
+        return {
+          value: 30
+        };
       };
       expect(expression.mode).toBe($wf.$runtimeMode.dynamic);
       expect(expression.unit).toBe("px");
       expect(expression.evaluate(v)).toBe("10px");
       expect(pExpression.evaluate(v)).toBe("6px");
       v = function(name) {
-        return 60;
+        return {
+          value: 60
+        };
       };
       expect(expression.evaluate(v)).toBe("20px");
       expect(pExpression.evaluate(v)).toBe("16px");
@@ -321,11 +347,15 @@
       expect(expression.mode).toBe($wf.$runtimeMode.dynamic);
       expect(expression.unit).toBe("px");
       v = function(name) {
-        return 3;
+        return {
+          value: 3
+        };
       };
       expect(expression.evaluate(v)).toBe("10px");
       v = function(name) {
-        return 10;
+        return {
+          value: 10
+        };
       };
       expect(expression.evaluate(v)).toBe("3px");
       return expect(result.bindings.variables["heightDivisor"][0]).toBe(0);
@@ -354,7 +384,9 @@
       expression = result.selectors[0].properties[0].value;
       locals = function(name) {
         if (name === "maxHeight") {
-          return 300;
+          return {
+            value: 300
+          };
         }
       };
       globals = {
@@ -374,7 +406,9 @@
       result = parse("$maxHeight: 300px;\ndiv {\n	height: min($maxHeight * 2, @height);\n}");
       expression = result.selectors[0].properties[0].value;
       locals = function() {
-        return 100;
+        return {
+          value: 100
+        };
       };
       globals = {
         height: {
@@ -395,9 +429,13 @@
       locals = function(name) {
         switch (name) {
           case "maxHeight":
-            return 300;
+            return {
+              value: 300
+            };
           case "minHeight":
-            return 100;
+            return {
+              value: 100
+            };
         }
       };
       globals = {
@@ -478,7 +516,9 @@
       result = parse("$fullHeight: 30px;\ndiv {\n	height: $fullHeight / 3 !important;\n}");
       expression = result.selectors[0].properties[0].value;
       expect(expression.evaluate(function() {
-        return 30;
+        return {
+          value: 30
+        };
       })).toBe("10px");
       expect(expression.important).toBe(true);
       expect(expression.mode).toBe($wf.$runtimeMode.dynamic);
@@ -489,7 +529,8 @@
       result = parse("div {\n	height: @('', 'width', @self)px / 1.5;\n}");
       expression = result.selectors[0].properties[0].value;
       expect(expression.mode).toBe($wf.$runtimeMode.individual);
-      return expect(expression.unit).toBe("px");
+      expect(expression.unit).toBe("px");
+      return expect(expression.setter).toBe(false);
     });
     it("should recognize setter expressions", function() {
       var expression, result;
@@ -497,7 +538,8 @@
       expression = result.selectors[0].properties[0].value;
       expect(expression.mode).toBe($wf.$runtimeMode.individual);
       expect(expression.type).toBe($wf.$type.String);
-      return expect(expression.unit).toBe(void 0);
+      expect(expression.unit).toBe(void 0);
+      return expect(expression.setter).toBe(true);
     });
     return it("should apply units to relative variables", function() {
       var expression, result;

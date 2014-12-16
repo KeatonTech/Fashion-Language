@@ -40,8 +40,8 @@ window.fashiontests.processor.properties = ()->
 		# Expect the property compiler to have been called with the raw value
 		expect(compileSpy).toHaveBeenCalled()
 		value = compileSpy.calls.mostRecent().args[0]
-		expect(value.evaluate(() -> return 10)).toBe("10px")
-		expect(value.evaluate(() -> return 20)).toBe("20px")
+		expect(value.evaluate(() -> return value: 10)).toBe("10px")
+		expect(value.evaluate(() -> return value: 20)).toBe("20px")
 
 
 	it "should be able to determine the type and unit of arguments", ()->

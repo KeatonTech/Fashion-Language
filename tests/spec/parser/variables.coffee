@@ -80,9 +80,9 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["main"][0]["value"]).toEqual(10);
 		expect(result.variables["copy"][0]["value"].script).toBeDefined();
 
-		v = (name) -> if name is "main" then 10
+		v = (name) -> if name is "main" then value: 10
 		expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("10px");
-		v = (name) -> if name is "main" then 20
+		v = (name) -> if name is "main" then value: 20
 		expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("20px");
 
 		# Check types
@@ -109,9 +109,9 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["main"][0]["value"]).toEqual(10);
 		expect(result.variables["offset"][0]["value"]).toEqual(3);
 
-		v = (name) -> if name is "main" then 10 else if "offset" then 3
+		v = (name) -> if name is "main" then value: 10 else if "offset" then value: 3
 		expect(result.variables["height"][0]["value"].evaluate(v)).toBe("8px");
-		v = (name) -> if name is "main" then 20 else if "offset" then 5
+		v = (name) -> if name is "main" then value: 20 else if "offset" then value: 5
 		expect(result.variables["height"][0]["value"].evaluate(v)).toBe("15px");
 
 		# Check link
