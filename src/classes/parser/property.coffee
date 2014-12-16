@@ -12,6 +12,11 @@ class Property
 				@value.transition = transition
 		else @value = value
 
+	# Creates a copy of the property with a new name
+	# Useful for browser prefixing
+	copyWithName: (name) ->
+		new Property name, @value, @mode
+
 
 # Represents a transition of a property
 class PropertyTransition

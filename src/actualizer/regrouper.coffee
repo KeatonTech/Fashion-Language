@@ -45,12 +45,14 @@ window.fashion.$actualizer.groupPropertiesWithMode = (properties, mode) ->
 		if property.mode isnt mode then continue
 
 		# If the two properties share the same 'category', they conflict
-		propertyCategory = property.name.split('-')[0].toLowerCase()
+		if property.name[0] is "-" then id = 2 else id = 0 # Deal with prefixing
+		propertyCategory = property.name.split('-')[id].toLowerCase()
 
 		# Go through everything under it and check for conflicts
 		i = o + 1
 		while i < properties.length - bottomCount
-			compareCategory = properties[i].name.split('-')[0].toLowerCase()
+			if properties[i].name[0] is "-" then id = 2 else id = 0 # Deal with prefixing
+			compareCategory = properties[i].name.split('-')[id].toLowerCase()
 			if compareCategory is propertyCategory then break
 			i++
 

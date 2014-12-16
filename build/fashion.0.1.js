@@ -508,6 +508,10 @@ Property = (function() {
     }
   }
 
+  Property.prototype.copyWithName = function(name) {
+    return new Property(name, this.value, this.mode);
+  };
+
   return Property;
 
 })();
@@ -1579,7 +1583,11 @@ window.fashion.$run.evaluate = function(valueObject, element, variables, globals
   }
   runtime = window.FASHION ? w.FASHION.runtime : $wf.$run;
   varLookup = function(varName) {
-    return variables[varName]["default"];
+    if (variables[varName]["default"]) {
+      return variables[varName]["default"];
+    } else if (variables[varName][0].value) {
+      return variables[varName][0].value;
+    }
   };
   evaluateSingleValue = function(valueObject) {
     if (typeof valueObject === "string") {
@@ -1895,6 +1903,7 @@ window.fashion.$run.watchGlobals = function(globals) {
 window.fashion.$actualizer = {
   actualize: function(parseTree, scriptIndex) {
     var capabilities, css, cssSelectors, hMap, jsSelectors, runtimeData, selectors, _ref;
+    $wf.$actualizer.separateTransitions(parseTree);
     _ref = $wf.$actualizer.regroupProperties(parseTree), selectors = _ref.selectors, hMap = _ref.map;
     cssSelectors = $wf.$actualizer.cullSelectors(selectors, $wf.$runtimeMode.scoped);
     jsSelectors = $wf.$actualizer.cullSelectors(selectors, $wf.$runtimeMode["static"]);
@@ -1946,7 +1955,7 @@ window.fashion.$actualizer.regroupProperties = function(parseTree) {
 };
 
 window.fashion.$actualizer.groupPropertiesWithMode = function(properties, mode) {
-  var bottomCount, compareCategory, i, o, property, propertyCategory, _i, _ref, _results;
+  var bottomCount, compareCategory, i, id, o, property, propertyCategory, _i, _ref, _results;
   bottomCount = properties[properties.length - 1].mode === mode ? 1 : 0;
   _results = [];
   for (o = _i = _ref = properties.length - 2 - bottomCount; _i >= 0; o = _i += -1) {
@@ -1954,10 +1963,20 @@ window.fashion.$actualizer.groupPropertiesWithMode = function(properties, mode) 
     if (property.mode !== mode) {
       continue;
     }
-    propertyCategory = property.name.split('-')[0].toLowerCase();
+    if (property.name[0] === "-") {
+      id = 2;
+    } else {
+      id = 0;
+    }
+    propertyCategory = property.name.split('-')[id].toLowerCase();
     i = o + 1;
     while (i < properties.length - bottomCount) {
-      compareCategory = properties[i].name.split('-')[0].toLowerCase();
+      if (properties[i].name[0] === "-") {
+        id = 2;
+      } else {
+        id = 0;
+      }
+      compareCategory = properties[i].name.split('-')[id].toLowerCase();
       if (compareCategory === propertyCategory) {
         break;
       }
@@ -2076,13 +2095,12 @@ window.fashion.$actualizer.mapVariableDependents = function(runtimeVar, bindings
   return hDependents;
 };
 window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
-  var css, cssProperties, cssValue, evalFunction, id, property, selector, transitions, value, _i, _len, _ref;
-  evalFunction = $wf.$actualizer.evaluationFunction(runtimeData);
+  var css, cssProperties, cssValue, evalFunction, id, property, selector, value, _i, _len, _ref;
+  evalFunction = $wf.$actualizer.evaluationFunction(runtimeData.variables);
   css = "";
   for (id in cssSelectors) {
     selector = cssSelectors[id];
     cssProperties = [];
-    transitions = [];
     _ref = selector.properties;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       property = _ref[_i];
@@ -2096,9 +2114,6 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
       } else {
         cssValue = evalFunction(value);
       }
-      if (value.transition) {
-        transitions.push(value.transition);
-      }
       cssProperties.push($wf.$actualizer.cssPropertyTemplate(property.name, cssValue));
     }
     css += $wf.$actualizer.cssSelectorTemplate(selector.name, cssProperties);
@@ -2106,9 +2121,74 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
   return css;
 };
 
-window.fashion.$actualizer.evaluationFunction = function(runtimeData) {
+window.fashion.$actualizer.cssPrefixes = ["", "-webkit-", "-moz-", "-ms-"];
+
+window.fashion.$actualizer.separateTransitions = function(parseTree) {
+  var evalFunction, id, mode, modes, prefix, prefixes, property, pt, selector, string, strings, transitions, _i, _len, _ref, _ref1, _results;
+  evalFunction = $wf.$actualizer.evaluationFunction(parseTree.variables);
+  prefixes = window.fashion.$actualizer.cssPrefixes;
+  _ref = parseTree.selectors;
+  _results = [];
+  for (id in _ref) {
+    selector = _ref[id];
+    transitions = [];
+    _ref1 = selector.properties;
+    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+      property = _ref1[_i];
+      if (property.value.transition) {
+        transitions.push(pt = property.value.transition);
+        pt.property = property.name;
+        pt.mode = pt.easing.mode | pt.duration.mode | pt.delay.mode;
+      }
+    }
+    modes = $wf.$runtimeMode;
+    _results.push((function() {
+      var _j, _len1, _ref2, _results1;
+      _ref2 = [modes["static"], modes.dynamic, modes.individual, modes.live];
+      _results1 = [];
+      for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+        mode = _ref2[_j];
+        strings = $wf.$actualizer.transitionStrings(evalFunction, transitions, mode);
+        if (strings.length === 0) {
+          continue;
+        }
+        string = strings.join(",");
+        property = new Property("transition", string, mode);
+        _results1.push((function() {
+          var _k, _len2, _results2;
+          _results2 = [];
+          for (_k = 0, _len2 = prefixes.length; _k < _len2; _k++) {
+            prefix = prefixes[_k];
+            _results2.push(selector.addProperty(property.copyWithName(prefix + "transition")));
+          }
+          return _results2;
+        })());
+      }
+      return _results1;
+    })());
+  }
+  return _results;
+};
+
+window.fashion.$actualizer.transitionStrings = function(evalFunction, transitions, runtimeMode) {
+  var delay, duration, easing, t, _i, _len, _results;
+  _results = [];
+  for (_i = 0, _len = transitions.length; _i < _len; _i++) {
+    t = transitions[_i];
+    if (!(t.mode === runtimeMode)) {
+      continue;
+    }
+    duration = t.duration.script ? evalFunction(t.duration) : t.duration;
+    easing = t.easing.script ? evalFunction(t.easing) : t.easing;
+    delay = t.delay.script ? evalFunction(t.delay) : t.delay;
+    _results.push($wf.$actualizer.cssTransitionTemplate(t.property, duration, easing, delay));
+  }
+  return _results;
+};
+
+window.fashion.$actualizer.evaluationFunction = function(variables) {
   return function(value) {
-    return window.fashion.$run.evaluate(value, 0, runtimeData.variables, $wf.$globals, $wf.$functions);
+    return window.fashion.$run.evaluate(value, 0, variables, $wf.$globals, $wf.$functions);
   };
 };
 
@@ -2118,6 +2198,10 @@ window.fashion.$actualizer.cssPropertyTemplate = function(name, value) {
 
 window.fashion.$actualizer.cssSelectorTemplate = function(selector, properties) {
   return "" + selector + " {" + (properties.join('')) + "}\n";
+};
+
+window.fashion.$actualizer.cssTransitionTemplate = function(property, duration, easing, delay) {
+  return "" + property + " " + (duration || '1s') + " " + (easing || '') + (delay ? ' ' + delay : '');
 };
 var RuntimeCapabilities,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };

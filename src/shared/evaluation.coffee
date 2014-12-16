@@ -18,7 +18,9 @@ window.fashion.$run.evaluate = (valueObject, element, variables, globals, funcs)
 	runtime = if window.FASHION then w.FASHION.runtime else $wf.$run
 
 	# Create a variable lookup function
-	varLookup = (varName) -> variables[varName].default
+	varLookup = (varName) -> 
+		if variables[varName].default then variables[varName].default
+		else if variables[varName][0].value then variables[varName][0].value
 
 	# Evaluates a single value, not an array
 	evaluateSingleValue = (valueObject) ->

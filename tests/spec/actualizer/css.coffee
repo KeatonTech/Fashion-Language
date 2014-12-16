@@ -4,6 +4,7 @@ window.fashiontests.actualizer.css = ()->
 	parse = window.fashion.$parser.parse
 	process = window.fashion.$processor.process
 	actualize = (parseTree) -> window.fashion.$actualizer.actualize parseTree, 0
+	prefixes = window.fashion.$actualizer.cssPrefixes
 
 
 	it 'should generate CSS identical to the input for static files', () ->
@@ -70,4 +71,34 @@ window.fashiontests.actualizer.css = ()->
 			"""
 
 		expect(css).toBe(cssString)
-		
+
+
+	it 'should generate the CSS for transitions', () ->
+		{css: css} = actualize process parse """
+			body {
+				background-color: [linear 100ms] blue;
+			}
+			"""
+
+		cssString = 'body {background-color: blue;'
+		for prefix in prefixes
+			cssString += "#{prefix}transition: background-color 100ms linear;"
+		cssString += "}\n"
+
+		expect(css).toBe(cssString)
+
+
+	it 'should generate the CSS for dynamic transitions', () ->
+		{css: css} = actualize process parse """
+			$duration: 314ms;
+			body {
+				background-color: [linear $duration] blue;
+			}
+			"""
+
+		cssString = 'body {background-color: blue;}\nbody {'
+		for prefix in prefixes
+			cssString += "#{prefix}transition: background-color 314ms linear;"
+		cssString += "}\n"
+
+		expect(css).toBe(cssString)

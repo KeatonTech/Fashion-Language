@@ -6,6 +6,9 @@ window.fashion.$actualizer =
 	# scriptIndex allows multiple Fashion scripts to be used on a page without colliding
 	actualize: (parseTree, scriptIndex) ->
 
+		# Separate transitions out into their own properties
+		$wf.$actualizer.separateTransitions parseTree
+
 		# Split each selector to into pieces with homogenous property modes
 		{selectors: selectors, map: hMap} = $wf.$actualizer.regroupProperties parseTree
 
