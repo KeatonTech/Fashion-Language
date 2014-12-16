@@ -75,8 +75,45 @@
 
 }).call(this);
 (function() {
+  window.fashiontests.actualizer.css = function() {
+    var $wf, actualize, parse, process;
+    $wf = window.fashion;
+    parse = window.fashion.$parser.parse;
+    process = window.fashion.$processor.process;
+    actualize = function(parseTree) {
+      return window.fashion.$actualizer.actualize(parseTree, 0);
+    };
+    it('should generate CSS identical to the input for static files', function() {
+      var css, cssString;
+      css = actualize(process(parse("body {\n	background-color: blue;\n	width: 100%;\n	content: \"body string\";\n}"))).css;
+      cssString = 'body {background-color: blue;width: 100%;content: "body string";}\n';
+      return expect(css).toBe(cssString);
+    });
+    it('should be able to lookup variable values', function() {
+      var css, cssString;
+      css = actualize(process(parse("$minHeight: 100px;\nbody {\n	width:100%;\n	min-height: $minHeight;\n}"))).css;
+      cssString = "body {width: 100%;}\nbody {min-height: 100px;}\n";
+      return expect(css).toBe(cssString);
+    });
+    it('should be able to evaluate expressions', function() {
+      var css, cssString;
+      css = actualize(process(parse("$height: 100px;\nbody {\n	width: $height * 2;\n	height: $height;\n}"))).css;
+      cssString = "body {width: 200px;height: 100px;}\n";
+      return expect(css).toBe(cssString);
+    });
+    return it('should ignore individual properties', function() {
+      var css, cssString;
+      css = actualize(process(parse("$height: 100px;\nbody {\n	width: $height * 2;\n	height: $height;\n	color: @self.color;\n}"))).css;
+      cssString = "body {width: 200px;height: 100px;}\n";
+      return expect(css).toBe(cssString);
+    });
+  };
+
+}).call(this);
+(function() {
   describe("Actualizer", function() {
-    return describe("Regrouper", window.fashiontests.actualizer.regrouper);
+    describe("Regrouper", window.fashiontests.actualizer.regrouper);
+    return describe("CSS Generator", window.fashiontests.actualizer.css);
   });
 
 }).call(this);

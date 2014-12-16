@@ -59,7 +59,7 @@ document.onreadystatechange = ()->
 # @prepros-append ./helpers/basic.coffee
 # @prepros-append ./helpers/dom.coffee
 # @prepros-append ./helpers/stringify.coffee
-# @prepros-append ./classes/parsetree.coffee
+# @prepros-append ./classes/parser/parsetree.coffee
 # @prepros-append ./classes/modules.coffee
 # @prepros-append ./types/types.coffee
 # @prepros-append ./types/runtime-modes.coffee

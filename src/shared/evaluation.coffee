@@ -1,5 +1,5 @@
 # Get the string value of a variable
-window.fashion.$run.getVariable = (variables, varName, type = FASHION.type) ->
+window.fashion.$run.getVariable = (variables, varName) ->
 	if !variables[varName] then return ""
 	vobj = variables[varName]
 
@@ -11,12 +11,14 @@ window.fashion.$run.getVariable = (variables, varName, type = FASHION.type) ->
 	else return vobj.value
 
 # Turn a value object into an actual string value for the sheet
-window.fashion.$run.evaluate = (valueObject, element, variables, types, funcs, globals) ->
+window.fashion.$run.evaluate = (valueObject, element, variables, globals, funcs) ->
 	if !variables then variables = FASHION.variableProxy
-	if !types then types = FASHION.type
 	if !funcs then funcs = FASHION.functions
 	if !globals then globals = FASHION.globals
 	runtime = if window.FASHION then w.FASHION.runtime else $wf.$run
+
+	# Create a variable lookup function
+	varLookup = (varName) -> variables[varName].default
 
 	# Evaluates a single value, not an array
 	evaluateSingleValue = (valueObject) ->
@@ -25,25 +27,9 @@ window.fashion.$run.evaluate = (valueObject, element, variables, types, funcs, g
 		if typeof valueObject is "string" then return valueObject
 		if typeof valueObject is "number" then return valueObject
 
-		# Handle simple variable links
-		if valueObject.link and valueObject.link.length > 1
-
-			# Local variable
-			if valueObject.link[0] is "$"
-				varName = valueObject.link.substr(1)
-				return window.fashion.$run.getVariable variables, varName, types
-
-			# Global variable
-			else if valueObject.link[0] is "@"
-				globObject = globals[valueObject.link.substr(1)]
-				if !globObject then return ""
-				if globObject.type is types.Number
-					return globObject.get() + (globObject.unit || "")
-				else return globObject.get()
-
 		# Handle expressions
 		else if valueObject.evaluate
-			return valueObject.evaluate variables, globals, funcs, runtime
+			return valueObject.evaluate varLookup, globals, funcs, runtime, element
 
 		# Handle valued objects (used with transitiong)
 		else if valueObject.value then return valueObject.value
