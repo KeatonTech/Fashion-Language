@@ -2,13 +2,14 @@
 class Selector
 
 	# Create a selector object, which is really pretty boring
-	constructor: (name) -> 
+	constructor: (name, mode) -> 
 		@name = name
 		@properties = []
 		@index = -1
 
 		# Selectors with variables in the name are dynamic
-		if name instanceof Expression then @mode = $wf.$runtimeMode.dynamic
+		if mode then @mode = mode
+		else if name instanceof Expression then @mode = $wf.$runtimeMode.dynamic
 		else @mode = $wf.$runtimeMode.static
 
 	# Add a raw, unparsed body

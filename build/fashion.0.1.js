@@ -436,11 +436,13 @@ window.fashion.$class.Variable = Variable;
 var Selector;
 
 Selector = (function() {
-  function Selector(name) {
+  function Selector(name, mode) {
     this.name = name;
     this.properties = [];
     this.index = -1;
-    if (name instanceof Expression) {
+    if (mode) {
+      this.mode = mode;
+    } else if (name instanceof Expression) {
       this.mode = $wf.$runtimeMode.dynamic;
     } else {
       this.mode = $wf.$runtimeMode["static"];
@@ -1911,358 +1913,80 @@ window.fashion.$run.watchGlobals = function(globals) {
   return _results;
 };
 window.fashion.$actualizer = {
-  actualizeFullSheet: function(parseTree, index) {
-    var rules, selMap, _ref;
-    _ref = $wf.$actualizer.makeDomStyleFromTree(parseTree, index), selMap = _ref.map, rules = _ref.rules;
-    window.fashion.$actualizer.addScriptFromTree(parseTree, selMap, rules);
-    return true;
+  actualize: function(parseTree, scriptIndex) {
+    var hMap, hSelectors, _ref;
+    return _ref = $wf.$actualizer.regroupProperties(parseTree), hSelectors = _ref.selectors, hMap = _ref.map, _ref;
   }
 };
-window.fashion.$actualizer.generateStyleProperties = function(selectors, variables) {
-  var evaluated, newSelector, properties, ps, rules, selector, selectorIsDynamic, sheets, tCSS, wrap;
-  rules = {
-    dynamic: [],
-    "static": [],
-    javascript: {
-      dynamic: {},
-      individual: {}
-    },
-    final: {
-      dynamic: [],
-      "static": []
-    }
-  };
-  for (selector in selectors) {
-    properties = selectors[selector];
-    newSelector = window.fashion.$run.expandVariables(selector, variables);
-    selectorIsDynamic = newSelector !== selector;
-    sheets = $wf.$actualizer.splitProperties(properties, !selectorIsDynamic);
-    ps = sheets.props;
-    wrap = (function(sel) {
-      return function(css) {
-        return {
-          name: sel,
-          value: css
-        };
-      };
-    })(selector);
-    if (sheets.lengths["static"] > 0) {
-      evaluated = $wf.$actualizer.propertiesToCSS(ps["static"], variables);
-      rules["static"].push(wrap("" + newSelector + " {" + (evaluated.join('')) + "}"));
-    }
-    if (sheets.lengths.dynamic > 0) {
-      evaluated = $wf.$actualizer.propertiesToCSS(ps.dynamic, variables);
-      rules.dynamic.push(wrap("" + newSelector + " {" + (evaluated.join('')) + "}"));
-    }
-    if (sheets.lengths.dynamic > 0) {
-      rules.javascript.dynamic[selector] = ps.dynamic;
-    }
-    if (sheets.lengths.individual > 0) {
-      rules.javascript.individual[selector] = ps.individual;
-    }
-    tCSS = window.fashion.$actualizer.addTransitions(sheets.transitions);
-    if (sheets.lengths["static"] > 0 && tCSS["static"]) {
-      evaluated = $wf.$actualizer.propertiesToCSS(ps["static"], variables);
-      rules["static"].push(wrap("" + newSelector + " {" + (evaluated.join('')) + tCSS["static"] + "}"));
-    }
-    if (sheets.lengths.dynamic > 0 && tCSS.dynamic) {
-      evaluated = $wf.$actualizer.propertiesToCSS(ps.dynamic, variables);
-      rules.dynamic.push(wrap("" + newSelector + " {" + (evaluated.join('')) + tCSS.dynamic + "}"));
-    }
-  }
-  return rules;
-};
-
-window.fashion.$actualizer.splitProperties = function(properties, allowStatic) {
-  var lengths, property, props, transitions, value, vi;
-  if (allowStatic == null) {
-    allowStatic = true;
-  }
-  props = {
-    dynamic: {},
-    "static": {},
-    individual: {}
-  };
-  lengths = {
-    dynamic: 0,
-    "static": 0,
-    individual: 0
-  };
-  transitions = [];
-  for (property in properties) {
-    value = properties[property];
-    if (typeof value === 'object' && value['transition']) {
-      transitions[property] = value.transition;
-      value.transition = void 0;
-    }
-    if (value instanceof Array) {
-      if (((function() {
-        var _i, _len, _results;
-        _results = [];
-        for (_i = 0, _len = value.length; _i < _len; _i++) {
-          vi = value[_i];
-          if (vi["individualized"]) {
-            _results.push(true);
-          }
-        }
-        return _results;
-      })())[0]) {
-        props.individual[property] = value;
-        lengths.individual++;
-      } else if (!allowStatic || ((function() {
-        var _i, _len, _results;
-        _results = [];
-        for (_i = 0, _len = value.length; _i < _len; _i++) {
-          vi = value[_i];
-          if (vi["dynamic"]) {
-            _results.push(true);
-          }
-        }
-        return _results;
-      })())[0]) {
-        props.dynamic[property] = value;
-        lengths.dynamic++;
-      } else {
-        props["static"][property] = value;
-        lengths["static"]++;
-      }
-    } else if (typeof value === 'object') {
-      if (value["individualized"] === true) {
-        props.individual[property] = value;
-        lengths.individual++;
-      } else if (!allowStatic || value["dynamic"] === true) {
-        props.dynamic[property] = value;
-        lengths.dynamic++;
-      } else {
-        props["static"][property] = value;
-        lengths["static"]++;
-      }
-    } else if (allowStatic) {
-      props["static"][property] = value;
-      lengths["static"]++;
-    } else {
-      props.dynamic[property] = value;
-      lengths.dynamic++;
-    }
-  }
-  return {
-    props: props,
-    lengths: lengths,
-    transitions: transitions
-  };
-};
-
-window.fashion.$actualizer.propertiesToCSS = function(properties, variables, evalFunction) {
-  var cssValues, property, val, valueObject, vi, vo;
-  if (!evalFunction) {
-    evalFunction = window.fashion.$run.evaluate;
-  }
-  cssValues = [];
-  for (property in properties) {
-    valueObject = properties[property];
-    if (valueObject instanceof Array) {
-      if (valueObject[0] instanceof Array) {
-        val = ((function() {
-          var _i, _len, _results;
-          _results = [];
-          for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
-            vi = valueObject[_i];
-            _results.push(((function() {
-              var _j, _len1, _results1;
-              _results1 = [];
-              for (_j = 0, _len1 = vi.length; _j < _len1; _j++) {
-                vo = vi[_j];
-                _results1.push(evalFunction(vo, 0, variables, $wf.$type, {}, $wf.$globals));
-              }
-              return _results1;
-            })()).join(" "));
-          }
-          return _results;
-        })()).join(", ");
-      } else {
-        val = ((function() {
-          var _i, _len, _results;
-          _results = [];
-          for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
-            vi = valueObject[_i];
-            _results.push(evalFunction(vi, 0, variables, $wf.$type, {}, $wf.$globals));
-          }
-          return _results;
-        })()).join(" ");
-      }
-    } else {
-      val = evalFunction(valueObject, 0, variables, $wf.$type, $wf.$functions, $wf.$globals);
-    }
-    cssValues.push("" + property + ": " + val + ";");
-  }
-  return cssValues;
-};
-
-window.fashion.$actualizer.addTransitions = function(transitions) {
-  var hasDynamic, hasStatic, isDynamic, property, t, tDynamic, tStatic, tString;
-  tStatic = tDynamic = "transition: ";
-  hasStatic = hasDynamic = false;
-  for (property in transitions) {
-    t = transitions[property];
-    isDynamic = t.easing && typeof t.easing === 'object' && t.easing.dynamic;
-    isDynamic &= t.duration && typeof t.duration === 'object' && t.duration.dynamic;
-    isDynamic &= t.delay && typeof t.delay === 'object' && t.delay.dynamic;
-    tString = "" + property + " " + (t.duration || '1s') + " " + (t.easing || '') + " " + (t.delay || '') + ",";
-    if (isDynamic) {
-      tDynamic += tString;
-    } else {
-      tStatic += tString;
-    }
-    if (isDynamic) {
-      hasDynamic = true;
-    } else {
-      hasStatic = true;
-    }
-  }
-  tStatic = tStatic.substr(0, tStatic.length - 1) + ";";
-  tDynamic = tDynamic.substr(0, tDynamic.length - 1) + ";";
-  tStatic = [tStatic, "-webkit-" + tStatic, "-moz-" + tStatic, "-ms-" + tStatic].join('');
-  tDynamic = [tDynamic, "-webkit-" + tDynamic, "-moz-" + tDynamic, "-ms-" + tDynamic].join('');
-  return {
-    "static": (hasStatic ? tStatic : false),
-    dynamic: (hasDynamic ? tDynamic : false)
-  };
-};
-window.fashion.$actualizer.makeDomStyleFromTree = function(parseTree, index) {
-  var dynamicMap, dynamicSheet, row, rule, rules, staticMap, staticSheet, _ref, _ref1;
-  dynamicSheet = window.fashion.$dom.makeStylesheet("fashionDynamic", index, true);
-  staticSheet = window.fashion.$dom.makeStylesheet("fashionStatic", index, false);
-  window.fashion.$dom.addElementToHead(staticSheet);
-  window.fashion.$dom.addElementToHead(dynamicSheet);
-  rules = window.fashion.$actualizer.generateStyleProperties(parseTree.selectors, parseTree.variables);
-  staticMap = {};
-  _ref = rules["static"];
-  for (row in _ref) {
-    rule = _ref[row];
-    staticMap[rule.name] = [index, parseInt(row)];
-    window.fashion.$actualizer.addCSSRule(rule.value, staticSheet);
-  }
-  dynamicMap = {};
-  _ref1 = rules.dynamic;
-  for (row in _ref1) {
-    rule = _ref1[row];
-    dynamicMap[rule.name] = [index, parseInt(row)];
-    window.fashion.$actualizer.addCSSRule(rule.value, dynamicSheet);
-  }
-  wait(1, function() {
-    return window.fashion.$actualizer.subInFinalRules(rules.final, staticMap, dynamicMap, staticSheet, dynamicSheet);
-  });
-  return {
-    map: dynamicMap,
-    rules: rules
-  };
-};
-
-window.fashion.$actualizer.subInFinalRules = function(final, staticMap, dynamicMap, staticSheet, dynamicSheet) {
-  var row, rule, _i, _j, _len, _len1, _ref, _ref1, _results;
-  _ref = final["static"];
+window.fashion.$actualizer.regroupProperties = function(parseTree) {
+  var expansionMap, homogenousSelectors, properties, selector, selectorIds, splitSelector, splitSelectors, _i, _j, _len, _len1, _ref;
+  homogenousSelectors = [];
+  expansionMap = [];
+  _ref = parseTree.selectors;
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    rule = _ref[_i];
-    row = staticMap[rule.name][1];
-    window.fashion.$actualizer.subCSSRule(rule.value, staticSheet, row);
+    selector = _ref[_i];
+    properties = selector.properties;
+    $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.dynamic);
+    $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.live);
+    $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.individual);
+    splitSelectors = $wf.$actualizer.splitSelectorByModes(selector);
+    selectorIds = [];
+    for (_j = 0, _len1 = splitSelectors.length; _j < _len1; _j++) {
+      splitSelector = splitSelectors[_j];
+      homogenousSelectors.push(splitSelector);
+      selectorIds.push(homogenousSelectors.length - 1);
+    }
+    expansionMap.push(selectorIds);
   }
-  _ref1 = final.dynamic;
+  return {
+    selectors: homogenousSelectors,
+    map: expansionMap
+  };
+};
+
+window.fashion.$actualizer.groupPropertiesWithMode = function(properties, mode) {
+  var bottomCount, compareCategory, i, o, property, propertyCategory, _i, _ref, _results;
+  bottomCount = properties[properties.length - 1].mode === mode ? 1 : 0;
   _results = [];
-  for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-    rule = _ref1[_j];
-    row = dynamicMap[rule.name][1];
-    _results.push(window.fashion.$actualizer.subCSSRule(rule.value, dynamicSheet, row));
+  for (o = _i = _ref = properties.length - 2 - bottomCount; _i >= 0; o = _i += -1) {
+    property = properties[o];
+    if (property.mode !== mode) {
+      continue;
+    }
+    propertyCategory = property.name.split('-')[0].toLowerCase();
+    i = o + 1;
+    while (i < properties.length - bottomCount) {
+      compareCategory = properties[i].name.split('-')[0].toLowerCase();
+      if (compareCategory === propertyCategory) {
+        break;
+      }
+      i++;
+    }
+    properties.splice(o, 1);
+    properties.splice(i - 1, 0, property);
+    if (i === properties.length - bottomCount) {
+      _results.push(bottomCount++);
+    } else {
+      _results.push(void 0);
+    }
   }
   return _results;
 };
 
-window.fashion.$actualizer.addCSSRule = function(ruleText, sheetElement) {
-  var error, staticIndex;
-  staticIndex = window.fashion.$dom.incrementSheetIndex(sheetElement);
-  try {
-    sheetElement.sheet.insertRule(ruleText, staticIndex);
-  } catch (_error) {
-    error = _error;
-    console.log("[FASHION] Invalid rule: '" + ruleText + "'");
-  }
-  return staticIndex;
-};
-
-window.fashion.$actualizer.subCSSRule = function(ruleText, sheetElement, index) {
-  sheetElement.sheet.deleteRule(index);
-  return sheetElement.sheet.insertRule(ruleText, index);
-};
-window.fashion.$actualizer.addScriptFromTree = function(tree, selMap, rules) {
-  var jsElement, jsText;
-  jsText = $wf.$actualizer.createScriptFromTree(tree, selMap, rules);
-  jsElement = $wf.$dom.makeScriptTag(jsText);
-  window.fashion.$dom.addElementToHead(jsElement);
-  return jsElement;
-};
-
-window.fashion.$actualizer.createScriptFromTree = function(tree, selMap, rules) {
-  var jsText, s, tr, _i, _len, _ref;
-  jsText = window.fashion.$blueprint.initialize(tree, selMap);
-  jsText += window.fashion.$blueprint.basicRuntime() + "\n";
-  jsText += window.fashion.$actualizer.addSelectorsToJS(rules);
-  jsText += window.fashion.$actualizer.addGlobalsToJS(tree) + "\n";
-  tr = tree.requirements;
-  jsText += "w.FASHION.functions = " + (window.fashion.$stringify(tr.functions)) + ";\n";
-  jsText += "w.FASHION.properties = " + (window.fashion.$stringify(tr.properties)) + ";\n";
-  jsText += "w.FASHION.blocks = " + (window.fashion.$stringify(tr.blocks)) + ";\n";
-  _ref = tree.javascript;
+window.fashion.$actualizer.splitSelectorByModes = function(selector) {
+  var currentSelector, newSelectors, property, _i, _len, _ref;
+  newSelectors = [];
+  currentSelector = void 0;
+  _ref = selector.properties;
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    s = _ref[_i];
-    jsText += s;
-  }
-  jsText += window.fashion.$blueprint.startRuntime();
-  return jsText;
-};
-
-window.fashion.$actualizer.addSelectorsToJS = function(rules) {
-  var selectors;
-  selectors = {
-    dynamic: rules.javascript.dynamic,
-    individual: rules.javascript.individual
-  };
-  return "w.FASHION.selectors = " + (window.fashion.$stringify(selectors)) + ";\n";
-};
-
-window.fashion.$actualizer.addGlobalsToJS = function(tree, globals) {
-  var acc, k, name, obj, objString, v, _ref, _ref1;
-  if (globals == null) {
-    globals = $wf.$globals;
-  }
-  if (JSON.stringify(tree.globals) === "{}") {
-    return "";
-  }
-  acc = "w.FASHION.globals = {";
-  _ref = tree.globals;
-  for (name in _ref) {
-    obj = _ref[name];
-    if (!globals[name]) {
-      continue;
+    property = _ref[_i];
+    if (!currentSelector || currentSelector.mode !== property.mode) {
+      currentSelector = new Selector(selector.name, property.mode);
+      newSelectors.push(currentSelector);
     }
-    _ref1 = globals[name];
-    for (k in _ref1) {
-      v = _ref1[k];
-      obj[k] = v;
-    }
-    objString = window.fashion.$stringify(obj);
-    acc += "" + name + ": " + (objString.replace('\n', '')) + ",\n";
+    currentSelector.addProperty(property);
   }
-  return acc.substr(0, acc.length - 2) + "};";
-};
-window.fashion.$blueprint = {
-  initialize: function(parseTree, selMap) {
-    return "" + window.fashion.fileHeader + "\nw = window;\nw.FASHION = {\n	variables: " + (JSON.stringify(parseTree.variables)) + ",\n	cssMap: " + (JSON.stringify(selMap)) + ",\n	type: " + (JSON.stringify(window.fashion.$type)) + ",\n	unit: " + (JSON.stringify(window.fashion.$unit)) + ",\n	constants: " + (JSON.stringify(window.fashion.$typeConstants)) + ",\n	config: {\n		variableObject: '" + window.fashion.variableObject + "',\n		cssId: '" + window.fashion.cssId + "'\n	}\n};\n";
-  },
-  basicRuntime: function() {
-    return "var __indexOf = " + ('[].indexOf' || __indexOf.toString()) + ";\nw.FASHION.runtime = " + (window.fashion.$stringify(window.fashion.$run));
-  },
-  startRuntime: function() {
-    return "w.FASHION.runtime.defineProperties.call(w.FASHION.runtime);\nw.FASHION.runtime.watchGlobals.call(w.FASHION.runtime);\nw.FASHION.runtime.applyIndividualizedSelectors.call(\n	w.FASHION.runtime, w.FASHION.selectors.individual);";
-  }
+  return newSelectors;
 };
 window.fashion.$functions = {
   random: new FunctionModule({

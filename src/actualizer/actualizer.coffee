@@ -3,18 +3,13 @@
 window.fashion.$actualizer = 
 
 	# Generate a whole new document
-	actualizeFullSheet: (parseTree, index) ->
+	# scriptIndex allows multiple Fashion scripts to be used on a page without colliding
+	actualize: (parseTree, scriptIndex) ->
 
-		# Create the stylesheets and get a selector mapping
-		{map: selMap, rules: rules} = $wf.$actualizer.makeDomStyleFromTree parseTree, index
-
-		# Create a javascript file with all of the necessary logic
-		window.fashion.$actualizer.addScriptFromTree parseTree, selMap, rules
-
-		# Return everything
-		return true
+		# Split each selector to into pieces with homogenous property modes
+		{selectors: hSelectors, map: hMap} = $wf.$actualizer.regroupProperties parseTree
+				
 
 	
 # Includes
-# @prepros-append ./css/css.coffee
-# @prepros-append ./javascript/javascript.coffee
+# @prepros-append ./regrouper.coffee
