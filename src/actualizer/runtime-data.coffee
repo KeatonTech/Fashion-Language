@@ -5,7 +5,7 @@ window.fashion.$actualizer.generateRuntimeData = (parseTree, hSelectors, hMap) -
 	variables = $wf.$actualizer.actualizeVariables parseTree, hSelectors, hMap
 
 	# Create the runtime data object
-	rdata = new RuntimeData hSelectors, variables, parseTree.scripts
+	rdata = new RuntimeData hSelectors, variables
 
 	# Return the runtime data object
 	return rdata

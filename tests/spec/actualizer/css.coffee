@@ -8,7 +8,7 @@ window.fashiontests.actualizer.css = ()->
 
 
 	it 'should generate CSS identical to the input for static files', () ->
-		{css: css} = actualize process parse """
+		{css} = actualize process parse """
 			body {
 				background-color: blue;
 				width: 100%;
@@ -21,7 +21,7 @@ window.fashiontests.actualizer.css = ()->
 
 
 	it 'should be able to lookup variable values', () ->
-		{css: css} = actualize process parse """
+		{css} = actualize process parse """
 			$minHeight: 100px;
 			body {
 				width:100%;
@@ -39,7 +39,7 @@ window.fashiontests.actualizer.css = ()->
 
 
 	it 'should be able to evaluate expressions', () ->
-		{css: css} = actualize process parse """
+		{css} = actualize process parse """
 			$height: 100px;
 			body {
 				width: $height * 2;
@@ -56,7 +56,7 @@ window.fashiontests.actualizer.css = ()->
 
 
 	it 'should ignore individual properties', () ->
-		{css: css} = actualize process parse """
+		{css} = actualize process parse """
 			$height: 100px;
 			body {
 				width: $height * 2;
@@ -74,7 +74,7 @@ window.fashiontests.actualizer.css = ()->
 
 
 	it 'should generate the CSS for transitions', () ->
-		{css: css} = actualize process parse """
+		{css} = actualize process parse """
 			body {
 				background-color: [linear 100ms] blue;
 			}
@@ -89,7 +89,7 @@ window.fashiontests.actualizer.css = ()->
 
 
 	it 'should generate the CSS for dynamic transitions', () ->
-		{css: css} = actualize process parse """
+		{css} = actualize process parse """
 			$duration: 314ms;
 			body {
 				background-color: [linear $duration] blue;

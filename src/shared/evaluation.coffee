@@ -1,38 +1,52 @@
-# Get the string value of a variable
-window.fashion.$run.getVariable = (variables, varName) ->
-	if !variables[varName] then return ""
-	vobj = variables[varName]
+window.fashion.$shared.getVariable =
+(variables, globals, funcs, runtime, varName, elem) ->
+	vObj = variables[varName]
 
-	# Numbers should be rendered with units
-	if vobj.type is type.Number
-		return vobj.value + (vobj.unit || "")
+	# Parsetree variables -- sent by the actualizer
+	if vObj[0] then return vObj[0]
 
-	# Everything else can just get sent normally
-	else return vobj.value
+	# Scoped variables
+	if vObj.scope and vObj.scope.length > 0
+		@throwError "Scoped variables are not yet supported"
+
+	# Top-level variables
+	else if vObj.default 
+		if vObj.default.script
+			return value: @evaluate vObj.default, variables, globals, funcs, runtime, elem
+		else return value: vObj.default 
+
+	# Variable doesn't exist, I guess
+	else @throwError "Variable '#{varName}' does not exist."
+
 
 # Turn a value object into an actual string value for the sheet
-window.fashion.$run.evaluate = (valueObject, element, variables, globals, funcs) ->
-	if !variables then variables = FASHION.variableProxy
-	if !funcs then funcs = FASHION.functions
-	if !globals then globals = FASHION.globals
-	runtime = if window.FASHION then w.FASHION.runtime else $wf.$run
-
-	# Create a variable lookup function
-	varLookup = (varName) -> 
-		if variables[varName].default
-			return value: variables[varName].default 
-		else if variables[varName][0] then variables[varName][0]
+window.fashion.$shared.evaluate =
+(valueObject, variables, globals, funcs, runtime, element) ->
 
 	# Evaluates a single value, not an array
-	evaluateSingleValue = (valueObject) ->
+	evaluateSingleValue = (valueObject) =>
 
 		# Take care of the easy stuff
 		if typeof valueObject is "string" then return valueObject
 		if typeof valueObject is "number" then return valueObject
 
+		# Create a variable lookup function
+		varObjects = []
+		varLookup = (varName, element) => 
+			vObj = @getVariable variables, globals, funcs, runtime, varName, element
+			varObjects.push {object: vObj, value: vObj.value}
+			return vObj
+
 		# Handle expressions
-		else if valueObject.evaluate
-			return valueObject.evaluate varLookup, globals, funcs, runtime, element
+		if valueObject.evaluate
+			val = valueObject.evaluate varLookup, globals, funcs, runtime, element
+
+			# Check to see if the expression changed any variable values
+			if valueObject.setter
+				for v in varObjects when v.object.value isnt v.value
+					@setVariable v.object.name, v.object.value
+
+			return val
 
 		# Handle valued objects (used with transitiong)
 		else if valueObject.value then return valueObject.value

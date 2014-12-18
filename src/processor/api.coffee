@@ -49,12 +49,12 @@ window.fashion.$processor.api =
 	determineType: (value) ->
 		if value.type then return value.type
 		else if typeof value is 'string'
-			window.fashion.$run.determineType(value, $wf.$type, $wf.$typeConstants)
+			window.fashion.$shared.determineType(value, $wf.$type, $wf.$typeConstants)
 		else $wf.$type.Unknown
 
 	# Get the unit of a number value
 	determineUnit: (value) ->
 		if value.unit then return value.unit
 		else if typeof value is 'string'
-			window.fashion.$run.getUnit(value, $wf.$type.Number, $wf.$type, $wf.$unit).unit
+			window.fashion.$shared.getUnit(value,$wf.$type.Number,$wf.$type,$wf.$unit).unit
 		else ''

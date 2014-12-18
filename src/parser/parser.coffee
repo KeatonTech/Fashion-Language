@@ -40,10 +40,10 @@ window.fashion.$parser.addVariable = (parseTree, name, value, scope) ->
 		if !val then return
 
 		# Add a type
-		type = window.fashion.$run.determineType(val, $wf.$type, $wf.$typeConstants)
+		type = window.fashion.$shared.determineType(val, $wf.$type, $wf.$typeConstants)
 
 		# Add units, if necessary
-		unittedValue = window.fashion.$run.getUnit(val, type, $wf.$type, $wf.$unit)
+		unittedValue = window.fashion.$shared.getUnit(val, type, $wf.$type, $wf.$unit)
 		typedValue = unittedValue['value']
 		unit = unittedValue['unit']
 

@@ -4,6 +4,11 @@ class Module
 	constructor: (args) -> 
 		@mode = args.mode || args.runtimeMode || $wf.$runtimeMode.static
 
+		# Any runtime modules needed for this module
+		# These are things like "watchSelector" and "liveProperties",
+		# functionality built into Fashion that is often disabled for efficiency
+		@runtimeCapabilities = args.runtimeCapabilities || args.capabilities
+
 		# Add a watcher function, if possible
 		if args.watcherFunction 
 			if !(@mode | $wf.$runtimeMode.dynamic) || (@mode | $wf.$runtimeMode.live)

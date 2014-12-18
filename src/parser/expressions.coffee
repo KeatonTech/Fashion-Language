@@ -180,7 +180,7 @@ window.fashion.$parser.expressionExpander =
 		parseTree.addVariableBinding selectorId, name
 
 		# Has to account for the fact that variables can also be expressions
-		script = "v('#{name}',v,g,f,t#{if isIndividual then ',e' else ''}).value"
+		script = "v('#{name}'#{if isIndividual then ',e' else ''}).value"
 		mode = $wf.$runtimeMode.generate(true, isIndividual)
 		return new Expression script, type, unit, mode
 
@@ -203,9 +203,9 @@ window.fashion.$parser.expressionExpander =
 	numberWithUnit: (value) ->
 		numberType = window.fashion.$type.Number
 		staticMode = $wf.$runtimeMode.static
-		unittedValue = window.fashion.$run.getUnit(value, numberType, $wf.$type, $wf.$unit)
-		if unittedValue.value is NaN then unittedValue.value = 0
-		return new Expression unittedValue.value, numberType, unittedValue.unit, staticMode
+		unitValue = window.fashion.$shared.getUnit(value, numberType, $wf.$type, $wf.$unit)
+		if unitValue.value is NaN then unitValue.value = 0
+		return new Expression unitValue.value, numberType, unitValue.unit, staticMode
 
 
 	# Expand relative object references (disguised as globals)

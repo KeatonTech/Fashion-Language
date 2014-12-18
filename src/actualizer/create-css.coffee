@@ -85,8 +85,8 @@ window.fashion.$actualizer.transitionStrings = (evalFunction, transitions, runti
 
 # Helpful function that returns a function that easily evaluates expressions
 window.fashion.$actualizer.evaluationFunction = (variables) -> (value) ->
-		window.fashion.$run.evaluate(value, 0, variables,
-			$wf.$globals, $wf.$functions)
+	window.fashion.$shared.evaluate.call(window.fashion.$shared, value, variables,
+		$wf.$globals, $wf.$functions)
 
 
 # Templates used in generating CSS

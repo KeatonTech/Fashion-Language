@@ -1,5 +1,5 @@
 # Determines and handles variable types
-window.fashion.$run.determineType = (value, types = FASHION.type, constants = FASHION.constants) ->
+window.fashion.$shared.determineType = (value, types, constants) ->
 
 	# Try the easy stuff first
 	if typeof value is 'number' then return types.Number

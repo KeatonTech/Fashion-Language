@@ -68,6 +68,7 @@ document.onreadystatechange = ()->
 # @prepros-append ./loader/live.coffee
 # @prepros-append ./parser/parser.coffee
 # @prepros-append ./processor/processor.coffee
+# @prepros-append ./shared/shared.coffee
 # @prepros-append ./runtime/runtime.coffee
 # @prepros-append ./actualizer/actualizer.coffee
 

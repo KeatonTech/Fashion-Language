@@ -27,10 +27,27 @@ THE SOFTWARE.
 
 # Get a place to put everything
 $wf = window.fashion = {
-	mimeType: "text/x-fashion",
-	fileHeader: "// Generated with Fashion - http://keaton.ws/fashion\n",
+
+	# Library metadata
+	version: "0.1"
+	url: "http://writefashion.org"
+	author: "Keaton Brandt"
+
+	# Language properties
+	mimeType: "text/x-fashion"
+
+	# Generated CSS properties
+	cssId: "FASHION-style-"
+
+	# Generated JS properties
 	variableObject: "style",
-	cssId: "FASHION-dynblock-"
+	runtimeObject: "FASHION",
+
+	# Generated JS runtime
+	runtimeModules: [
+		"watchVariables"
+	]
+
 }
 
 # Coffeescript helpers

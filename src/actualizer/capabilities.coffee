@@ -1,9 +1,11 @@
+# @prepros-prepend ../classes/runtime/runtime-capabilities.coffee
+	
 # Determines what functionality needs to be included in the generated JS
 window.fashion.$actualizer.determineRuntimeCapabilities = (runtimeData) ->
 	capabilities = new RuntimeCapabilities()
 
 	# If there are variables, we'll need some bindings and watchers
-	if runtimeData.variables.length > 0
+	if JSON.stringify(runtimeData.variables) isnt "{}"
 		capabilities.add $wf.$runtimeCapability.variables
 
 		# If any of them are scoped, we'll need that too
@@ -23,10 +25,30 @@ window.fashion.$actualizer.determineRuntimeCapabilities = (runtimeData) ->
 	return capabilities
 
 
+# Test the runtime data to see if it has a selector block with the given mode
 window.fashion.$actualizer.hasPropertyMode = (runtimeData, mode) ->
 	for selectorBlock in runtimeData.selectors
 		if selectorBlock.mode is mode then return true
 	return false
 
 
-# @prepros-prepend ../classes/runtime/runtime-capabilities.coffee
+# Load all of the runtime functions for the given capabilities
+window.fashion.$actualizer.addRuntimeFunctions = (runtimeData, parseTree, capabilities) ->
+	if !capabilities.capabilities then return
+
+	# Add all of the modules that the requested capabilities depend on
+	for moduleName in capabilities.capabilities
+		module = $wf.$runtimeModules[moduleName]
+		if !module then return console.log "[FASHION] Could not find module #{moduleName}"
+
+		# Add dependencies to the capabilities
+		capabilities.addDependencies module.dependencies
+
+		# Add this module to the runtime
+		runtimeData.addRuntimeModule module
+
+		# If the module has initializers, add them to the parse tree scripts
+		if module.initializers.length > 0
+			for key in module.initializers
+				functionName = "window.#{$wf.runtimeObject}.runtime.#{key}"
+				parseTree.addScript "window.addEventListener('load', #{functionName}, false);"

@@ -218,10 +218,34 @@
 
 }).call(this);
 (function() {
+  window.fashiontests.actualizer.js = function() {
+    var $wf, actualize, parse, process;
+    $wf = window.fashion;
+    parse = window.fashion.$parser.parse;
+    process = window.fashion.$processor.process;
+    actualize = function(parseTree) {
+      return window.fashion.$actualizer.actualize(parseTree, 0);
+    };
+    return it('should include all necessary runtime data', function() {
+      var js;
+      js = actualize(process(parse("$colorVar: blue;\nbody {\n	background-color: $colorVar;\n	width: 100%;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      expect(window.FASHION.variables.colorVar["default"]).toBe('blue');
+      expect(window.FASHION.selectors[0]).toBeUndefined();
+      expect(window.FASHION.selectors[1].name).toBe('body');
+      expect(window.FASHION.selectors[1].properties.length).toBe(1);
+      return expect(window.FASHION.selectors[1].properties[0].name).toBe('background-color');
+    });
+  };
+
+}).call(this);
+(function() {
   describe("Actualizer", function() {
     describe("Regrouper", window.fashiontests.actualizer.regrouper);
     describe("CSS Transitions", window.fashiontests.actualizer.transitions);
-    return describe("CSS Generator", window.fashiontests.actualizer.css);
+    describe("CSS Generator", window.fashiontests.actualizer.css);
+    return describe("JS Generator", window.fashiontests.actualizer.js);
   });
 
 }).call(this);

@@ -1,5 +1,5 @@
 # Convert a raw number property into a value and a unit
-window.fashion.$run.getUnit = (rawValue, varType, type=FASHION.type, unit=FASHION.unit) ->
+window.fashion.$shared.getUnit = (rawValue, varType, type, unit) ->
 
 	# Try the easy stuff first
 	if typeof rawValue is 'number' then return {value: parseFloat(rawValue), unit: false}
@@ -34,7 +34,7 @@ window.fashion.$run.getUnit = (rawValue, varType, type=FASHION.type, unit=FASHIO
 # CONVERSION METHODS
 
 # Convert time to milliseconds
-window.fashion.$run.timeInMs = (valueObject) ->
+window.fashion.$shared.timeInMs = (valueObject) ->
 	if valueObject.unit is "ms" then return valueObject.value
 	else if valueObject.unit is "s" then return valueObject.value * 1000
 	else return 0
