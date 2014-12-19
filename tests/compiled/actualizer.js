@@ -194,8 +194,8 @@
     });
     it('should generate the CSS for transitions', function() {
       var css, cssString, prefix, _i, _len;
-      css = actualize(process(parse("body {\n	background-color: [linear 100ms] blue;\n}"))).css;
-      cssString = 'body {background-color: blue;';
+      css = actualize(process(parse("body {\n	border: 1px solid black;\n	background-color: [linear 100ms] blue;\n}"))).css;
+      cssString = 'body {border: 1px solid black;background-color: blue;';
       for (_i = 0, _len = prefixes.length; _i < _len; _i++) {
         prefix = prefixes[_i];
         cssString += "" + prefix + "transition: background-color 100ms linear;";

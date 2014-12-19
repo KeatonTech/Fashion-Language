@@ -1,50 +1,42 @@
-$wf.addRuntimeModule "selectors", ["evaluation"],
+$wf.addRuntimeModule "selectors", ["evaluation", "errors"],
+
+	# Include the runtime modes
+	runtimeModes: window.fashion.$runtimeMode
 
 	# Update the CSS of a selector block
 	regenerateSelector: (selectorId) ->
-		variables = FASHION.variables
-		selectors = FASHION.selectors
 
-		# Deal with dynamic selectors
-		if selectors.dynamic[name]
-			properties = selectors.dynamic[name]
+		# Get the selector
+		selector = FASHION.selectors[selectorId]
+		if !selector then return @throwError "Selector #{selectorId} does not exist"
 
-			# Check that everything is as it should be
-			if !properties then return @throwError "Could not find selector '#{name}'"
-			location = map[name]
-			if !location and !allowNonexistant
-				return @throwError "Could not find selector '#{name}' in CSS"
+		# Handle dynamic selectors
+		if selector.mode is @runtimeModes.dynamic
 
-			# Delete the existing rule, or make a new one
-			if location
-				cssElem = document.getElementById("#{FASHION.config.cssId}#{location[0]}")
-				cssElem.sheet.deleteRule location[1]
-			else 
-				cssElem = document.getElementById("#{FASHION.config.cssId}0")
-				map[name] = location = [0, cssElem.sheet.rules.length]
+			# Delete it from the stylesheet
+			cssElem = document.getElementById "#{FASHION.config.cssId}"
+			stylesheet = cssElem.sheet
+			stylesheet.deleteRule selectorId
 
 			# Add the regenerated selector
-			cssElem.sheet.insertRule @regenerateSelector(name, properties), location[1]
+			stylesheet.insertRule @CSSRuleForSelector(selector), selectorId
 
-		# Deal with individualized selectors
-		if selectors.individual[name]
-			individualProps = selectors.individual[name]
-			if individualProps then @applyIndividualizedSelectors selectors.individual
-
+	# CSS Templates
+	CSSPropertyTemplate: window.fashion.$actualizer.cssPropertyTemplate
+	CSSSelectorTemplate: window.fashion.$actualizer.cssSelectorTemplate
 
 	# Generate a CSS rule for the given selector block
-	CSSRuleForSelector: (selectorObject) ->
+	CSSRuleForSelector: (selector) ->
 
-		# Separate styles based on whether or not they'll actually change
-		expandedSelector = @expandVariables selector
-		dynamicSelector = expandedSelector isnt selector
-		dynamicProps = "#{expandedSelector} {"
+		# Get the name of the selector
+		if selector.name.script
+			selectorName = @evaluate valueObject
+		else selectorName = selector.name
 
 		# Loop over every property in the selector
-		for property, valueObject of properties
+		cssProperties = (for propertyObject in selector.properties
+			@CSSPropertyTemplate(propertyObject.name, @evaluate propertyObject.value)
+		)
 
-			# Evaluate the current string value
-			val = @evaluate valueObject, undefined, variables
-			dynamicProps += "#{property}: #{val};"
-
-		return dynamicProps + "}"
+		# Return the templated selector
+		return @CSSSelectorTemplate selectorName, cssProperties

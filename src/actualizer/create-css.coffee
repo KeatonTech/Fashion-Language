@@ -16,8 +16,8 @@ window.fashion.$actualizer.createCSS = (runtimeData, cssSelectors) ->
 			# Values are computed differently if they're dynamic or have a transition
 			if selector.mode is $wf.$runtimeMode.static
 				if typeof value is 'object' and value.value
-					cssValue = value.value 						# Static w/ Transition
-				else cssValue = value 							# Static w/o Transition
+					cssValue = evalFunction value.value 		# Static w/ Transition
+				else cssValue = evalFunction value 				# Static w/o Transition
 			else cssValue = evalFunction value 					# Dynamic / Live
 
 			# Turn this property into a string
@@ -46,8 +46,9 @@ window.fashion.$actualizer.separateTransitions = (parseTree) ->
 		# Go through each property 
 		for property in selector.properties
 			if property.value.transition
-				transitions.push(pt = property.value.transition)
+				pt = property.value.transition
 				pt.property = property.name
+				transitions.push(pt)
 
 				# Determine the mode of the transition
 				pt.mode = pt.easing.mode | pt.duration.mode | pt.delay.mode
@@ -90,6 +91,8 @@ window.fashion.$actualizer.evaluationFunction = (variables) -> (value) ->
 
 
 # Templates used in generating CSS
+# NOTE: These are copied into the runtime and used there as well
+
 window.fashion.$actualizer.cssPropertyTemplate = (name, value) ->
 	"#{name}: #{value};"
 

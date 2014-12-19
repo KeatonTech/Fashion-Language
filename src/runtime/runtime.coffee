@@ -23,6 +23,10 @@ $wf.addRuntimeModule "evaluation", ["variables"],
 			FASHION.runtime,	# Runtime functions, passed to functions
 			element
 		)
+
+# Register basic functionality
+$wf.addRuntimeModule "errors", [],
+	throwError: (message) -> console.log "[FASHION] Runtime error: #{message}";
 	
 # Here come the rest of the modules!
 #@prepros-append ./variables.coffee

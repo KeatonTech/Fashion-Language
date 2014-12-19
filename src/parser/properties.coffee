@@ -14,6 +14,7 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 			///g
 
 	while property = regex.exec bodyString
+		transition = undefined
 		if property.length < 7 then continue # Sanity check
 
 		# Create a value object

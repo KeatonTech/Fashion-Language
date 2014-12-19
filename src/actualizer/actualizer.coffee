@@ -4,7 +4,7 @@ window.fashion.$actualizer =
 
 	# Generate a whole new document
 	# scriptIndex allows multiple Fashion scripts to be used on a page without colliding
-	actualize: (parseTree, scriptIndex) ->
+	actualize: (parseTree) ->
 
 		# Separate transitions out into their own properties
 		$wf.$actualizer.separateTransitions parseTree

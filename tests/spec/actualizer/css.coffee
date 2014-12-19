@@ -76,11 +76,12 @@ window.fashiontests.actualizer.css = ()->
 	it 'should generate the CSS for transitions', () ->
 		{css} = actualize process parse """
 			body {
+				border: 1px solid black;
 				background-color: [linear 100ms] blue;
 			}
 			"""
 
-		cssString = 'body {background-color: blue;'
+		cssString = 'body {border: 1px solid black;background-color: blue;'
 		for prefix in prefixes
 			cssString += "#{prefix}transition: background-color 100ms linear;"
 		cssString += "}\n"

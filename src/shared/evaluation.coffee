@@ -1,6 +1,9 @@
 window.fashion.$shared.getVariable =
 (variables, globals, funcs, runtime, varName, elem) ->
 	vObj = variables[varName]
+	if !vObj
+		console.log "[FASHION] Could not find variable '#{varName}'"
+		return {value: undefined}
 
 	# Parsetree variables -- sent by the actualizer
 	if vObj[0] then return vObj[0]

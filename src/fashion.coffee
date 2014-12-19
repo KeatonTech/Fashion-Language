@@ -37,18 +37,21 @@ $wf = window.fashion = {
 	mimeType: "text/x-fashion"
 
 	# Generated CSS properties
-	cssId: "FASHION-style-"
+	cssId: "FASHION-stylesheet"
 
 	# Generated JS properties
-	variableObject: "style",
 	runtimeObject: "FASHION",
 
 	# Generated JS runtime
 	runtimeModules: [
 		"watchVariables"
 	]
-
 }
+
+# Add settings that will be sent to the runtime
+window.fashion.runtimeConfig = 
+	variableObject: "style"
+	cssId: window.fashion.cssId
 
 # Coffeescript helpers
 wait = (d,f)-> setTimeout(f,d)

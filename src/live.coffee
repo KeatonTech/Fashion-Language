@@ -46,10 +46,10 @@ document.onreadystatechange = ()->
 			parseTree = window.fashion.$processor.process parseTree
 
 			# Convert the tree into JS and CSS elements
-			{css, js} = window.fashion.$actualizer.actualize parseTree, scriptIndex
+			{css, js} = window.fashion.$actualizer.actualize parseTree
 
 			# Add those elements to the page
-			$wf.$dom.addStylesheet css, scriptIndex++
+			$wf.$dom.addStylesheet css
 			$wf.$dom.addScript js
 
 			# Print the runtime
@@ -73,8 +73,8 @@ document.onreadystatechange = ()->
 # @prepros-append ./parser/parser.coffee
 # @prepros-append ./processor/processor.coffee
 # @prepros-append ./shared/shared.coffee
-# @prepros-append ./runtime/runtime.coffee
 # @prepros-append ./actualizer/actualizer.coffee
+# @prepros-append ./runtime/runtime.coffee
 
 # Include all of the built-in Fashion modules
 # @prepros-append ./built-in/functions/functions.coffee

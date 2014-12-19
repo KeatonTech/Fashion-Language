@@ -34,10 +34,14 @@ $wf = window.fashion = {
   url: "http://writefashion.org",
   author: "Keaton Brandt",
   mimeType: "text/x-fashion",
-  cssId: "FASHION-style-",
-  variableObject: "style",
+  cssId: "FASHION-stylesheet",
   runtimeObject: "FASHION",
   runtimeModules: ["watchVariables"]
+};
+
+window.fashion.runtimeConfig = {
+  variableObject: "style",
+  cssId: window.fashion.cssId
 };
 
 wait = function(d, f) {
@@ -176,8 +180,8 @@ document.onreadystatechange = function() {
       start = new Date().getTime();
       parseTree = window.fashion.$parser.parse(scriptText);
       parseTree = window.fashion.$processor.process(parseTree);
-      _ref = window.fashion.$actualizer.actualize(parseTree, scriptIndex), css = _ref.css, js = _ref.js;
-      $wf.$dom.addStylesheet(css, scriptIndex++);
+      _ref = window.fashion.$actualizer.actualize(parseTree), css = _ref.css, js = _ref.js;
+      $wf.$dom.addStylesheet(css);
       $wf.$dom.addScript(js);
       console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
       if (--fileCount <= 0) {
@@ -218,11 +222,11 @@ window.fashion.$dom = {
     head = document.head || document.getElementsByTagName('head')[0];
     return head.appendChild(element);
   },
-  addStylesheet: function(styleText, index) {
+  addStylesheet: function(styleText) {
     var id, rule, sheet, styleRules, _results;
     sheet = document.createElement("style");
     sheet.setAttribute("type", "text/css");
-    sheet.setAttribute("id", "" + window.fashion.cssId + index);
+    sheet.setAttribute("id", "" + window.fashion.cssId);
     $wf.$dom.addElementToHead(sheet);
     styleRules = styleText.split("\n");
     _results = [];
@@ -980,6 +984,7 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
   regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*([^;}\n]*?)[\s]*(!important)?[;}\n]/g;
   _results = [];
   while (property = regex.exec(bodyString)) {
+    transition = void 0;
     if (property.length < 7) {
       continue;
     }
@@ -1453,6 +1458,12 @@ window.fashion.$shared = {};
 window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime, varName, elem) {
   var vObj;
   vObj = variables[varName];
+  if (!vObj) {
+    console.log("[FASHION] Could not find variable '" + varName + "'");
+    return {
+      value: void 0
+    };
+  }
   if (vObj[0]) {
     return vObj[0];
   }
@@ -1629,104 +1640,8 @@ window.fashion.$shared.timeInMs = function(valueObject) {
     return 0;
   }
 };
-var RuntimeModule;
-
-RuntimeModule = (function() {
-  function RuntimeModule(name, dependencies, functions) {
-    var f, key;
-    this.name = name;
-    this.dependencies = dependencies;
-    this.functions = functions;
-    this.initializers = [];
-    for (key in functions) {
-      f = functions[key];
-      if (key[0] === "$") {
-        this.initializers.push(key);
-      }
-    }
-  }
-
-  return RuntimeModule;
-
-})();
-window.fashion.$runtimeModules = {};
-
-window.fashion.addRuntimeModule = function(name, dependencies, functions) {
-  return window.fashion.$runtimeModules[name] = new RuntimeModule(name, dependencies, functions);
-};
-
-$wf.addRuntimeModule("types", [], {
-  determineType: window.fashion.$shared.determineType,
-  getUnit: window.fashion.$shared.getUnit,
-  timeInMs: window.fashion.$shared.timeInMs
-});
-
-$wf.addRuntimeModule("evaluation", ["variables"], {
-  evaluate_Shared: window.fashion.$shared.evaluate,
-  evaluate: function(value, element) {
-    return this.evaluate_Shared(value, FASHION.variables, FASHION.globals, FASHION.functions, FASHION.runtime, element);
-  }
-});
-$wf.addRuntimeModule("variables", ["evaluation", "types"], {
-  getVariable_Shared: window.fashion.$shared.getVariable,
-  getVariable: function(varName, element) {
-    return this.getVariable_Shared(FASHION.variables, FASHION.globals, FASHION.functions, FASHION.runtime, varName, element);
-  },
-  setVariable: function(varName, value, element) {
-    return console.log("Setting " + varName + " to " + value);
-  }
-});
-
-$wf.addRuntimeModule("watchVariables", [], {
-  $initWatchers: function() {
-    return console.log("test");
-  }
-});
-$wf.addRuntimeModule("selectors", ["evaluation"], {
-  regenerateSelector: function(selectorId) {
-    var cssElem, individualProps, location, properties, selectors, variables;
-    variables = FASHION.variables;
-    selectors = FASHION.selectors;
-    if (selectors.dynamic[name]) {
-      properties = selectors.dynamic[name];
-      if (!properties) {
-        return this.throwError("Could not find selector '" + name + "'");
-      }
-      location = map[name];
-      if (!location && !allowNonexistant) {
-        return this.throwError("Could not find selector '" + name + "' in CSS");
-      }
-      if (location) {
-        cssElem = document.getElementById("" + FASHION.config.cssId + location[0]);
-        cssElem.sheet.deleteRule(location[1]);
-      } else {
-        cssElem = document.getElementById("" + FASHION.config.cssId + "0");
-        map[name] = location = [0, cssElem.sheet.rules.length];
-      }
-      cssElem.sheet.insertRule(this.regenerateSelector(name, properties), location[1]);
-    }
-    if (selectors.individual[name]) {
-      individualProps = selectors.individual[name];
-      if (individualProps) {
-        return this.applyIndividualizedSelectors(selectors.individual);
-      }
-    }
-  },
-  CSSRuleForSelector: function(selectorObject) {
-    var dynamicProps, dynamicSelector, expandedSelector, property, val, valueObject;
-    expandedSelector = this.expandVariables(selector);
-    dynamicSelector = expandedSelector !== selector;
-    dynamicProps = "" + expandedSelector + " {";
-    for (property in properties) {
-      valueObject = properties[property];
-      val = this.evaluate(valueObject, void 0, variables);
-      dynamicProps += "" + property + ": " + val + ";";
-    }
-    return dynamicProps + "}";
-  }
-});
 window.fashion.$actualizer = {
-  actualize: function(parseTree, scriptIndex) {
+  actualize: function(parseTree) {
     var capabilities, css, cssSelectors, hMap, js, jsSelectors, runtimeData, selectors, _ref;
     $wf.$actualizer.separateTransitions(parseTree);
     _ref = $wf.$actualizer.regroupProperties(parseTree), selectors = _ref.selectors, hMap = _ref.map;
@@ -1843,8 +1758,10 @@ var RuntimeData;
 
 RuntimeData = (function() {
   function RuntimeData(parseTree, selectors, variables) {
+    this.config = $wf.runtimeConfig;
     this.selectors = selectors;
     this.variables = variables;
+    this.globals = parseTree.dependencies.globals;
     this.functions = parseTree.dependencies.functions;
     this.watchSelectors = [];
     this.runtime = {};
@@ -1855,17 +1772,15 @@ RuntimeData = (function() {
   };
 
   RuntimeData.prototype.addRuntimeModule = function(runtimeModule) {
-    var func, name, _ref, _results;
+    var func, name, _ref;
     _ref = runtimeModule.functions;
-    _results = [];
     for (name in _ref) {
       func = _ref[name];
       if (this.runtime[name]) {
-        "[FASHION] Overwriting runtime function '" + name + "'";
+        return;
       }
-      _results.push(this.runtime[name] = func);
+      this.runtime[name] = func;
     }
-    return _results;
   };
 
   return RuntimeData;
@@ -1960,9 +1875,9 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
       value = property.value;
       if (selector.mode === $wf.$runtimeMode["static"]) {
         if (typeof value === 'object' && value.value) {
-          cssValue = value.value;
+          cssValue = evalFunction(value.value);
         } else {
-          cssValue = value;
+          cssValue = evalFunction(value);
         }
       } else {
         cssValue = evalFunction(value);
@@ -1989,8 +1904,9 @@ window.fashion.$actualizer.separateTransitions = function(parseTree) {
     for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
       property = _ref1[_i];
       if (property.value.transition) {
-        transitions.push(pt = property.value.transition);
+        pt = property.value.transition;
         pt.property = property.name;
+        transitions.push(pt);
         pt.mode = pt.easing.mode | pt.duration.mode | pt.delay.mode;
       }
     }
@@ -2131,13 +2047,16 @@ window.fashion.$actualizer.hasPropertyMode = function(runtimeData, mode) {
 };
 
 window.fashion.$actualizer.addRuntimeFunctions = function(runtimeData, parseTree, capabilities) {
-  var functionName, key, module, moduleName, _i, _j, _len, _len1, _ref, _ref1;
+  var cid, functionName, key, module, moduleName, _i, _len, _ref;
   if (!capabilities.capabilities) {
     return;
   }
-  _ref = capabilities.capabilities;
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    moduleName = _ref[_i];
+  cid = 0;
+  while (cid < capabilities.capabilities.length) {
+    moduleName = capabilities.capabilities[cid++];
+    if (moduleName === void 0) {
+      continue;
+    }
     module = $wf.$runtimeModules[moduleName];
     if (!module) {
       return console.log("[FASHION] Could not find module " + moduleName);
@@ -2145,15 +2064,165 @@ window.fashion.$actualizer.addRuntimeFunctions = function(runtimeData, parseTree
     capabilities.addDependencies(module.dependencies);
     runtimeData.addRuntimeModule(module);
     if (module.initializers.length > 0) {
-      _ref1 = module.initializers;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        key = _ref1[_j];
+      _ref = module.initializers;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        key = _ref[_i];
         functionName = "window." + $wf.runtimeObject + ".runtime." + key;
         parseTree.addScript("window.addEventListener('load', " + functionName + ", false);");
       }
     }
   }
 };
+var RuntimeModule;
+
+RuntimeModule = (function() {
+  function RuntimeModule(name, dependencies, functions) {
+    var f, key;
+    this.name = name;
+    this.dependencies = dependencies;
+    this.functions = functions;
+    this.initializers = [];
+    for (key in functions) {
+      f = functions[key];
+      if (key[0] === "$") {
+        this.initializers.push(key);
+      }
+    }
+  }
+
+  return RuntimeModule;
+
+})();
+window.fashion.$runtimeModules = {};
+
+window.fashion.addRuntimeModule = function(name, dependencies, functions) {
+  return window.fashion.$runtimeModules[name] = new RuntimeModule(name, dependencies, functions);
+};
+
+$wf.addRuntimeModule("types", [], {
+  determineType: window.fashion.$shared.determineType,
+  getUnit: window.fashion.$shared.getUnit,
+  timeInMs: window.fashion.$shared.timeInMs
+});
+
+$wf.addRuntimeModule("evaluation", ["variables"], {
+  evaluate_Shared: window.fashion.$shared.evaluate,
+  evaluate: function(value, element) {
+    return this.evaluate_Shared(value, FASHION.variables, FASHION.globals, FASHION.functions, FASHION.runtime, element);
+  }
+});
+
+$wf.addRuntimeModule("errors", [], {
+  throwError: function(message) {
+    return console.log("[FASHION] Runtime error: " + message);
+  }
+});
+$wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"], {
+  getVariable: window.fashion.$shared.getVariable,
+  variableValue: function(varName, element) {
+    return this.getVariable(FASHION.variables, FASHION.globals, FASHION.functions, FASHION.runtime, varName, element).value;
+  },
+  setVariable: function(varName, value, element) {
+    if (element === void 0) {
+      return this.setTopLevelVariable(varName, value);
+    }
+    return console.log("Scoped variable setting coming soon");
+  },
+  setTopLevelVariable: function(varName, value) {
+    var selectorId, vObj, _i, _len, _ref, _results;
+    vObj = FASHION.variables[varName];
+    if (!vObj) {
+      return this.throwError("Variable '$" + varName + "' does not exist");
+    }
+
+    /* For now, it's your problem if you screw this up
+    		 * Make sure the variable did not change type
+    		if @determineType(value) isnt vObj.type
+    			return @throwError "Cannot change type of '$#{varName}'"
+    
+    		 * Check to see if the unit changed
+    		unittedValue = @getUnit value, vObj.type, types
+    		if unittedValue.unit and unittedValue.unit != vObj.unit
+    			return @throwError "Cannot (yet) change unit of '$#{varName}'"
+    			 *vObj.unit = unittedValue.unit
+    
+    		if unittedValue.value then vObj.default = unittedValue.value
+    		else vObj.value = value
+     */
+    vObj["default"] = value;
+    _ref = vObj.dependents;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      selectorId = _ref[_i];
+      _results.push(this.regenerateSelector(selectorId));
+    }
+    return _results;
+  }
+});
+
+$wf.addRuntimeModule("watchVariables", [], {
+  $initWatchers: function() {
+    var propObject, styleObject, varName, varObj, _ref, _results;
+    window[FASHION.config.variableObject] = styleObject = {};
+    _ref = FASHION.variables;
+    _results = [];
+    for (varName in _ref) {
+      varObj = _ref[varName];
+      propObject = ((function(_this) {
+        return function(varName) {
+          return {
+            get: function() {
+              return FASHION.runtime.variableValue(varName);
+            },
+            set: function(newValue) {
+              return FASHION.runtime.setVariable(varName, newValue);
+            }
+          };
+        };
+      })(this))(varName);
+      Object.defineProperty(styleObject, varName, propObject);
+      _results.push(Object.defineProperty(styleObject, "$" + varName, propObject));
+    }
+    return _results;
+  }
+});
+$wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
+  runtimeModes: window.fashion.$runtimeMode,
+  regenerateSelector: function(selectorId) {
+    var cssElem, selector, stylesheet;
+    selector = FASHION.selectors[selectorId];
+    if (!selector) {
+      return this.throwError("Selector " + selectorId + " does not exist");
+    }
+    if (selector.mode === this.runtimeModes.dynamic) {
+      cssElem = document.getElementById("" + FASHION.config.cssId);
+      stylesheet = cssElem.sheet;
+      stylesheet.deleteRule(selectorId);
+      return stylesheet.insertRule(this.CSSRuleForSelector(selector), selectorId);
+    }
+  },
+  CSSPropertyTemplate: window.fashion.$actualizer.cssPropertyTemplate,
+  CSSSelectorTemplate: window.fashion.$actualizer.cssSelectorTemplate,
+  CSSRuleForSelector: function(selector) {
+    var cssProperties, propertyObject, selectorName;
+    if (selector.name.script) {
+      selectorName = this.evaluate(valueObject);
+    } else {
+      selectorName = selector.name;
+    }
+    cssProperties = (function() {
+      var _i, _len, _ref, _results;
+      _ref = selector.properties;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        propertyObject = _ref[_i];
+        _results.push(this.CSSPropertyTemplate(propertyObject.name, this.evaluate(propertyObject.value)));
+      }
+      return _results;
+    }).call(this);
+    return this.CSSSelectorTemplate(selectorName, cssProperties);
+  }
+});
 window.fashion.$functions = {
   random: new FunctionModule({
     output: $wf.$type.Number,

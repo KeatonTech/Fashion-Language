@@ -37,7 +37,11 @@ window.fashion.$actualizer.addRuntimeFunctions = (runtimeData, parseTree, capabi
 	if !capabilities.capabilities then return
 
 	# Add all of the modules that the requested capabilities depend on
-	for moduleName in capabilities.capabilities
+	cid = 0
+	while cid < capabilities.capabilities.length
+		moduleName = capabilities.capabilities[cid++]
+		if moduleName is undefined then continue
+
 		module = $wf.$runtimeModules[moduleName]
 		if !module then return console.log "[FASHION] Could not find module #{moduleName}"
 
