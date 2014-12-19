@@ -5,7 +5,7 @@ window.fashion.$actualizer.generateRuntimeData = (parseTree, hSelectors, hMap) -
 	variables = $wf.$actualizer.actualizeVariables parseTree, hSelectors, hMap
 
 	# Create the runtime data object
-	rdata = new RuntimeData hSelectors, variables
+	rdata = new RuntimeData parseTree, hSelectors, variables
 
 	# Return the runtime data object
 	return rdata
@@ -31,7 +31,8 @@ window.fashion.$actualizer.actualizeVariables = (parseTree, hSelectors, hMap) ->
 
 		# Add the dependencies, mapped to the split up selector blocks
 		bindings = parseTree.bindings.variables[varName]
-		rvar.dependents = $wf.$actualizer.mapVariableDependents rvar, bindings, hMap
+		rvar.dependents = $wf.$actualizer.mapVariableDependents(
+			rvar, bindings, hSelectors, hMap)
 
 		# Store this variable
 		variables[varName] = rvar
@@ -39,10 +40,17 @@ window.fashion.$actualizer.actualizeVariables = (parseTree, hSelectors, hMap) ->
 	return variables
 
 # Add dependencies to each variable object, based on homogenous selectors
-window.fashion.$actualizer.mapVariableDependents = (runtimeVar, bindings, hMap) ->
+window.fashion.$actualizer.mapVariableDependents = (runtimeVar, bindings, selectors, map) ->
 	hDependents = []
 	for boundSelectorId in bindings
-		hDependents.push.call hDependents, hMap[boundSelectorId]
+		for selectorId in map[boundSelectorId]
+			selector = selectors[selectorId]
+
+			# NOTE: This will sometimes return false positives, which aren't great
+			# 		If a selector has to be broken into multiple dynamic blocks,
+			#		both will be registered as dependencies even if only 1 uses the var.
+			if selector and selector.mode isnt $wf.$runtimeMode.static
+				hDependents.push selectorId
 	return hDependents
 
 

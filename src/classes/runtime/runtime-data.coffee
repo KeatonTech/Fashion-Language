@@ -1,10 +1,13 @@
 # Format for the data included in the Javascript for the runtime
 class RuntimeData
-	constructor: (selectors, variables) ->
+	constructor: (parseTree, selectors, variables) ->
 
 		# Basic parsetree information
 		@selectors = selectors
 		@variables = variables
+
+		# Dependencies
+		@functions = parseTree.dependencies.functions
 
 		# Used for individual properties
 		@watchSelectors = []

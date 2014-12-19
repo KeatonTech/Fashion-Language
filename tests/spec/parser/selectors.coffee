@@ -34,9 +34,9 @@ window.fashiontests.parser.selectors = ()->
 
 		# Check the name and order
 		expect(result.selectors[0].name).toBe(".outer")
-		expect(result.selectors[1].name).toBe(".outer .middle")
-		expect(result.selectors[2].name).toBe(".outer .middle .inner")
-		expect(result.selectors[3].name).toBe(".outer .middle.super")
+		expect(result.selectors[1].name).toBe(".outer > .middle")
+		expect(result.selectors[2].name).toBe(".outer > .middle > .inner")
+		expect(result.selectors[3].name).toBe(".outer > .middle.super")
 
 		# Check head values
 		expect(result.selectors[0].properties[0].value).toBe("1.0")

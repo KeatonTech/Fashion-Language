@@ -172,11 +172,13 @@ document.onreadystatechange = function() {
     };
     fileCount = window.fashion.$loader.countScripts();
     return window.fashion.$loader.loadScriptsFromTags(function(scriptText) {
-      var parseTree, start;
+      var css, js, parseTree, start, _ref;
       start = new Date().getTime();
       parseTree = window.fashion.$parser.parse(scriptText);
       parseTree = window.fashion.$processor.process(parseTree);
-      window.fashion.$actualizer.actualizeFullSheet(parseTree, scriptIndex++);
+      _ref = window.fashion.$actualizer.actualize(parseTree, scriptIndex), css = _ref.css, js = _ref.js;
+      $wf.$dom.addStylesheet(css, scriptIndex++);
+      $wf.$dom.addScript(js);
       console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
       if (--fileCount <= 0) {
         return allLoaded();
@@ -216,23 +218,28 @@ window.fashion.$dom = {
     head = document.head || document.getElementsByTagName('head')[0];
     return head.appendChild(element);
   },
-  makeStylesheet: function(className, index, isDynamic) {
-    var sheet;
+  addStylesheet: function(styleText, index) {
+    var id, rule, sheet, styleRules, _results;
     sheet = document.createElement("style");
     sheet.setAttribute("type", "text/css");
-    sheet.setAttribute("class", className);
-    sheet.setAttribute("data-count", "0");
-    sheet.setAttribute("data-index", index);
-    if (isDynamic) {
-      sheet.setAttribute("id", "" + window.fashion.cssId + index);
+    sheet.setAttribute("id", "" + window.fashion.cssId + index);
+    $wf.$dom.addElementToHead(sheet);
+    styleRules = styleText.split("\n");
+    _results = [];
+    for (id in styleRules) {
+      rule = styleRules[id];
+      if (rule.length > 3) {
+        _results.push(sheet.sheet.insertRule(rule, id));
+      }
     }
-    return sheet;
+    return _results;
   },
-  makeScriptTag: function(scriptText) {
+  addScript: function(scriptText) {
     var script;
     script = document.createElement("script");
+    script.setAttribute("type", "text/javascript");
     script.text = scriptText;
-    return script;
+    return $wf.$dom.addElementToHead(script);
   },
   incrementSheetIndex: function(sheet) {
     var val;
@@ -905,8 +912,10 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
     } else if (segment[7]) {
       if (segment[7][0] === "&") {
         name = topSel.name + segment[7].substr(1);
+      } else if (segment[7][0] === "~") {
+        name = topSel.name + " " + segment[7].substr(1);
       } else {
-        name = topSel.name + " " + segment[7];
+        name = topSel.name + " > " + segment[7];
       }
       selectors.push($wf.$parser.createSelector(parseTree, name));
       selectorStack.push(selectors.length - 1);
@@ -1833,9 +1842,10 @@ window.fashion.$actualizer.splitSelectorByModes = function(selector) {
 var RuntimeData;
 
 RuntimeData = (function() {
-  function RuntimeData(selectors, variables) {
+  function RuntimeData(parseTree, selectors, variables) {
     this.selectors = selectors;
     this.variables = variables;
+    this.functions = parseTree.dependencies.functions;
     this.watchSelectors = [];
     this.runtime = {};
   }
@@ -1889,7 +1899,7 @@ RuntimeVariable = (function() {
 window.fashion.$actualizer.generateRuntimeData = function(parseTree, hSelectors, hMap) {
   var rdata, variables;
   variables = $wf.$actualizer.actualizeVariables(parseTree, hSelectors, hMap);
-  rdata = new RuntimeData(hSelectors, variables);
+  rdata = new RuntimeData(parseTree, hSelectors, variables);
   return rdata;
 };
 
@@ -1915,18 +1925,25 @@ window.fashion.$actualizer.actualizeVariables = function(parseTree, hSelectors, 
       rvar.addScope(name, varObj.value);
     }
     bindings = parseTree.bindings.variables[varName];
-    rvar.dependents = $wf.$actualizer.mapVariableDependents(rvar, bindings, hMap);
+    rvar.dependents = $wf.$actualizer.mapVariableDependents(rvar, bindings, hSelectors, hMap);
     variables[varName] = rvar;
   }
   return variables;
 };
 
-window.fashion.$actualizer.mapVariableDependents = function(runtimeVar, bindings, hMap) {
-  var boundSelectorId, hDependents, _i, _len;
+window.fashion.$actualizer.mapVariableDependents = function(runtimeVar, bindings, selectors, map) {
+  var boundSelectorId, hDependents, selector, selectorId, _i, _j, _len, _len1, _ref;
   hDependents = [];
   for (_i = 0, _len = bindings.length; _i < _len; _i++) {
     boundSelectorId = bindings[_i];
-    hDependents.push.call(hDependents, hMap[boundSelectorId]);
+    _ref = map[boundSelectorId];
+    for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+      selectorId = _ref[_j];
+      selector = selectors[selectorId];
+      if (selector && selector.mode !== $wf.$runtimeMode["static"]) {
+        hDependents.push(selectorId);
+      }
+    }
   }
   return hDependents;
 };

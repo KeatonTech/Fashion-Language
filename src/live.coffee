@@ -46,7 +46,11 @@ document.onreadystatechange = ()->
 			parseTree = window.fashion.$processor.process parseTree
 
 			# Convert the tree into JS and CSS elements
-			window.fashion.$actualizer.actualizeFullSheet parseTree, scriptIndex++
+			{css, js} = window.fashion.$actualizer.actualize parseTree, scriptIndex
+
+			# Add those elements to the page
+			$wf.$dom.addStylesheet css, scriptIndex++
+			$wf.$dom.addScript js
 
 			# Print the runtime
 			console.log "[FASHION] Compile finished in #{new Date().getTime() - start}ms"

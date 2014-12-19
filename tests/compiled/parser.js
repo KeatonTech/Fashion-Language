@@ -119,8 +119,8 @@
     return it("should allow variables within nested selectors", function() {
       var result;
       result = parse(".menu {\n	.main {\n		$isSelected: true;\n	}\n}");
-      expect(result.variables["isSelected"][".menu .main"]["value"]).toEqual("true");
-      return expect(result.variables["isSelected"][".menu .main"]["type"]).toEqual(type.Unknown);
+      expect(result.variables["isSelected"][".menu > .main"]["value"]).toEqual("true");
+      return expect(result.variables["isSelected"][".menu > .main"]["type"]).toEqual(type.Unknown);
     });
   };
 
@@ -142,9 +142,9 @@
       var result;
       result = parse(".outer {\n	opacity: 1.0;\n	.middle {\n		opacity: 0.5;\n		.inner {opacity: 0.0;}\n		&.super {opacity: 0.75;}\n		height: 50px\n	}\n	height: 100px\n}");
       expect(result.selectors[0].name).toBe(".outer");
-      expect(result.selectors[1].name).toBe(".outer .middle");
-      expect(result.selectors[2].name).toBe(".outer .middle .inner");
-      expect(result.selectors[3].name).toBe(".outer .middle.super");
+      expect(result.selectors[1].name).toBe(".outer > .middle");
+      expect(result.selectors[2].name).toBe(".outer > .middle > .inner");
+      expect(result.selectors[3].name).toBe(".outer > .middle.super");
       expect(result.selectors[0].properties[0].value).toBe("1.0");
       expect(result.selectors[1].properties[0].value).toBe("0.5");
       expect(result.selectors[2].properties[0].value).toBe("0.0");
