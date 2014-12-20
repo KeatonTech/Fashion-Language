@@ -656,6 +656,7 @@ BlockModule = (function(_super) {
     } else {
       this.compile = args.compileFunction || args.compile;
       this.runtimeObject = args.runtimeObject || args.runtime;
+      this.runtimeCapabilities = args.runtimeCapabilities || args.capabilities;
     }
   }
 
@@ -678,6 +679,7 @@ PropertyModule = (function(_super) {
       this.replace = args.replace || false;
       this.runtimeObject = args.runtimeObject || args.runtime;
       this.mode = args.mode;
+      this.runtimeCapabilities = args.runtimeCapabilities || args.capabilities;
     }
   }
 
@@ -1375,9 +1377,9 @@ window.fashion.$processor.api = {
   throwError: function(property, error) {
     return console.log("[FASHION: " + property + "] " + error);
   },
-  setProperty: function(selector, insertIndex, mode, name, value) {
+  setProperty: function(selector, insertIndex, name, value) {
     var property;
-    property = new Property(name, value, mode);
+    property = new Property(name, value, value.mode || $wf.$runtimeMode["static"]);
     return selector.insertProperty(property, insertIndex + 1);
   },
   getProperty: function(parseTree, selectorName, propertyName) {
@@ -1466,7 +1468,7 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
       if (propertyModule) {
         API = {
           throwError: funcs.throwError.bind(0, property),
-          setProperty: funcs.setProperty.bind(0, selector, index, property.mode),
+          setProperty: funcs.setProperty.bind(0, selector, index),
           getProperty: funcs.getProperty.bind(0, parseTree, selector.name),
           parseValue: funcs.parseValue,
           determineType: funcs.determineType,
@@ -1846,10 +1848,16 @@ var RuntimeData;
 
 RuntimeData = (function() {
   function RuntimeData(parseTree, selectors, variables) {
+    var block, name, _ref;
     this.config = $wf.runtimeConfig;
     this.selectors = selectors;
     this.variables = variables;
     this.modules = parseTree.dependencies;
+    _ref = this.modules.blocks;
+    for (name in _ref) {
+      block = _ref[name];
+      this.modules.blocks[name] = block.runtimeObject;
+    }
     this.runtime = {};
   }
 
@@ -2115,6 +2123,7 @@ window.fashion.$actualizer.determineRuntimeCapabilities = function(runtimeData, 
   if (JSON.stringify(runtimeData.modules.globals) !== "{}") {
     capabilities.add($wf.$runtimeCapability.globals);
   }
+  $wf.$actualizer.addModuleCapabilities(capabilities, runtimeData);
   return capabilities;
 };
 
@@ -2155,6 +2164,40 @@ window.fashion.$actualizer.addRuntimeFunctions = function(runtimeData, parseTree
       }
     }
   }
+};
+
+window.fashion.$actualizer.addModuleCapabilities = function(capabilities, runtimeData) {
+  var module, n, _ref, _ref1, _ref2, _ref3, _results;
+  _ref = runtimeData.modules.blocks;
+  for (n in _ref) {
+    module = _ref[n];
+    if (module.runtimeCapabilities) {
+      capabilities.addDependencies(module.runtimeCapabilities);
+    }
+  }
+  _ref1 = runtimeData.modules.properties;
+  for (n in _ref1) {
+    module = _ref1[n];
+    if (module.runtimeCapabilities) {
+      capabilities.addDependencies(module.runtimeCapabilities);
+    }
+  }
+  _ref2 = runtimeData.modules.functions;
+  for (n in _ref2) {
+    module = _ref2[n];
+    if (module.runtimeCapabilities) {
+      capabilities.addDependencies(module.runtimeCapabilities);
+    }
+  }
+  _ref3 = runtimeData.modules.globals;
+  _results = [];
+  for (n in _ref3) {
+    module = _ref3[n];
+    if (module.runtimeCapabilities) {
+      _results.push(capabilities.addDependencies(module.runtimeCapabilities));
+    }
+  }
+  return _results;
 };
 window.fashion.$actualizer.mapBindings = function(bindings, selectors, map) {
   var boundSelectorId, hDependents, selector, selectorId, _i, _j, _len, _len1, _ref;
@@ -2346,6 +2389,9 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
         propertyObject = _ref[_i];
         if (module = FASHION.modules.properties[propertyObject.name]) {
           evalFunction = this.evaluate.bind(this, propertyObject.value, element);
+          if (!module.apply) {
+            continue;
+          }
           module.apply(element, propertyObject.value, evalFunction);
           if (module.replace) {
             continue;
@@ -2357,6 +2403,15 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
       return _results;
     }).call(this);
     return this.CSSSelectorTemplate(selectorName, cssProperties);
+  },
+  addSelector: function(name, properties) {
+    var CSS, stylesheet;
+    CSS = this.CSSRuleForSelector({
+      name: name,
+      properties: properties
+    });
+    stylesheet = document.getElementById("" + FASHION.config.cssId).sheet;
+    return stylesheet.insertRule(CSS, stylesheet.rules.length);
   }
 });
 $wf.addRuntimeModule("individualized", ["selectors", "elements"], {
@@ -2461,7 +2516,7 @@ $wf.addRuntimeModule("elements", [], {
     Object.defineProperty(eObj, "parent", {
       get: (function(_this) {
         return function() {
-          return _this.buildObjectForElement(DOMElement.parentNode);
+          return _this.createElementObject(DOMElement.parentNode);
         };
       })(this)
     });
@@ -2715,6 +2770,7 @@ $wf.$extend(window.fashion.$properties, new ((function() {
 })()));
 window.fashion.$blocks = {};
 window.fashion.$blocks["transition"] = new BlockModule({
+  capabilities: ["selectors", "evaluation"],
   compile: function(args, body) {
     var acc, count, currentKeyframe, depth, keyframe, keyframes, lastAcc, name, regex, segment, transition;
     name = args[0];
@@ -2752,10 +2808,16 @@ window.fashion.$blocks["transition"] = new BlockModule({
   },
   runtimeObject: {
     transitions: {},
+    startDelay: 10,
+    endDelay: 2,
+    settleDelay: 1,
+    wait: function(d, f) {
+      return setTimeout(f, d);
+    },
     trigger: function(name, duration, element) {
-      var addSelectors, head, keyframe, runtime, selectors, sheet, sheetElement, startTime, transition;
+      var addSelectors, d, head, intStartTime, keyframe, runtime, selectors, sheet, sheetElement, startTime, transition;
       duration = this.timeInMs(duration);
-      runtime = w.FASHION.blocks.transition;
+      runtime = FASHION.modules.blocks.transition;
       transition = runtime.transitions[name];
       sheetElement = document.createElement("style");
       sheetElement.setAttribute("type", "text/css");
@@ -2767,46 +2829,51 @@ window.fashion.$blocks["transition"] = new BlockModule({
         if (keyframe === "start") {
           startTime = 0;
         } else {
-          startTime = (parseFloat(keyframe.split('-')[0]) / 100 * duration) + 10;
+          intStartTime = parseFloat(keyframe.split('-')[0]) / 100 * duration;
+          startTime = intStartTime + runtime.startDelay;
         }
-        addSelectors = runtime.addSelectors(selectors, duration, sheet, runtime);
+        addSelectors = runtime.addSelectorsFunc(selectors, duration, sheet, runtime);
         if (startTime > 0) {
-          wait(startTime, addSelectors.bind(this));
+          runtime.wait(startTime, addSelectors.bind(this));
         } else {
           addSelectors.bind(this)();
         }
       }
-      return wait(duration + 12, function() {
+      d = duration + runtime.startDelay + runtime.endDelay;
+      return runtime.wait(d, function() {
         return sheetElement.parentElement.removeChild(sheetElement);
       });
     },
-    addSelectors: function(selectors, duration, sheet, runtime) {
+    addSelectorsFunc: function(selectors, duration, sheet, runtime) {
       return function() {
-        var jumpProperties, properties, property, selector, smoothCount, smoothProperties, transitionRule, valueObject;
-        for (selector in selectors) {
-          properties = selectors[selector];
-          jumpProperties = {};
-          smoothProperties = {};
+        var id, jumpProperties, properties, property, selName, selector, settleDelay, smoothCount, smoothProperties, tCSS, _i, _len;
+        settleDelay = FASHION.modules.blocks.transition.settleDelay;
+        for (id in selectors) {
+          selector = selectors[id];
+          properties = selector.properties;
+          jumpProperties = [];
+          smoothProperties = [];
           smoothCount = 0;
-          for (property in properties) {
-            valueObject = properties[property];
-            if (typeof valueObject !== 'object' || !valueObject.transition) {
-              jumpProperties[property] = valueObject;
+          for (_i = 0, _len = properties.length; _i < _len; _i++) {
+            property = properties[_i];
+            if (typeof property.value !== 'object' || !property.value.transition) {
+              jumpProperties.push(property);
             } else {
-              smoothProperties[property] = valueObject;
+              smoothProperties.push(property);
               smoothCount++;
             }
           }
-          this.addProperties(selector, jumpProperties);
+          this.addSelector(selector.name, jumpProperties);
           if (smoothCount === 0) {
             continue;
           }
-          transitionRule = runtime.generateTransitions(smoothProperties, duration);
-          sheet.insertRule("" + selector + " {" + transitionRule + "}", sheet.rules.length);
-          wait(1, ((function(_this) {
+          tCSS = runtime.generateTransitions.call(this, smoothProperties, duration);
+          selName = this.evaluate(selector.name);
+          sheet.insertRule("" + selName + " {" + tCSS + "}", sheet.rules.length);
+          runtime.wait(settleDelay, ((function(_this) {
             return function(selector, smoothProperties) {
               return function() {
-                return _this.addProperties(selector, smoothProperties);
+                return _this.addSelector(selector.name, smoothProperties);
               };
             };
           })(this))(selector, smoothProperties));
@@ -2814,17 +2881,17 @@ window.fashion.$blocks["transition"] = new BlockModule({
       };
     },
     generateTransitions: function(properties, duration) {
-      var csstext, l, msLength, property, t, valueObject;
+      var csstext, l, msLength, property, t, _i, _len;
       csstext = "transition: ";
-      for (property in properties) {
-        valueObject = properties[property];
-        if (!valueObject.transition) {
+      for (_i = 0, _len = properties.length; _i < _len; _i++) {
+        property = properties[_i];
+        if (!property.value.transition) {
           continue;
         }
-        t = valueObject.transition;
-        l = parseFloat(t.duration) / 100 * duration;
+        t = property.value.transition;
+        l = parseFloat(this.evaluate(t.duration)) / 100 * duration;
         msLength = l ? "" + l + "ms" : t.duration;
-        csstext += "" + property + " " + msLength + " " + (t.easing || '') + " " + (t.delay || '') + ",";
+        csstext += "" + property.name + " " + msLength + " " + (t.easing || '') + " " + (t.delay || '') + ",";
       }
       csstext = csstext.substr(0, csstext.length - 1) + ";";
       csstext = [csstext, "-webkit-" + csstext, "-moz-" + csstext, "-ms-" + csstext].join('');
@@ -2838,7 +2905,9 @@ window.fashion.$functions["trigger"] = new FunctionModule({
   unit: '',
   mode: $wf.$runtimeMode.individual,
   evaluate: function(name, duration, element) {
-    return w.FASHION.blocks.transition.trigger.call(this, name.value, duration, element);
+    var triggerFunction;
+    triggerFunction = FASHION.modules.blocks.transition.trigger;
+    return triggerFunction.call(this, name.value, duration, element);
   }
 });
 window.fashion.$globals = {

@@ -18,7 +18,7 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 				# Guarantees a certain amount of safety
 				API =
 					throwError: funcs.throwError.bind 0, property
-					setProperty: funcs.setProperty.bind 0, selector, index, property.mode
+					setProperty: funcs.setProperty.bind 0, selector, index
 					getProperty: funcs.getProperty.bind 0, parseTree, selector.name
 					parseValue: funcs.parseValue
 					determineType: funcs.determineType

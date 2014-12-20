@@ -53,7 +53,11 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
 			if module = FASHION.modules.properties[propertyObject.name]
 				evalFunction = @evaluate.bind(this, propertyObject.value, element)
+
+				# The apply function is run at runtime
+				if !module.apply then continue
 				module.apply element, propertyObject.value, evalFunction
+
 				if module.replace then continue
 
 			value = @evaluate(propertyObject.value, element)
@@ -62,3 +66,9 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
 		# Return the templated selector
 		return @CSSSelectorTemplate selectorName, cssProperties
+
+	# Add a new selector
+	addSelector: (name, properties) ->
+		CSS = @CSSRuleForSelector {name: name, properties: properties}
+		stylesheet = document.getElementById("#{FASHION.config.cssId}").sheet
+		stylesheet.insertRule CSS, stylesheet.rules.length

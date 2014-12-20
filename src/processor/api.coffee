@@ -5,10 +5,10 @@ window.fashion.$processor.api =
 	throwError: (property, error) -> console.log "[FASHION: #{property}] #{error}"
 
 	# Sets a property in the parse tree
-	setProperty: (selector, insertIndex, mode, name, value) ->
+	setProperty: (selector, insertIndex, name, value) ->
 
 		# Create a property
-		property = new Property name, value, mode
+		property = new Property name, value, value.mode || $wf.$runtimeMode.static
 
 		# Add the property
 		selector.insertProperty property, insertIndex+1

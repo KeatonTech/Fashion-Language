@@ -80,6 +80,9 @@ class BlockModule extends Module
 			# This object will be made available as w.FASHION.blocks.[name of block]
 			@runtimeObject = args.runtimeObject || args.runtime
 
+			# For adding things to the runtime
+			@runtimeCapabilities = args.runtimeCapabilities || args.capabilities
+
 
 # Adds a new CSS property to Fashion
 class PropertyModule extends Module
@@ -117,6 +120,9 @@ class PropertyModule extends Module
 
 			# Property mode
 			@mode = args.mode
+
+			# For adding things to the runtime
+			@runtimeCapabilities = args.runtimeCapabilities || args.capabilities
 
 # Make these accessible from the outside
 if !window.fashion.$class then window.fashion.$class = {}

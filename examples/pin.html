@@ -2,7 +2,7 @@
 <html>
 <head>
 	<title>Fashion Test</title>
-	<script src="../../build/fashion.0.1.js"></script>
+	<script src="../../build/fashion.0.2.js"></script>
 	<style type="text/x-fashion">
 
 	$boxWidth: 300px;
@@ -33,7 +33,7 @@
 	<script>
 		window.fashion.addFunction("randomColor",{
 			output: window.fashion.$type.Color,
-			individualized: true,
+			mode: window.fashion.$runtimeMode.individual,
 			evaluate: function() {
 				v = Math.random()
 				if (v > 0.0 && v <= 0.2) return "#f00"

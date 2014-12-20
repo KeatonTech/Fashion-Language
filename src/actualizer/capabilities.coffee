@@ -25,6 +25,9 @@ window.fashion.$actualizer.determineRuntimeCapabilities = (runtimeData, selector
 	if JSON.stringify(runtimeData.modules.globals) isnt "{}"
 		capabilities.add $wf.$runtimeCapability.globals
 
+	# Add capabilities from the modules used in the runtime
+	$wf.$actualizer.addModuleCapabilities capabilities, runtimeData
+
 	# Return the object
 	return capabilities
 
@@ -61,3 +64,19 @@ window.fashion.$actualizer.addRuntimeFunctions = (runtimeData, parseTree, capabi
 			for key in module.initializers
 				functionName = "window.#{$wf.runtimeObject}.runtime.#{key}.bind(FASHION.runtime)"
 				parseTree.addScript "window.addEventListener('load', #{functionName}, false);"
+
+
+# Adds in capabilities from runtime modules
+window.fashion.$actualizer.addModuleCapabilities = (capabilities, runtimeData) ->
+
+	for n, module of runtimeData.modules.blocks when module.runtimeCapabilities
+		capabilities.addDependencies module.runtimeCapabilities
+
+	for n, module of runtimeData.modules.properties when module.runtimeCapabilities
+		capabilities.addDependencies module.runtimeCapabilities
+
+	for n, module of runtimeData.modules.functions when module.runtimeCapabilities
+		capabilities.addDependencies module.runtimeCapabilities
+
+	for n, module of runtimeData.modules.globals when module.runtimeCapabilities
+		capabilities.addDependencies module.runtimeCapabilities

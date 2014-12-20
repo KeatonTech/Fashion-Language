@@ -42,6 +42,8 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***runtime-data.coffee:*** Converts the parse tree into a different data format more useful to the JS runtime.
 * ***capabilities.coffee:*** Figures out which capabilities of the Fashion runtime need to be included in the JS.
 * ***create-css.coffee:*** Create the text of a CSS file based on the homogenous selectors and runtime data.
+* ***selectors.coffee:*** After the regrouper, this piece splits selectors up based on what should go where.
+* ***bindings.coffee:*** Map and add 'dependents' objects to modules and variables.
 
 ### ./shared
 ##### Code used to deal with variables and expressions that is used by both the compiler and the outputted code
@@ -58,7 +60,7 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***selectors.coffee:*** Defines functions for generating CSS selector blocks
 * ***individualized.coffee:*** Defines functions for setting and maintaining individual properties on objects
 * ***elements.coffee:*** Defines functions for converting HTML elements into Fashion expression elements
-
+* ***globals.coffee:*** Handles watching and setting global variables, ones that start with a @
 
 ***
 

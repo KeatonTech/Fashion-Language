@@ -12,7 +12,7 @@ $wf.addRuntimeModule "elements", [],
 
 		# Navigation (deferred until the user asks for it)
 		Object.defineProperty eObj, "parent", 
-			get: ()=> @buildObjectForElement DOMElement.parentNode
+			get: ()=> @createElementObject DOMElement.parentNode
 
 		# Positioning
 		eObj.width = DOMElement.clientWidth
