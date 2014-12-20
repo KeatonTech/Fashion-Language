@@ -15,7 +15,7 @@ window.fashion.$stringifyObject = (object) ->
 	propStrings = []
 	for property, value of object when object.hasOwnProperty property
 		property = property.replace("'","\'")
-		propStrings.push "#{property}: #{window.fashion.$stringify value}"
+		propStrings.push "'#{property}': #{window.fashion.$stringify value}"
 	return "{#{propStrings.join(',')}}"
 
 

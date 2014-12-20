@@ -12,7 +12,7 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 			propertyModule = propertyModules[property.name]
 
 			# Determine if this is a fashion property
-			if propertyModule and propertyModule.compile
+			if propertyModule
 
 				# Bind the API to this particular run state
 				# Guarantees a certain amount of safety
@@ -24,12 +24,16 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 					determineType: funcs.determineType
 					determineUnit: funcs.determineUnit
 
-				# Process it!
-				propertyModules[property.name].compile.call API, property.value
-
 				# Remove the property if necessary
-				if propertyModule.replace and propertyModule.mode isnt $wf.$runtimeMode.individual
-					selector.properties.splice index--, 1
+				if propertyModule.mode isnt $wf.$runtimeMode.individual
+					parseTree.addPropertyDependency property.name, propertyModule
+
+				else
+					# Process it!
+					propertyModules[property.name].compile.call API, property.value
+
+					# Remove it if necessary
+					if propertyModule.replace then selector.properties.splice index--, 1
 
 
 	# Pass it back

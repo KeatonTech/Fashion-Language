@@ -25,4 +25,8 @@ $wf.addRuntimeModule "elements", [],
 			Object.defineProperty eObj, "outerHeight", 
 				get: ()-> parseFloat(cs.marginTop) + parseFloat(cs.marginBottom) + eObj.height
 
+		# Functionality
+		eObj.addEventListener = (evt, func, bubble) ->
+			DOMElement.addEventListener evt, func, bubble
+
 		return eObj

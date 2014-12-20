@@ -20,6 +20,10 @@ $wf.addRuntimeModule "individualized", ["selectors", "elements"],
 	# List elements for selector
 	updateSelectorElements: (selector) ->
 
+		# Clear any existing CSS rules
+		for id, individual of selector.elements when individual.cssid isnt -1
+			FASHION.individualSheet.deleteRule individual.cssid
+
 		# TODO: Make this work with scoped variables
 		selectorName = @evaluate selector.name
 		selector.elementsSelector = selectorName

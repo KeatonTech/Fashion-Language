@@ -186,7 +186,7 @@ window.fashion.$parser.expressionExpander =
 		
 		if isSetter 
 			# Setters do not need to be linked. This setter just uses a straight up equals
-			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value = "
+			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value ="
 
 		else
 			# Link this variable in the parse tree

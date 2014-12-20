@@ -50,6 +50,12 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
 		# Loop over every property in the selector
 		cssProperties = (for propertyObject in selector.properties
+
+			if module = FASHION.modules.properties[propertyObject.name]
+				evalFunction = @evaluate.bind(this, propertyObject.value, element)
+				module.apply element, propertyObject.value, evalFunction
+				if module.replace then continue
+
 			value = @evaluate(propertyObject.value, element)
 			@CSSPropertyTemplate(propertyObject.name, value)
 		)

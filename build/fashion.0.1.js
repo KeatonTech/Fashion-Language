@@ -287,7 +287,7 @@ window.fashion.$stringifyObject = function(object) {
       continue;
     }
     property = property.replace("'", "\'");
-    propStrings.push("" + property + ": " + (window.fashion.$stringify(value)));
+    propStrings.push("'" + property + "': " + (window.fashion.$stringify(value)));
   }
   return "{" + (propStrings.join(',')) + "}";
 };
@@ -1264,7 +1264,7 @@ window.fashion.$parser.expressionExpander = {
       unit = vObj.unit;
     }
     if (isSetter) {
-      script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value = ";
+      script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value =";
     } else {
       parseTree.addVariableBinding(selectorId, name);
       script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value";
@@ -1453,7 +1453,7 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
       property = _ref1[_j];
       index++;
       propertyModule = propertyModules[property.name];
-      if (propertyModule && propertyModule.compile) {
+      if (propertyModule) {
         API = {
           throwError: funcs.throwError.bind(0, property),
           setProperty: funcs.setProperty.bind(0, selector, index, property.mode),
@@ -1462,9 +1462,13 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
           determineType: funcs.determineType,
           determineUnit: funcs.determineUnit
         };
-        propertyModules[property.name].compile.call(API, property.value);
-        if (propertyModule.replace && propertyModule.mode !== $wf.$runtimeMode.individual) {
-          selector.properties.splice(index--, 1);
+        if (propertyModule.mode !== $wf.$runtimeMode.individual) {
+          parseTree.addPropertyDependency(property.name, propertyModule);
+        } else {
+          propertyModules[property.name].compile.call(API, property.value);
+          if (propertyModule.replace) {
+            selector.properties.splice(index--, 1);
+          }
         }
       }
     }
@@ -1517,6 +1521,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         var vObj;
         vObj = _this.getVariable(variables, globals, funcs, runtime, varName, element);
         varObjects.push({
+          name: varName,
           object: vObj,
           value: vObj.value
         });
@@ -1528,7 +1533,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
           for (_i = 0, _len = varObjects.length; _i < _len; _i++) {
             v = varObjects[_i];
             if (v.object.value !== v.value) {
-              _this.setVariable(v.object.name, v.object.value);
+              _this.setVariable(v.name, v.object.value);
             }
           }
         }
@@ -2198,7 +2203,8 @@ $wf.addRuntimeModule("evaluation", ["variables"], {
 
 $wf.addRuntimeModule("errors", [], {
   throwError: function(message) {
-    return console.log("[FASHION] Runtime error: " + message);
+    console.log("[FASHION] Runtime error: " + message);
+    return console.log(new Error().stack);
   }
 });
 $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"], {
@@ -2300,7 +2306,7 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
   CSSPropertyTemplate: window.fashion.$actualizer.cssPropertyTemplate,
   CSSSelectorTemplate: window.fashion.$actualizer.cssSelectorTemplate,
   CSSRuleForSelector: function(selector, element, name) {
-    var cssProperties, propertyObject, selectorName, value;
+    var cssProperties, evalFunction, module, propertyObject, selectorName, value;
     selectorName = name || this.evaluate(selector.name, element);
     cssProperties = (function() {
       var _i, _len, _ref, _results;
@@ -2308,6 +2314,13 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         propertyObject = _ref[_i];
+        if (module = FASHION.modules.properties[propertyObject.name]) {
+          evalFunction = this.evaluate.bind(this, propertyObject.value, element);
+          module.apply(element, propertyObject.value, evalFunction);
+          if (module.replace) {
+            continue;
+          }
+        }
         value = this.evaluate(propertyObject.value, element);
         _results.push(this.CSSPropertyTemplate(propertyObject.name, value));
       }
@@ -2338,7 +2351,14 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements"], {
     return _results;
   },
   updateSelectorElements: function(selector) {
-    var element, matchedElements, selectorName, _i, _len, _results;
+    var element, id, individual, matchedElements, selectorName, _i, _len, _ref, _results;
+    _ref = selector.elements;
+    for (id in _ref) {
+      individual = _ref[id];
+      if (individual.cssid !== -1) {
+        FASHION.individualSheet.deleteRule(individual.cssid);
+      }
+    }
     selectorName = this.evaluate(selector.name);
     selector.elementsSelector = selectorName;
     selector.elements = {};
@@ -2430,6 +2450,9 @@ $wf.addRuntimeModule("elements", [], {
         }
       });
     }
+    eObj.addEventListener = function(evt, func, bubble) {
+      return DOMElement.addEventListener(evt, func, bubble);
+    };
     return eObj;
   }
 });

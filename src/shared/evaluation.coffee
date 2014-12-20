@@ -37,7 +37,7 @@ window.fashion.$shared.evaluate =
 		varObjects = []
 		varLookup = (varName, element) => 
 			vObj = @getVariable variables, globals, funcs, runtime, varName, element
-			varObjects.push {object: vObj, value: vObj.value}
+			varObjects.push {name: varName, object: vObj, value: vObj.value}
 			return vObj
 
 		# Handle expressions
@@ -47,7 +47,7 @@ window.fashion.$shared.evaluate =
 			# Check to see if the expression changed any variable values
 			if valueObject.setter
 				for v in varObjects when v.object.value isnt v.value
-					@setVariable v.object.name, v.object.value
+					@setVariable v.name, v.object.value
 
 			return val
 
