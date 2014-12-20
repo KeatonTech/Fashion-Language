@@ -22,10 +22,13 @@ window.fashion.$actualizer =
 		# Generate a runtime data object containing everything the Javascript will need
 		runtimeData = $wf.$actualizer.generateRuntimeData parseTree, jsSelectors, cssMap
 
+		# Add bindings (selector dependents) for globals and functions
+		$wf.$actualizer.addBindings runtimeData, parseTree, jsSelectors, cssMap
+
 		# Figure out what capabilities will be needed in the Javascript
 		capabilities = $wf.$actualizer.determineRuntimeCapabilities runtimeData, selectors
 
-		# Catalog all of the individual properties, if necessary
+		# Catalog all of the individual-mode properties, if necessary
 		if capabilities.has $wf.$runtimeCapability.individualProps
 			$wf.$actualizer.addIndividualProperties runtimeData, selectors, cullOffsets
 
@@ -60,3 +63,4 @@ window.fashion.$actualizer.createJS = (runtimeData, scripts) ->
 # @prepros-append ./runtime-data.coffee
 # @prepros-append ./create-css.coffee
 # @prepros-append ./capabilities.coffee
+# @prepros-append ./bindings.coffee

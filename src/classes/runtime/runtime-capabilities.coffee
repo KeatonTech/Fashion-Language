@@ -5,6 +5,7 @@ window.fashion.$runtimeCapability =
 	scopedVariables: "scopedVariables"
 	individualProps: "individualized"
 	liveProps: "liveProperties"
+	globals: "globals"
 
 # Class to store these
 class RuntimeCapabilities

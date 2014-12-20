@@ -301,7 +301,8 @@ window.fashion.$stringifyArray = function(array) {
   }
   return "[" + (propStrings.join(',')) + "]";
 };
-var ParseTree;
+var ParseTree,
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 ParseTree = (function() {
   function ParseTree() {
@@ -371,12 +372,18 @@ ParseTree = (function() {
     if (!this.bindings.variables[variableName]) {
       throw new Error("Variable " + variableName + " does not exist or cannot be bound.");
     }
+    if (__indexOf.call(this.bindings.variables[variableName], selectorId) >= 0) {
+      return;
+    }
     return this.bindings.variables[variableName].push(selectorId);
   };
 
   ParseTree.prototype.addGlobalBinding = function(selectorId, globalName) {
     if (!this.bindings.globals[globalName]) {
       this.bindings.globals[globalName] = [];
+    }
+    if (__indexOf.call(this.bindings.globals[globalName], selectorId) >= 0) {
+      return;
     }
     return this.bindings.globals[globalName].push(selectorId);
   };
@@ -617,6 +624,7 @@ GlobalModule = (function(_super) {
   __extends(GlobalModule, _super);
 
   function GlobalModule(args) {
+    this.watch = args.watch;
     GlobalModule.__super__.constructor.call(this, args);
   }
 
@@ -669,6 +677,7 @@ PropertyModule = (function(_super) {
       }
       this.replace = args.replace || false;
       this.runtimeObject = args.runtimeObject || args.runtime;
+      this.mode = args.mode;
     }
   }
 
@@ -1128,7 +1137,7 @@ window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, 
     } else if (section[5]) {
       eObj = expander.localVariable(section[5], linkId, parseTree);
     } else if (section[6]) {
-      eObj = expander.globalVariable(section[6], globals, parseTree);
+      eObj = expander.globalVariable(section[6], linkId, globals, parseTree);
     } else if (section[7]) {
       eObj = expander.numberWithUnit(section[7]);
     } else if (section[10]) {
@@ -1272,7 +1281,7 @@ window.fashion.$parser.expressionExpander = {
     mode = $wf.$runtimeMode.generate(true, isIndividual);
     return new Expression(script, type, unit, mode);
   },
-  globalVariable: function(name, globals, parseTree) {
+  globalVariable: function(name, selectorId, globals, parseTree) {
     var dynamicMode, script, vObj;
     name = name.toLowerCase();
     vObj = globals[name];
@@ -1280,6 +1289,7 @@ window.fashion.$parser.expressionExpander = {
       return console.log("[FASHION] Variable $" + name + " does not exist.");
     }
     parseTree.addGlobalDependency(name, vObj);
+    parseTree.addGlobalBinding(selectorId, name);
     dynamicMode = $wf.$runtimeMode.dynamic;
     script = "g." + name + ".get()";
     return new Expression(script, vObj.type, vObj.unit, dynamicMode);
@@ -1462,7 +1472,7 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
           determineType: funcs.determineType,
           determineUnit: funcs.determineUnit
         };
-        if (propertyModule.mode !== $wf.$runtimeMode.individual) {
+        if (propertyModule.mode === $wf.$runtimeMode.individual) {
           parseTree.addPropertyDependency(property.name, propertyModule);
         } else {
           propertyModules[property.name].compile.call(API, property.value);
@@ -1671,6 +1681,7 @@ window.fashion.$actualizer = {
     _ref1 = $wf.$actualizer.cullIndividuality(selectors, hMap), cssSelectors = _ref1.sel, cssMap = _ref1.map, cullOffsets = _ref1.offsets;
     jsSelectors = $wf.$actualizer.filterSelectors(cssSelectors, rMode["static"]);
     runtimeData = $wf.$actualizer.generateRuntimeData(parseTree, jsSelectors, cssMap);
+    $wf.$actualizer.addBindings(runtimeData, parseTree, jsSelectors, cssMap);
     capabilities = $wf.$actualizer.determineRuntimeCapabilities(runtimeData, selectors);
     if (capabilities.has($wf.$runtimeCapability.individualProps)) {
       $wf.$actualizer.addIndividualProperties(runtimeData, selectors, cullOffsets);
@@ -1918,31 +1929,10 @@ window.fashion.$actualizer.actualizeVariables = function(parseTree, jsSelectors,
       rvar.addScope(name, varObj.value);
     }
     bindings = parseTree.bindings.variables[varName];
-    rvar.dependents = $wf.$actualizer.mapVariableDependents(rvar, bindings, jsSelectors, cssMap);
+    rvar.dependents = $wf.$actualizer.mapBindings(bindings, jsSelectors, cssMap);
     variables[varName] = rvar;
   }
   return variables;
-};
-
-window.fashion.$actualizer.mapVariableDependents = function(runtimeVar, bindings, selectors, map) {
-  var boundSelectorId, hDependents, selector, selectorId, _i, _j, _len, _len1, _ref;
-  hDependents = [];
-  for (_i = 0, _len = bindings.length; _i < _len; _i++) {
-    boundSelectorId = bindings[_i];
-    _ref = map[boundSelectorId];
-    for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-      selectorId = _ref[_j];
-      if (typeof selectorId === "number") {
-        selector = selectors[selectorId];
-        if (selector && selector.mode !== $wf.$runtimeMode["static"]) {
-          hDependents.push(selectorId);
-        }
-      } else {
-        hDependents.push(selectorId);
-      }
-    }
-  }
-  return hDependents;
 };
 window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
   var css, cssProperties, cssValue, evalFunction, id, property, selector, selectorName, value, _i, _len, _ref;
@@ -2062,7 +2052,8 @@ window.fashion.$runtimeCapability = {
   variables: "variables",
   scopedVariables: "scopedVariables",
   individualProps: "individualized",
-  liveProps: "liveProperties"
+  liveProps: "liveProperties",
+  globals: "globals"
 };
 
 RuntimeCapabilities = (function() {
@@ -2121,6 +2112,9 @@ window.fashion.$actualizer.determineRuntimeCapabilities = function(runtimeData, 
   if ($wf.$actualizer.hasPropertyMode(selectors, $wf.$runtimeMode.live)) {
     capabilities.add($wf.$runtimeCapability.liveProps);
   }
+  if (JSON.stringify(runtimeData.modules.globals) !== "{}") {
+    capabilities.add($wf.$runtimeCapability.globals);
+  }
   return capabilities;
 };
 
@@ -2161,6 +2155,42 @@ window.fashion.$actualizer.addRuntimeFunctions = function(runtimeData, parseTree
       }
     }
   }
+};
+window.fashion.$actualizer.mapBindings = function(bindings, selectors, map) {
+  var boundSelectorId, hDependents, selector, selectorId, _i, _j, _len, _len1, _ref;
+  hDependents = [];
+  for (_i = 0, _len = bindings.length; _i < _len; _i++) {
+    boundSelectorId = bindings[_i];
+    _ref = map[boundSelectorId];
+    for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+      selectorId = _ref[_j];
+      if (typeof selectorId === "number") {
+        selector = selectors[selectorId];
+        if (selector && selector.mode !== $wf.$runtimeMode["static"]) {
+          hDependents.push(selectorId);
+        }
+      } else {
+        hDependents.push(selectorId);
+      }
+    }
+  }
+  return hDependents;
+};
+
+window.fashion.$actualizer.addBindings = function(runtimeData, parseTree, selectors, map) {
+  return $wf.$actualizer.bindGlobals(runtimeData, parseTree.bindings.globals, selectors, map);
+};
+
+window.fashion.$actualizer.bindGlobals = function(runtimeData, globalBindings, selectors, map) {
+  var bindings, global, name, _ref, _results;
+  _ref = runtimeData.modules.globals;
+  _results = [];
+  for (name in _ref) {
+    global = _ref[name];
+    bindings = globalBindings[name];
+    _results.push(global.dependents = $wf.$actualizer.mapBindings(bindings, selectors, map));
+  }
+  return _results;
 };
 var RuntimeModule;
 
@@ -2454,6 +2484,34 @@ $wf.addRuntimeModule("elements", [], {
       return DOMElement.addEventListener(evt, func, bubble);
     };
     return eObj;
+  }
+});
+$wf.addRuntimeModule("globals", ["selectors"], {
+  $startWatchers: function() {
+    var global, name, onChangeFunction, _ref, _results;
+    onChangeFunction = (function(_this) {
+      return function(global) {
+        return _this.updateGlobal.bind(_this, global);
+      };
+    })(this);
+    _ref = FASHION.modules.globals;
+    _results = [];
+    for (name in _ref) {
+      global = _ref[name];
+      global.watch(onChangeFunction(global));
+      _results.push(this.updateGlobal(global));
+    }
+    return _results;
+  },
+  updateGlobal: function(global) {
+    var selectorId, _i, _len, _ref, _results;
+    _ref = global.dependents;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      selectorId = _ref[_i];
+      _results.push(this.regenerateSelector(selectorId));
+    }
+    return _results;
   }
 });
 window.fashion.$functions = {

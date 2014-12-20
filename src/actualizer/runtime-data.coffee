@@ -31,31 +31,12 @@ window.fashion.$actualizer.actualizeVariables = (parseTree, jsSelectors, cssMap)
 
 		# Add the dependencies, mapped to the split up selector blocks
 		bindings = parseTree.bindings.variables[varName]
-		rvar.dependents = $wf.$actualizer.mapVariableDependents(
-			rvar, bindings, jsSelectors, cssMap)
+		rvar.dependents = $wf.$actualizer.mapBindings(bindings, jsSelectors, cssMap)
 
 		# Store this variable
 		variables[varName] = rvar
 
 	return variables
-
-
-# Add dependencies to each variable object, based on homogenous selectors
-window.fashion.$actualizer.mapVariableDependents = (runtimeVar, bindings, selectors, map) ->
-	hDependents = []
-	for boundSelectorId in bindings
-		for selectorId in map[boundSelectorId]
-
-			# We should get rid of static properties, since the JS doesn't know about those
-			if typeof selectorId is "number"
-				selector = selectors[selectorId]
-				if selector and selector.mode isnt $wf.$runtimeMode.static
-					hDependents.push selectorId
-
-			# If it's a string, it's probably an individual property
-			else hDependents.push selectorId
-
-	return hDependents
 
 
 # Classes used in runtime code

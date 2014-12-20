@@ -37,3 +37,4 @@ $wf.addRuntimeModule "errors", [],
 #@prepros-append ./selectors.coffee
 #@prepros-append ./individualized.coffee
 #@prepros-append ./elements.coffee
+#@prepros-append ./globals.coffee

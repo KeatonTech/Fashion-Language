@@ -65,11 +65,13 @@ class ParseTree
 	addVariableBinding: (selectorId, variableName) ->
 		if !@bindings.variables[variableName]
 			throw new Error "Variable #{variableName} does not exist or cannot be bound."
+		if selectorId in @bindings.variables[variableName] then return
 		@bindings.variables[variableName].push selectorId
 
 	# Global bindings are fairly straightforward
 	addGlobalBinding: (selectorId, globalName)->
 		if !@bindings.globals[globalName] then @bindings.globals[globalName] = []
+		if selectorId in @bindings.globals[globalName] then return
 		@bindings.globals[globalName].push selectorId
 
 	# Dom bindings are hard to generalize because they can occur relative to a selector

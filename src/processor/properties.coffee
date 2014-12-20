@@ -25,7 +25,7 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 					determineUnit: funcs.determineUnit
 
 				# Remove the property if necessary
-				if propertyModule.mode isnt $wf.$runtimeMode.individual
+				if propertyModule.mode is $wf.$runtimeMode.individual
 					parseTree.addPropertyDependency property.name, propertyModule
 
 				else

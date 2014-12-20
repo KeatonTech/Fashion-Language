@@ -36,7 +36,12 @@ class ReturnValueModule extends Module
 
 # Adds a new global variable to Fashion.
 class GlobalModule extends ReturnValueModule
-	constructor: (args) -> super args
+	constructor: (args) -> 
+
+		# Function that runs a callback when the value changes
+		@watch = args.watch
+
+		super args
 
 # Adds a new function that can be called from Fashion expressions
 class FunctionModule extends ReturnValueModule
@@ -109,6 +114,9 @@ class PropertyModule extends Module
 			# Optionally add functions to the compiled fashion runtime
 			# Put whatever you want in here
 			@runtimeObject = args.runtimeObject || args.runtime
+
+			# Property mode
+			@mode = args.mode
 
 # Make these accessible from the outside
 if !window.fashion.$class then window.fashion.$class = {}

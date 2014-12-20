@@ -21,6 +21,10 @@ window.fashion.$actualizer.determineRuntimeCapabilities = (runtimeData, selector
 	if $wf.$actualizer.hasPropertyMode selectors, $wf.$runtimeMode.live
 		capabilities.add $wf.$runtimeCapability.liveProps
 
+	# Check for globals
+	if JSON.stringify(runtimeData.modules.globals) isnt "{}"
+		capabilities.add $wf.$runtimeCapability.globals
+
 	# Return the object
 	return capabilities
 

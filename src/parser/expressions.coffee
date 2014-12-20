@@ -59,7 +59,7 @@ window.fashion.$parser.parseExpression =
 
 		# Global variable
 		else if section[6]
-			eObj = expander.globalVariable section[6], globals, parseTree
+			eObj = expander.globalVariable section[6], linkId, globals, parseTree
 
 		# Number with unit (constant)
 		else if section[7] then eObj = expander.numberWithUnit section[7]
@@ -199,13 +199,14 @@ window.fashion.$parser.expressionExpander =
 
 
 	# Expand global variables
-	globalVariable: (name, globals, parseTree) ->
+	globalVariable: (name, selectorId, globals, parseTree) ->
 		name = name.toLowerCase()
 		vObj = globals[name]
 		if !vObj then return console.log "[FASHION] Variable $#{name} does not exist."
 
 		# Add a global-module dependency
 		parseTree.addGlobalDependency name, vObj
+		parseTree.addGlobalBinding selectorId, name
 
 		dynamicMode = $wf.$runtimeMode.dynamic
 		script = "g.#{name}.get()"
