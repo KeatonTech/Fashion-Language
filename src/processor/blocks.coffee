@@ -12,12 +12,11 @@ window.fashion.$processor.blocks = (parseTree, blocks) ->
 		# Bind the API to this particular run state
 		API =
 			throwError: funcs.throwError.bind 0, block.type
-			addRule: funcs.setProperty.bind 0, parseTree
-			getProperty: funcs.setProperty.bind 0, parseTree
+			addRule: funcs.addRule.bind 0, parseTree
 			addScript: funcs.addScript.bind 0, parseTree
 			parseValue: funcs.parseValue,
 			parse: $wf.$parser.parse,
-			runtimeObject: parseTree.requirements.blocks[block.type]
+			runtimeObject: parseTree.dependencies.blocks[block.type].runtimeObject
 
 		# Run the block module's compile function
 		blockObj.compile.call API, block.arguments, block.body

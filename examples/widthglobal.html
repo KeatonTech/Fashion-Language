@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Fashion Test</title>
+	<script src="../../build/fashion.0.2.js"></script>
+	<style type="text/x-fashion">
+
+	$padding: 50px;
+	div {
+		width: max(@height - $padding * 2, 200px);
+		height: @Height - $padding * 2;
+		line-height: @HEIGHT - $padding * 2;
+		text-align: center;
+		background-color: black;
+		color: white;
+		margin: 0 auto;
+		margin-top: $padding;
+		box-shadow: 0px 2px 2px blue, 2px 0px 2px red;
+	}
+
+	</style>
+</head>
+<body>
+	<div>
+		Look how centered I am
+	</div>
+</body>
+</html>

@@ -1,10 +1,15 @@
 window.fashiontests.parser.blocks = ()->
+
+	$wf = window.fashion
 	parse = window.fashion.$parser.parse
 
+	# NOTE(keatontech): Maybe the parser should be written with dependency injection
+	# 	so that we don't have to use real blocks here.
+	# 	That sounds like a pain though...
 
 	it "should parse the block body and properties", ()->
 		result = parse( """
-						@block property1 property2 {
+						@transition property1 property2 {
 							block body
 						}
 						""")
@@ -14,7 +19,10 @@ window.fashiontests.parser.blocks = ()->
 		expect(block.arguments[0]).toBe("property1")
 		expect(block.arguments[1]).toBe("property2")
 		expect(block.body).toBe("block body")
-		expect(block.type).toBe("block")
+		expect(block.type).toBe("transition")
+
+		# Test the back-link
+		expect(result.dependencies.blocks["transition"]).toBe($wf.$blocks.transition)
 
 
 	it "should parse blocks with no properties", ()->

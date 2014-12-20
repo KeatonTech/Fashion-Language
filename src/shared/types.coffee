@@ -1,5 +1,5 @@
 # Determines and handles variable types
-window.fashion.$run.determineType = (value, types = FASHION.type, constants = FASHION.constants) ->
+window.fashion.$shared.determineType = (value, types, constants) ->
 
 	# Try the easy stuff first
 	if typeof value is 'number' then return types.Number
@@ -27,28 +27,12 @@ window.fashion.$run.determineType = (value, types = FASHION.type, constants = FA
 
 	# Determine the type of a constant value, such as display
 	determineConstantType = (value) ->
+		if !constants then return types.Unknown;
 
 		# Check if it's a named color
-		if value in constants.colors
+		if constants.colors and value in constants.colors
 			return types.Color
 
-	# COMPOSITE TYPES ======================================================================
-
-	# Map of composite types and their contained types
-	# Uses type IDs from ./types.coffee
-	compositeTypeMap = {
-		C2Number: 	[0, 0]
-		C4Number: 	[0, 0, 0, 0]
-		CBorder: 	[[0, 103, 2], [104, 0, 103, 2]]
-	}
-
-	# Determine the type of a composite value, such as padding
-	determineCompositeType = (value) ->
-
-	#=======================================================================================
-
-	# Determine if the value is singular or composite
-	if value.indexOf(" ") is -1
-		return determineSinglePartType(value)
-	else
-		return determineCompositeType(value)
+	# Go!
+	return determineSinglePartType(value)
+	

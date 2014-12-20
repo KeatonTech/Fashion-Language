@@ -5,52 +5,56 @@ window.fashion.$processor.api =
 	throwError: (property, error) -> console.log "[FASHION: #{property}] #{error}"
 
 	# Sets a property in the parse tree
-	setProperty: (parseTree, selector, insertIndex, name, value) ->
+	setProperty: (selector, insertIndex, name, value) ->
 
-		# Make sure the selector exists (it really always should)
-		properties = parseTree.selectors[selector]
-		if !properties then return false
-
-		# Guarantee inheritance order
-		index = 0
-		for k,v in properties
-			index++
-			if index < insertIndex then continue
-			if k is name then return false
+		# Create a property
+		property = new Property name, value, value.mode || $wf.$runtimeMode.static
 
 		# Add the property
-		properties[name] = value
+		selector.insertProperty property, insertIndex+1
 
 
 	# Gets a property from the parse tree
-	getProperty: (parseTree, selector, property) ->
-
-		# Make sure the selector exists (it really always should)
-		properties = parseTree.selectors[selector]
-		if !properties then return false
-		return properties[property]
+	getProperty: (parseTree, selectorName, propertyName) ->
+		rval = undefined
+		parseTree.forEachMatchingSelector selectorName, (selector)->
+			selector.forEachPropertyNamed propertyName, (property)->
+				if rval then return false
+				rval = property.value
+			if rval then return false
+		return rval
 
 
 	# Add a rule (selector + properties) to the parse tree
-	addRule: (parseTree, selector, properties) ->
+	addRule: (parseTree, selectorName, body) ->
 
-		# If it already exists, add the new properties to the end
-		if parseTree.selectors[selector]
-			$wf.$extend parseTree.selectors[selector], properties
+		# Create the selector object
+		selector = $wf.$parser.createSelector parseTree, selectorName
 
-		# Add the new selector
-		else parseTree.selectors[selector] = properties
+		# Parse the properties and add them
+		$wf.$parser.parseSelectorBody body + "\n", selector, parseTree
 
 
 	# Add a script to the runtime
 	addScript: (parseTree, script) ->
-
-		# Make sure the parse tree has the requisite script array
-		if !parseTree["javascript"] then parseTree["javascript"] = []
-		parseTree.javascript.push script
+		parseTree.addScript script
 
 
 	# Parse a value
 	parseValue: (value) ->
 		if !value or typeof value isnt "string" then return ""
 		return $wf.$parser.parseSingleValue value
+
+	# Get the type of a value expressed as a string
+	determineType: (value) ->
+		if value.type then return value.type
+		else if typeof value is 'string'
+			window.fashion.$shared.determineType(value, $wf.$type, $wf.$typeConstants)
+		else $wf.$type.Unknown
+
+	# Get the unit of a number value
+	determineUnit: (value) ->
+		if value.unit then return value.unit
+		else if typeof value is 'string'
+			window.fashion.$shared.getUnit(value,$wf.$type.Number,$wf.$type,$wf.$unit).unit
+		else ''

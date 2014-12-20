@@ -1,3 +1,6 @@
+# Wrap everything to prevent global leaks
+# @prepros-prepend ./helpers/prepros/wrap-header.coffee
+
 # Global fashion stuff
 # @prepros-prepend ./fashion.coffee
 
@@ -43,7 +46,11 @@ document.onreadystatechange = ()->
 			parseTree = window.fashion.$processor.process parseTree
 
 			# Convert the tree into JS and CSS elements
-			window.fashion.$actualizer.actualizeFullSheet parseTree, scriptIndex++
+			{css, js} = window.fashion.$actualizer.actualize parseTree
+
+			# Add those elements to the page
+			$wf.$dom.addStylesheet css
+			$wf.$dom.addScript js
 
 			# Print the runtime
 			console.log "[FASHION] Compile finished in #{new Date().getTime() - start}ms"
@@ -56,17 +63,24 @@ document.onreadystatechange = ()->
 # @prepros-append ./helpers/basic.coffee
 # @prepros-append ./helpers/dom.coffee
 # @prepros-append ./helpers/stringify.coffee
+# @prepros-append ./classes/parser/parsetree.coffee
+# @prepros-append ./classes/modules.coffee
 # @prepros-append ./types/types.coffee
+# @prepros-append ./types/runtime-modes.coffee
 
 # Include the actual functional JS files
 # @prepros-append ./loader/live.coffee
 # @prepros-append ./parser/parser.coffee
 # @prepros-append ./processor/processor.coffee
-# @prepros-append ./runtime/runtime.coffee
+# @prepros-append ./shared/shared.coffee
 # @prepros-append ./actualizer/actualizer.coffee
+# @prepros-append ./runtime/runtime.coffee
 
 # Include all of the built-in Fashion modules
 # @prepros-append ./built-in/functions/functions.coffee
 # @prepros-append ./built-in/properties/properties.coffee
 # @prepros-append ./built-in/blocks/blocks.coffee
 # @prepros-append ./built-in/globals.coffee
+
+# Wrap everything to prevent globals from leaking
+# @prepros-append ./helpers/prepros/wrap-footer.coffee

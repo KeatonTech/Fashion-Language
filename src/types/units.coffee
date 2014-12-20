@@ -22,13 +22,3 @@ window.fashion.$unit =
 		"vmax":	"vmax"
 		"ms":	"ms"
 		"s":	"s"
-
-	Color:
-		Const:	0
-		Hex:	1
-		RGB:	2
-		RGBA:	3
-		HSB:	4
-		HSBA:	5
-		HSL:	6
-		HSLA:	7

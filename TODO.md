@@ -1,13 +1,11 @@
 ## Features
 
-* Full support for blocks throughout the whole system. Parser -> Processor -> Actualizer
 * Binding function, with DOM observers to update its value
 * Variable scoping to allow per-element values. (Big changes to parser, actualizer & runtime)
-* Also, while that's happening, variables declarations should support expressions
-* Switch to generating a single stylesheet, instead of 2, to keep inheritance fully in tact
 * Allow ternaries (CS and JS formats) in expressions
-* Optionally move individualized properties out of the style tag and into the CSS.
+* Add custom selectors like :dragging and :moving, as well as some of the jQuery stuff like :has()
 * Create a preprocessor in Node so that the compiler doesn't have to be run on the client
+* Custom easing functions using @keyframes
 
 
 ## Built-in Modules
@@ -35,6 +33,7 @@
 
 ## Fixes
 
+* Parser should respect comments in the form of /**/, // and #
 * Pin property should make its parent at least position relative
 * Pin property should respect relative-to
 * Binding functions should find a way to inherit the transition of their parent

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Fashion Test</title>
+	<script src="../../build/fashion.0.2.js"></script>
+	<style type="text/x-fashion">
+
+	div {
+		display: block; 
+		opacity: 0.0;
+		width: 400px;
+		margin: 0 auto;
+		padding: 10px;
+		background-color: #fa4;
+		border-radius: 8px;
+
+		p {
+			text-align: center;
+		}
+	}
+
+	button {
+		display: block;
+		margin: 0 auto;
+		margin-top: 20px;
+		on-click: trigger("fade-in", 500ms);
+	}
+
+	@transition fade-in {
+		start {
+			div {
+				opacity: 0.0;
+				position: relative;
+				right: 100px;
+
+				p {
+					opacity: 0;
+					position: relative;
+					right: 20px;
+				}
+			}
+		}
+		0% {
+			div {
+				opacity: [linear 50%] 1.0;
+				right: [ease-out 85%] 0px;
+			}
+		}
+		50% {
+			div p {
+				opacity: [linear 50%] 1.0;
+				right: [ease-out 50%] 0px;
+			}
+		}
+	}
+
+	</style>
+</head>
+<body>
+	<div>
+		<p>Block One</p>
+		<p>Block Two</p>
+		<p>Block Three</p>
+		<p>Block Four</p>
+		<p>Block Five</p>
+		<p>Block Six</p>
+		<p>Block Seven</p>
+		<p>Block Eight</p>
+	</div>
+	<button>Start</button>
+</body>
+</html>

@@ -4,19 +4,23 @@ window.fashion.$dom =
 		head = document.head || document.getElementsByTagName('head')[0]
 		head.appendChild(element)
 
-	makeStylesheet: (className, index, isDynamic) ->
+	addStylesheet: (styleText, id = window.fashion.cssId) ->
 		sheet = document.createElement "style"
 		sheet.setAttribute("type", "text/css")
-		sheet.setAttribute("class", className)
-		sheet.setAttribute("data-count", "0")
-		sheet.setAttribute("data-index", index)
-		if isDynamic then sheet.setAttribute("id", "#{window.fashion.cssId}#{index}")
-		return sheet
+		sheet.setAttribute("id", "#{id}")
+		$wf.$dom.addElementToHead sheet
+		
+		# Add the rules one-by-one
+		# Not really sure why the browser can't just do this part itself.
+		styleRules = styleText.split("\n")
+		for id, rule of styleRules when rule.length > 3
+			sheet.sheet.insertRule rule, id
 
-	makeScriptTag: (scriptText) ->
+	addScript: (scriptText) ->
 		script = document.createElement "script"
+		script.setAttribute("type", "text/javascript")
 		script.text = scriptText
-		return script
+		$wf.$dom.addElementToHead script
 
 	incrementSheetIndex: (sheet) ->
 		val = parseInt sheet.getAttribute("data-count")

@@ -1,6 +1,6 @@
 window.fashion.$properties =
 
-	"text-style":
+	"text-style": new PropertyModule
 		replace: true
 		compile: (values)->
 

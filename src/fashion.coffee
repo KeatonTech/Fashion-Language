@@ -27,11 +27,33 @@ THE SOFTWARE.
 
 # Get a place to put everything
 $wf = window.fashion = {
-	mimeType: "text/x-fashion",
-	fileHeader: "// Generated with Fashion - http://keaton.ws/fashion\n",
-	variableObject: "style",
-	cssId: "FASHION-dynblock-"
+
+	# Library metadata
+	version: "0.2"
+	url: "http://writefashion.org"
+	author: "Keaton Brandt"
+
+	# Language properties
+	mimeType: "text/x-fashion"
+
+	# Generated CSS properties
+	cssId: "FASHION-stylesheet"
+
+	# Generated JS properties
+	runtimeObject: "FASHION",
+
+	# Generated JS runtime
+	runtimeModules: [
+		"watchVariables"
+	]
 }
+
+# Add settings that will be sent to the runtime
+window.fashion.runtimeConfig = 
+	variableObject: "style"
+	idPrefix: "FS-"
+	individualCSSID: "FASHION-individual"
+	cssId: window.fashion.cssId
 
 # Coffeescript helpers
 wait = (d,f)-> setTimeout(f,d)

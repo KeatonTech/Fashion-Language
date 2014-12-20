@@ -1,5 +1,6 @@
 window.fashiontests.parser.properties = ()->
 
+	$wf = window.fashion
 	parse = window.fashion.$parser.parse
 
 	it "should allow properties with no semi-colon", ()->
@@ -10,13 +11,20 @@ window.fashiontests.parser.properties = ()->
 						}
 						""")
 
-		sels = result.selectors.p
-		expect(sels.height).toBe("100px")
-		expect(sels.width).toBe("200px")
+		props = result.selectors[0].properties
+
+		expect(props[0].name).toBe("height")
+		expect(props[0].value).toBe("100px")
+		expect(props[0].mode).toBe($wf.$runtimeMode.static)
+
+		expect(props[1].name).toBe("width")
+		expect(props[1].value).toBe("200px")
+		expect(props[1].mode).toBe($wf.$runtimeMode.static)
 
 	it "should allow one-line properties", ()->
 		result = parse("p {height: 120px;}")
-		expect(result.selectors.p.height).toBe("120px")
+		expect(result.selectors[0].properties[0].name).toBe("height")
+		expect(result.selectors[0].properties[0].value).toBe("120px")
 
 
 	it "should allow multipart properties", ()->
@@ -26,9 +34,55 @@ window.fashiontests.parser.properties = ()->
 						}
 						""")
 
-		sels = result.selectors.p
+		props = result.selectors[0].properties
 		expectedProperty = ['2px','solid','black']
-		expect(sels.border).toEqual(expectedProperty)
+		expect(props[0].value).toEqual(expectedProperty)
+
+
+	it "should allow variables in multipart properties", ()->
+		result = parse("""
+						$borderWidth: 2px;
+						p {
+							border: $borderWidth solid black;
+						}
+						""")
+
+		props = result.selectors[0].properties
+		expect(props[0].mode).toBe($wf.$runtimeMode.dynamic)
+
+		v = (name) -> value: 2
+		expect(props[0].value[0].evaluate(v)).toBe("2px")
+		
+
+	it "should allow expressions in multipart properties", ()->
+		result = parse("""
+						$borderWidth: 2px;
+						p {
+							box-shadow: $borderWidth / 2 -$borderWidth $borderWidth*2 black;
+						}
+						""")
+
+		props = result.selectors[0].properties
+		expect(props[0].mode).toBe($wf.$runtimeMode.dynamic)
+
+		v = (name) -> value: 2
+		expect(props[0].value[0].evaluate(v)).toBe("1px")
+		expect(props[0].value[1].evaluate(v)).toBe("-2px")
+		expect(props[0].value[2].evaluate(v)).toBe("4px")
+		expect(props[0].value[3]).toBe("black")
+
+
+	it "should allow relative values in multipart properties", ()->
+		result = parse("""
+						p {
+							box-shadow: 0px @self.depth @self.depth black;
+						}
+						""")
+
+		props = result.selectors[0].properties
+		expect(props[0].mode).toBe($wf.$runtimeMode.individual)
+		expect(props[0].value[0]).toBe("0px")
+		expect(props[0].value[3]).toBe("black")
 
 
 	it "should account for strings in multipart properties", ()->
@@ -39,12 +93,12 @@ window.fashiontests.parser.properties = ()->
 						}
 						""")
 
-		sels = result.selectors.p
+		props = result.selectors[0].properties
 		expectedProperty = ['"Times New Roman"','italic']
-		expect(sels["text-style"]).toEqual(expectedProperty)
+		expect(props[0].value).toEqual(expectedProperty)
 
 		expectedProperty = ["'Times New Roman'",'italic']
-		expect(sels["another"]).toEqual(expectedProperty)
+		expect(props[1].value).toEqual(expectedProperty)
 
 
 	it "should allow comma-separated properties", ()->
@@ -54,9 +108,9 @@ window.fashiontests.parser.properties = ()->
 						}
 						""")
 
-		sels = result.selectors.p
+		props = result.selectors[0].properties
 		expectedProperty = [['1px'], ['2px']]
-		expect(sels.property).toEqual(expectedProperty)
+		expect(props[0].value).toEqual(expectedProperty)
 
 
 	it "should allow multipart comma-separated properties", ()->
@@ -66,9 +120,9 @@ window.fashiontests.parser.properties = ()->
 						}
 						""")
 
-		sels = result.selectors.p
+		props = result.selectors[0].properties
 		expectedProperty = [['2px','solid','black'], ['1px','solid','white']]
-		expect(sels.border).toEqual(expectedProperty)
+		expect(props[0].value).toEqual(expectedProperty)
 
 
 	it "should acknowledge !important on string properties", ()->
@@ -78,37 +132,8 @@ window.fashiontests.parser.properties = ()->
 						}
 						""")
 
-		sels = result.selectors.p
-		expect(sels.height).toBe("100px !important")
-
-
-	it "should link variables", ()->
-		result = parse("""
-						$height: 100px;
-						p {
-							height: $height;
-						}
-						""")
-
-		sels = result.selectors.p
-
-		# Test a basic transition (height)
-		expect(sels.height.link).toBe("$height")
-		expect(sels.height.dynamic).toBe(true)
-
-		# Test the backlink
-		expect(result.variables.height.dependants.p).toEqual(["height"])
-
-
-	it "should link globals", ()->
-		result = parse("""
-						div {
-							height: @height;
-						}
-						""")
-
-		expect(result.selectors.div.height.dynamic).toBe(true)
-		expect(result.selectors.div.height.link).toBe("@height")
+		props = result.selectors[0].properties
+		expect(props[0].value).toBe("100px !important")
 
 
 	it "should acknowledge !important on linked properties", ()->
@@ -119,9 +144,9 @@ window.fashiontests.parser.properties = ()->
 						}
 						""")
 
-		sels = result.selectors.p
-		expect(sels.height.link).toBe("$height")
-		expect(sels.height.important).toBe(true)
+		props = result.selectors[0].properties
+		expect(props[0].value.important).toBe(true)
+		expect(props[0].mode).toBe($wf.$runtimeMode.dynamic)
 
 
 	it "should parse transitions", ()->
@@ -136,19 +161,21 @@ window.fashiontests.parser.properties = ()->
 						}
 						""")
 
-		sels = result.selectors.p
+		props = result.selectors[0].properties
+		height = props[0].value
+		width = props[1].value
 
 		# Test a basic transition (height)
-		expect(sels.height.transition.easing).toBe("ease-out")
-		expect(sels.height.transition.duration).toBe("1s")
+		expect(height.transition.easing).toBe("ease-out")
+		expect(height.transition.duration).toBe("1s")
 
 		# Test a more advanced transition with a delay and a var link (width)
-		expect(sels.width.transition.easing).toBe("ease-in-out")
-		expect(sels.width.transition.duration.link).toBe("$duration")
-		expect(sels.width.transition.duration.dynamic).toBe(true)
-		expect(sels.width.transition.delay.link).toBe("$delay")
-		expect(sels.width.transition.delay.dynamic).toBe(true)
+		expect(width.transition.easing).toBe("ease-in-out")
+		#expect(width.transition.duration.link).toBe("$duration")
+		#expect(width.transition.duration.dynamic).toBe(true)
+		#expect(width.transition.delay.link).toBe("$delay")
+		#expect(width.transition.delay.dynamic).toBe(true)
 
 		# Test the backlink
-		expect(result.variables.duration.dependants.p).toEqual(["transition.width"])
-		expect(result.variables.delay.dependants.p).toEqual(["transition.width"])
+		# expect(result.variables.duration.dependants.p).toEqual(["transition.width"])
+		# expect(result.variables.delay.dependants.p).toEqual(["transition.width"])

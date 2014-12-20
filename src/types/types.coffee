@@ -7,12 +7,6 @@ window.fashion.$type =
 	String:		2
 	Color: 		3
 
-	# Composite Types (border, box-shadow, padding)
-	C2Number:	50
-	C4Number:	51
-	CBorder:	52
-	CShadow: 	53
-
 	# Constant Valued Types (display, text-align)
 	KGeneric: 	100
 	KDisplay:	101

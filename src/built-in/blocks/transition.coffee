@@ -1,4 +1,7 @@
-window.fashion.$blocks["transition"] = 
+window.fashion.$blocks["transition"] = new BlockModule
+
+	# This block does property manipulation, so that must be added to the runtime
+	capabilities: ["selectors", "evaluation"]
 
 	# Compile the block (acts as a parser mostly)
 	compile: (args, body) ->
@@ -49,13 +52,24 @@ window.fashion.$blocks["transition"] =
 
 	# Support code to be added to the javascript when this block is included
 	runtimeObject: 
+
+		# This will be populated with relevant transition data by the compiler
 		transitions: {}
+
+		# Tweak this timing if browsers are having problems
+		startDelay: 10
+		endDelay: 2
+		settleDelay: 1 
+
+		# Helper function to make coffeescript nicer
+		wait: (d, f) -> setTimeout f, d
+
+		# Function that starts the ball rolling
 		trigger: (name, duration, element) -> 
 			duration = @timeInMs duration
-			runtime = w.FASHION.blocks.transition
+			runtime = FASHION.modules.blocks.transition
 			
 			# Get the transition object
-			# TODO(keatontech): This probably shouldn't be hard-coded. Find a fix later.
 			transition = runtime.transitions[name]
 
 			# Create a new stylesheet for temporary CSS3 transition properties
@@ -70,45 +84,50 @@ window.fashion.$blocks["transition"] =
 				if keyframe is "start"
 					startTime = 0
 				else
-					startTime = (parseFloat(keyframe.split('-')[0]) / 100 * duration) + 10
+					intStartTime = (parseFloat(keyframe.split('-')[0]) / 100 * duration)
+					startTime = intStartTime + runtime.startDelay
 
 				# Wait until the limelight is on this keyframe
-				addSelectors = runtime.addSelectors(selectors, duration, sheet, runtime)
+				addSelectors = runtime.addSelectorsFunc(selectors, duration, sheet, runtime)
 				if startTime > 0
-					wait startTime, addSelectors.bind(this)
+					runtime.wait startTime, addSelectors.bind(this)
 				else addSelectors.bind(this)()
 
 			# Delete the sheet once we're done
-			wait duration + 12, ()-> sheetElement.parentElement.removeChild(sheetElement)
+			d = duration + runtime.startDelay + runtime.endDelay
+			runtime.wait d, ()-> sheetElement.parentElement.removeChild(sheetElement)
 
 
 		# Add stuff for the each keyframe to the CSS
-		addSelectors: (selectors, duration, sheet, runtime) -> ()->
+		addSelectorsFunc: (selectors, duration, sheet, runtime) -> ()->
+			settleDelay = FASHION.modules.blocks.transition.settleDelay
 
 			# Go through each selector
-			for selector, properties of selectors
+			for id, selector of selectors
+				properties = selector.properties
 
 				# Separate out properties that need transitions applied to them
-				jumpProperties = {}; smoothProperties = {};
+				jumpProperties = []; smoothProperties = [];
 				smoothCount = 0
-				for property, valueObject of properties
-					if typeof valueObject isnt 'object' or !valueObject.transition
-						jumpProperties[property] = valueObject
+				for property in properties
+					if typeof property.value isnt 'object' or !property.value.transition
+						jumpProperties.push property
 					else 
-						smoothProperties[property] = valueObject
+						smoothProperties.push property
 						smoothCount++
 
 				# Immidiately add the jump properties
-				@addProperties selector, jumpProperties
+				@addSelector selector.name, jumpProperties
 				if smoothCount is 0 then continue
 
 				# Add the transition rule to the temporary sheet
-				transitionRule = runtime.generateTransitions smoothProperties, duration
-				sheet.insertRule "#{selector} {#{transitionRule}}", sheet.rules.length
+				tCSS = runtime.generateTransitions.call this, smoothProperties, duration
+				selName = @evaluate selector.name
+				sheet.insertRule "#{selName} {#{tCSS}}", sheet.rules.length
 
 				# Wait for that to percolate and then add the smooth properties
-				wait 1, ((selector, smoothProperties) => ()=> 
-					@addProperties selector, smoothProperties
+				runtime.wait settleDelay, ((selector, smoothProperties) => ()=> 
+					@addSelector selector.name, smoothProperties
 				)(selector, smoothProperties)
 
 			# Make sure coffeescript doesn't try and return an array
@@ -118,20 +137,21 @@ window.fashion.$blocks["transition"] =
 		# Generate CSS3 transition properties
 		generateTransitions: (properties, duration) ->
 			csstext = "transition: "
-			for property, valueObject of properties when valueObject.transition
-				t = valueObject.transition
-				l = parseFloat(t.duration) / 100 * duration
+			for property in properties when property.value.transition
+				t = property.value.transition
+				l = parseFloat(@evaluate t.duration) / 100 * duration
 				msLength = if l then "#{l}ms" else t.duration
-				csstext += "#{property} #{msLength} #{t.easing||''} #{t.delay||''},"
+				csstext += "#{property.name} #{msLength} #{t.easing||''} #{t.delay||''},"
+
 			csstext = csstext.substr(0, csstext.length - 1) + ";"
 			csstext = [csstext, "-webkit-"+csstext, "-moz-"+csstext, "-ms-"+csstext].join('')
 			return csstext
 
 
-window.fashion.$functions["trigger"] = 
+window.fashion.$functions["trigger"] = new FunctionModule
 	output: $wf.$type.None
 	unit: ''
-	dynamic: false
-	individualized: true
+	mode: $wf.$runtimeMode.individual
 	evaluate: (name, duration, element) ->
-		w.FASHION.blocks.transition.trigger.call this, name.value, duration, element
+		triggerFunction = FASHION.modules.blocks.transition.trigger
+		triggerFunction.call this, name.value, duration, element
