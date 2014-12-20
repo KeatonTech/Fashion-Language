@@ -51,6 +51,8 @@ $wf = window.fashion = {
 # Add settings that will be sent to the runtime
 window.fashion.runtimeConfig = 
 	variableObject: "style"
+	idPrefix: "FS-"
+	individualCSSID: "FASHION-individual"
 	cssId: window.fashion.cssId
 
 # Coffeescript helpers

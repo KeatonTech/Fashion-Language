@@ -1,18 +1,18 @@
 # Generate a runtime data object from homogenous selectors and a parse tree
-window.fashion.$actualizer.generateRuntimeData = (parseTree, hSelectors, hMap) ->
+window.fashion.$actualizer.generateRuntimeData = (parseTree, jsSelectors, cssMap) ->
 
 	# Turn the parse tree's variables into runtime object variables and map the dependents
-	variables = $wf.$actualizer.actualizeVariables parseTree, hSelectors, hMap
+	variables = $wf.$actualizer.actualizeVariables parseTree, jsSelectors, cssMap
 
 	# Create the runtime data object
-	rdata = new RuntimeData parseTree, hSelectors, variables
+	rdata = new RuntimeData parseTree, jsSelectors, variables
 
 	# Return the runtime data object
 	return rdata
 
 
 # Converts the parser's variable objects into runtime variable objects.
-window.fashion.$actualizer.actualizeVariables = (parseTree, hSelectors, hMap) ->
+window.fashion.$actualizer.actualizeVariables = (parseTree, jsSelectors, cssMap) ->
 	variables = {}
 	for varName, scopes of parseTree.variables
 
@@ -32,25 +32,29 @@ window.fashion.$actualizer.actualizeVariables = (parseTree, hSelectors, hMap) ->
 		# Add the dependencies, mapped to the split up selector blocks
 		bindings = parseTree.bindings.variables[varName]
 		rvar.dependents = $wf.$actualizer.mapVariableDependents(
-			rvar, bindings, hSelectors, hMap)
+			rvar, bindings, jsSelectors, cssMap)
 
 		# Store this variable
 		variables[varName] = rvar
 
 	return variables
 
+
 # Add dependencies to each variable object, based on homogenous selectors
 window.fashion.$actualizer.mapVariableDependents = (runtimeVar, bindings, selectors, map) ->
 	hDependents = []
 	for boundSelectorId in bindings
 		for selectorId in map[boundSelectorId]
-			selector = selectors[selectorId]
 
-			# NOTE: This will sometimes return false positives, which aren't great
-			# 		If a selector has to be broken into multiple dynamic blocks,
-			#		both will be registered as dependencies even if only 1 uses the var.
-			if selector and selector.mode isnt $wf.$runtimeMode.static
-				hDependents.push selectorId
+			# We should get rid of static properties, since the JS doesn't know about those
+			if typeof selectorId is "number"
+				selector = selectors[selectorId]
+				if selector and selector.mode isnt $wf.$runtimeMode.static
+					hDependents.push selectorId
+
+			# If it's a string, it's probably an individual property
+			else hDependents.push selectorId
+
 	return hDependents
 
 

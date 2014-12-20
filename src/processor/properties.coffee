@@ -9,9 +9,10 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 		index = -1
 		for property in selector.properties
 			index++
+			propertyModule = propertyModules[property.name]
 
 			# Determine if this is a fashion property
-			if propertyModules[property.name] and propertyModules[property.name]['compile']
+			if propertyModule and propertyModule.compile
 
 				# Bind the API to this particular run state
 				# Guarantees a certain amount of safety
@@ -27,7 +28,7 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 				propertyModules[property.name].compile.call API, property.value
 
 				# Remove the property if necessary
-				if propertyModules[property.name].replace
+				if propertyModule.replace and propertyModule.mode isnt $wf.$runtimeMode.individual
 					selector.properties.splice index--, 1
 
 

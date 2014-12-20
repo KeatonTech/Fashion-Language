@@ -24,7 +24,8 @@ window.fashion.$actualizer.createCSS = (runtimeData, cssSelectors) ->
 			cssProperties.push $wf.$actualizer.cssPropertyTemplate property.name, cssValue
 
 		# Turn this selector into a string
-		css += $wf.$actualizer.cssSelectorTemplate selector.name, cssProperties
+		selectorName = evalFunction selector.name
+		css += $wf.$actualizer.cssSelectorTemplate selectorName, cssProperties
 
 	# Return the CSS
 	return css;

@@ -3,7 +3,7 @@
 window.fashion.$runtimeCapability =
 	variables: "variables"
 	scopedVariables: "scopedVariables"
-	individualProps: "watchSelector"
+	individualProps: "individualized"
 	liveProps: "liveProperties"
 
 # Class to store these
@@ -18,3 +18,7 @@ class RuntimeCapabilities
 
 	addDependencies: (requirements) ->
 		@add(requirement) for requirement in requirements
+
+	has: (requirement) ->
+		if !@capabilities then return false
+		return (requirement in @capabilities)

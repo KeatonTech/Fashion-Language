@@ -5,7 +5,6 @@
 * Variable scoping to allow per-element values. (Big changes to parser, actualizer & runtime)
 * Allow ternaries (CS and JS formats) in expressions
 * Add custom selectors like :dragging and :moving, as well as some of the jQuery stuff like :has()
-* Optionally move individualized properties out of the style tag and into the CSS.
 * Create a preprocessor in Node so that the compiler doesn't have to be run on the client
 * Custom easing functions using @keyframes
 

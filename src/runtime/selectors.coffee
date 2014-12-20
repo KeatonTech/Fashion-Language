@@ -6,12 +6,29 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 	# Update the CSS of a selector block
 	regenerateSelector: (selectorId) ->
 
-		# Get the selector
-		selector = FASHION.selectors[selectorId]
-		if !selector then return @throwError "Selector #{selectorId} does not exist"
+		# Handle individual selectors
+		if typeof selectorId is 'string' and selectorId[0] is "i"
+			selector = FASHION.individual[parseInt(selectorId.substr(1))]
+			if !selector then @throwError "Could not find individual property #{selectorId}"
 
-		# Handle dynamic selectors
-		if selector.mode is @runtimeModes.dynamic
+			# The 'individualized' module is not required by this one
+			if !@updateSelectorElements
+				return @throwError "The 'individualized' module was not included."
+
+			# If the selector name changed, re-list the elements it applies to
+			if @evaluate(selector.name) isnt selector.elementsSelector
+				@updateSelectorElements selector
+
+			# Recalculate the value for each selector
+			@regenerateIndividualSelector selector
+
+
+		# Handle dynamic / live selectors
+		else
+
+			# Get the selector
+			selector = FASHION.selectors[selectorId]
+			if !selector then return @throwError "Selector #{selectorId} does not exist"
 
 			# Delete it from the stylesheet
 			cssElem = document.getElementById "#{FASHION.config.cssId}"
@@ -26,16 +43,15 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 	CSSSelectorTemplate: window.fashion.$actualizer.cssSelectorTemplate
 
 	# Generate a CSS rule for the given selector block
-	CSSRuleForSelector: (selector) ->
+	CSSRuleForSelector: (selector, element, name) ->
 
 		# Get the name of the selector
-		if selector.name.script
-			selectorName = @evaluate valueObject
-		else selectorName = selector.name
+		selectorName = name || @evaluate(selector.name, element)
 
 		# Loop over every property in the selector
 		cssProperties = (for propertyObject in selector.properties
-			@CSSPropertyTemplate(propertyObject.name, @evaluate propertyObject.value)
+			value = @evaluate(propertyObject.value, element)
+			@CSSPropertyTemplate(propertyObject.name, value)
 		)
 
 		# Return the templated selector

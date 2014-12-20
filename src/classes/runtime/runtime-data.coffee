@@ -8,16 +8,14 @@ class RuntimeData
 		@variables = variables
 
 		# Dependencies
-		@globals = parseTree.dependencies.globals
-		@functions = parseTree.dependencies.functions
-
-		# Used for individual properties
-		@watchSelectors = []
+		@modules = parseTree.dependencies
 
 		# Stores Fashion Javascript functions
 		@runtime = {}
 
-	addWatchSelector: (selectorName) -> @watchSelectors.push selectorName
+	addIndividualSelector: (selector) ->
+		if !@individual then @individual = []
+		@individual.push selector
 
 	addRuntimeModule: (runtimeModule) ->
 		for name, func of runtimeModule.functions

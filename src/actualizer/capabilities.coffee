@@ -1,7 +1,7 @@
 # @prepros-prepend ../classes/runtime/runtime-capabilities.coffee
 	
 # Determines what functionality needs to be included in the generated JS
-window.fashion.$actualizer.determineRuntimeCapabilities = (runtimeData) ->
+window.fashion.$actualizer.determineRuntimeCapabilities = (runtimeData, selectors) ->
 	capabilities = new RuntimeCapabilities()
 
 	# If there are variables, we'll need some bindings and watchers
@@ -14,11 +14,11 @@ window.fashion.$actualizer.determineRuntimeCapabilities = (runtimeData) ->
 				capabilities.add $wf.$runtimeCapability.scopedVariables
 
 	# Check for individual properties
-	if $wf.$actualizer.hasPropertyMode runtimeData, $wf.$runtimeMode.individual
+	if $wf.$actualizer.hasPropertyMode selectors, $wf.$runtimeMode.individual
 		capabilities.add $wf.$runtimeCapability.individualProps
 
 	# Check for live properties
-	if $wf.$actualizer.hasPropertyMode runtimeData, $wf.$runtimeMode.live
+	if $wf.$actualizer.hasPropertyMode selectors, $wf.$runtimeMode.live
 		capabilities.add $wf.$runtimeCapability.liveProps
 
 	# Return the object
@@ -26,9 +26,10 @@ window.fashion.$actualizer.determineRuntimeCapabilities = (runtimeData) ->
 
 
 # Test the runtime data to see if it has a selector block with the given mode
-window.fashion.$actualizer.hasPropertyMode = (runtimeData, mode) ->
-	for selectorBlock in runtimeData.selectors
-		if selectorBlock.mode is mode then return true
+window.fashion.$actualizer.hasPropertyMode = (selectors, mode) ->
+	for id, selectorBlock of selectors
+		if selectorBlock.mode is mode
+			return true
 	return false
 
 
@@ -54,5 +55,5 @@ window.fashion.$actualizer.addRuntimeFunctions = (runtimeData, parseTree, capabi
 		# If the module has initializers, add them to the parse tree scripts
 		if module.initializers.length > 0
 			for key in module.initializers
-				functionName = "window.#{$wf.runtimeObject}.runtime.#{key}"
+				functionName = "window.#{$wf.runtimeObject}.runtime.#{key}.bind(FASHION.runtime)"
 				parseTree.addScript "window.addEventListener('load', #{functionName}, false);"

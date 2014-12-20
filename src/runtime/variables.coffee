@@ -5,7 +5,8 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 	getVariable: window.fashion.$shared.getVariable
 	variableValue: (varName, element) -> 
 		@getVariable(
-			FASHION.variables, FASHION.globals, FASHION.functions, FASHION.runtime,
+			FASHION.variables, 
+			FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime,
 			varName, element
 		).value
 
@@ -61,3 +62,4 @@ $wf.addRuntimeModule "watchVariables", [],
 			# Add it as a property to the container
 			Object.defineProperty styleObject, varName, propObject
 			Object.defineProperty styleObject, "$" + varName, propObject
+			

@@ -3,8 +3,8 @@
 window.fashion.$actualizer = 
 
 	# Generate a whole new document
-	# scriptIndex allows multiple Fashion scripts to be used on a page without colliding
 	actualize: (parseTree) ->
+		rMode = $wf.$runtimeMode
 
 		# Separate transitions out into their own properties
 		$wf.$actualizer.separateTransitions parseTree
@@ -12,15 +12,22 @@ window.fashion.$actualizer =
 		# Split each selector to into pieces with homogenous property modes
 		{selectors: selectors, map: hMap} = $wf.$actualizer.regroupProperties parseTree
 
-		# CSS doesn't care about individual blocks; JS doesn't care about static blocks
-		cssSelectors = $wf.$actualizer.cullSelectors selectors, $wf.$runtimeMode.individual
-		jsSelectors = $wf.$actualizer.cullSelectors selectors, $wf.$runtimeMode.static
+		# CSS doesn't care about individual blocks, so they get stripped out here
+		{sel: cssSelectors, map: cssMap, offsets: cullOffsets} = 
+			$wf.$actualizer.cullIndividuality(selectors, hMap)
+
+		# Javascript doesn't need to know about static blocks, so they are filtered out
+		jsSelectors = $wf.$actualizer.filterSelectors(cssSelectors, rMode.static)
 
 		# Generate a runtime data object containing everything the Javascript will need
-		runtimeData = $wf.$actualizer.generateRuntimeData parseTree, jsSelectors, hMap
+		runtimeData = $wf.$actualizer.generateRuntimeData parseTree, jsSelectors, cssMap
 
 		# Figure out what capabilities will be needed in the Javascript
-		capabilities = $wf.$actualizer.determineRuntimeCapabilities runtimeData
+		capabilities = $wf.$actualizer.determineRuntimeCapabilities runtimeData, selectors
+
+		# Catalog all of the individual properties, if necessary
+		if capabilities.has $wf.$runtimeCapability.individualProps
+			$wf.$actualizer.addIndividualProperties runtimeData, selectors, cullOffsets
 
 		# Add all of the necessary runtime functions to the runtime data
 		$wf.$actualizer.addRuntimeFunctions runtimeData, parseTree, capabilities
@@ -33,15 +40,6 @@ window.fashion.$actualizer =
 
 		# Return two strings, one for JS and one for CSS
 		return {css: css, js: js}
-
-
-# Returns an object that contains only selectors that need to be included in runtime data
-window.fashion.$actualizer.cullSelectors = (allSelectors, cullMode) ->
-	nonStaticSelectors = {}
-	for id, selector of allSelectors
-		if selector.mode isnt cullMode
-			nonStaticSelectors[id] = selector
-	return nonStaticSelectors
 
 
 # Header added to Javascript Files
@@ -58,6 +56,7 @@ window.fashion.$actualizer.createJS = (runtimeData, scripts) ->
 
 # Other pieces of the actualizer
 # @prepros-append ./regrouper.coffee
+# @prepros-append ./selectors.coffee
 # @prepros-append ./runtime-data.coffee
 # @prepros-append ./create-css.coffee
 # @prepros-append ./capabilities.coffee

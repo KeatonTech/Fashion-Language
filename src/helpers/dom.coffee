@@ -4,10 +4,10 @@ window.fashion.$dom =
 		head = document.head || document.getElementsByTagName('head')[0]
 		head.appendChild(element)
 
-	addStylesheet: (styleText) ->
+	addStylesheet: (styleText, id = window.fashion.cssId) ->
 		sheet = document.createElement "style"
 		sheet.setAttribute("type", "text/css")
-		sheet.setAttribute("id", "#{window.fashion.cssId}")
+		sheet.setAttribute("id", "#{id}")
 		$wf.$dom.addElementToHead sheet
 		
 		# Add the rules one-by-one

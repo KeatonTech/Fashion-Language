@@ -53,9 +53,12 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ### ./runtime
 ##### Functions that are used in the generated Javascript code and run on the page.
 
-* ***runtime.coffee:*** Has basic functions for updating Fashion variables and associated CSS selectors
-* ***dom/watch-vars.coffee:*** Watches for changes to the variables object. Supports IE9+, optional polyfill may be added later.
-* ***dom/individualized.coffee:*** Applies individualized properties to each element matching the selector.
+* ***runtime.coffee:*** Defines the very simple fashion runtime module system and brings in shared code.
+* ***variables.coffee:*** Defines functions for getting, setting and watching local variables
+* ***selectors.coffee:*** Defines functions for generating CSS selector blocks
+* ***individualized.coffee:*** Defines functions for setting and maintaining individual properties on objects
+* ***elements.coffee:*** Defines functions for converting HTML elements into Fashion expression elements
+
 
 ***
 

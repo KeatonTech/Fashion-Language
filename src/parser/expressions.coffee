@@ -17,6 +17,7 @@ window.fashion.$parser.parseExpression =
 
 	# Track the types and units of things included in the expression
 	types = []; units = []
+	isSetter = false;
 
 	# Method to replace pieces of the expression string within the script
 	scriptOffset = 0
@@ -26,6 +27,7 @@ window.fashion.$parser.parseExpression =
 
 	# Detect functions and variables
 	regex = ///(
+			\$([\w\-]+)\s*?\=|		# Expression sets a variable
 			\@(self|this|parent)	# Relative element reference (name)
 			\.?([^\s\)]*)|			# Relative element reference (property)
 			\$([\w\-]+)|			# Defined variable
@@ -43,22 +45,27 @@ window.fashion.$parser.parseExpression =
 	while !shouldBreak and section = regex.exec expString
 		start = section.index; length = section[0].length; end = start + length;
 
+		# Sets a local variable (top-level or scoped)
+		if section[2]
+			eObj = expander.localVariable section[2], linkId, parseTree, true
+			isSetter = true
+
 		# @self, @this or @parent objects
-		if section[2] then eObj = expander.relativeObject section[2], section[3]
+		else if section[3] then eObj = expander.relativeObject section[3], section[4]
 
 		# Local variable (top-level or scoped)
-		else if section[4]
-			eObj = expander.localVariable section[4], linkId, parseTree
+		else if section[5]
+			eObj = expander.localVariable section[5], linkId, parseTree
 
 		# Global variable
-		else if section[5]
-			eObj = expander.globalVariable section[5], globals, parseTree
+		else if section[6]
+			eObj = expander.globalVariable section[6], globals, parseTree
 
 		# Number with unit (constant)
-		else if section[6] then eObj = expander.numberWithUnit section[6]
+		else if section[7] then eObj = expander.numberWithUnit section[7]
 
 		# Functions
-		else if section[9]
+		else if section[10]
 
 			# We have to match parenthesis to get the whole function body
 			{body: contained, unit: tailingUnit} = matchParens regex, expString, end
@@ -71,7 +78,7 @@ window.fashion.$parser.parseExpression =
 			if tailingUnit then length += tailingUnit.length
 
 			# Wow this function has a lot of arguments!
-			eObj = expander.function(section[9], contained, tailingUnit, linkId, 
+			eObj = expander.function(section[10], contained, tailingUnit, linkId, 
 				parseTree, funcs, globals)
 
 
@@ -90,7 +97,7 @@ window.fashion.$parser.parseExpression =
 	{type: type, unit: unit} = $wf.$parser.determineExpressionType types, units
 
 	# If the script sets a value, don't bother with units
-	if expString.match /\s\=\s/g then unit = undefined
+	if isSetter then unit = undefined
 
 	# Wrap the script with return statements and such
 	script = $wf.$parser.wrapExpressionScript script, top, type, unit
@@ -125,7 +132,7 @@ window.fashion.$parser.matchParenthesis = (regex, string, index) ->
 		if section[0].indexOf("(") isnt -1 then depth++
 		else if section[0].indexOf(")") isnt -1 and depth-- is 0
 			acc += string.substr(lastIndex, (section.index - lastIndex))
-			return {body: acc, unit: section[10]}
+			return {body: acc, unit: section[11]}
 		else
 			acc += string.substr(lastIndex, (section.index - lastIndex) + section[0].length)
 			lastIndex = section.index + section[0].length
@@ -163,7 +170,7 @@ window.fashion.$parser.determineExpressionType = (types, units) ->
 window.fashion.$parser.expressionExpander =
 
 	# Expand local variables
-	localVariable: (name, selectorId, parseTree) ->
+	localVariable: (name, selectorId, parseTree, isSetter = false) ->
 		vars = parseTree.variables
 		selectors = vars[name]
 		if !selectors then return console.log "[FASHION] Variable $#{name} does not exist."
@@ -176,11 +183,17 @@ window.fashion.$parser.expressionExpander =
 			type = vObj.type
 			unit = vObj.unit
 
-		# Link this variable in the parse tree
-		parseTree.addVariableBinding selectorId, name
+		
+		if isSetter 
+			# Setters do not need to be linked. This setter just uses a straight up equals
+			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value = "
+
+		else
+			# Link this variable in the parse tree
+			parseTree.addVariableBinding selectorId, name
+			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value"
 
 		# Has to account for the fact that variables can also be expressions
-		script = "v('#{name}'#{if isIndividual then ',e' else ''}).value"
 		mode = $wf.$runtimeMode.generate(true, isIndividual)
 		return new Expression script, type, unit, mode
 

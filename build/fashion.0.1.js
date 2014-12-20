@@ -41,6 +41,8 @@ $wf = window.fashion = {
 
 window.fashion.runtimeConfig = {
   variableObject: "style",
+  idPrefix: "FS-",
+  individualCSSID: "FASHION-individual",
   cssId: window.fashion.cssId
 };
 
@@ -222,11 +224,14 @@ window.fashion.$dom = {
     head = document.head || document.getElementsByTagName('head')[0];
     return head.appendChild(element);
   },
-  addStylesheet: function(styleText) {
-    var id, rule, sheet, styleRules, _results;
+  addStylesheet: function(styleText, id) {
+    var rule, sheet, styleRules, _results;
+    if (id == null) {
+      id = window.fashion.cssId;
+    }
     sheet = document.createElement("style");
     sheet.setAttribute("type", "text/css");
-    sheet.setAttribute("id", "" + window.fashion.cssId);
+    sheet.setAttribute("id", "" + id);
     $wf.$dom.addElementToHead(sheet);
     styleRules = styleText.split("\n");
     _results = [];
@@ -841,7 +846,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   sq = dq = bt = false;
   acc = "";
   ret = [];
-  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\(\)\"\'\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\(\)\"\'\`\s]+|\s|[^\(\)\"\'\`\s]+)/g;
+  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\(\)\"\'\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\(\)\"\'\`\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
   while (token = regex.exec(value)) {
     if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
       ret.push(acc);
@@ -1080,7 +1085,7 @@ window.fashion.$parser.parsePropertyValue = function(value, linkId, parseTree, a
 };
 
 window.fashion.$parser.identifyExpression = function() {
-  return /(([\s][\+\-\/\*\=][\s])|[\(\)\[\]]|\@|\$)/g;
+  return /(([\s][\+\-\/\*\=][\s])|\s(\&\&|\|\|)\s|[\(\)\[\]]|\@|\$)/g;
 };
 
 window.fashion.$parser.parseSingleValue = function(value, linkId, parseTree) {
@@ -1093,7 +1098,7 @@ window.fashion.$parser.parseSingleValue = function(value, linkId, parseTree) {
   return value;
 };
 window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, funcs, globals, top) {
-  var contained, eObj, end, expander, expr, length, matchParens, mode, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, tailingUnit, type, types, unit, units, _ref, _ref1;
+  var contained, eObj, end, expander, expr, isSetter, length, matchParens, mode, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, tailingUnit, type, types, unit, units, _ref, _ref1;
   if (top == null) {
     top = true;
   }
@@ -1103,26 +1108,30 @@ window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, 
   mode = $wf.$runtimeMode["static"];
   types = [];
   units = [];
+  isSetter = false;
   scriptOffset = 0;
   replaceInScript = function(start, length, string) {
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\(|\)([\S]*))/g;
+  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\(|\)([\S]*))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
     start = section.index;
     length = section[0].length;
     end = start + length;
     if (section[2]) {
-      eObj = expander.relativeObject(section[2], section[3]);
-    } else if (section[4]) {
-      eObj = expander.localVariable(section[4], linkId, parseTree);
+      eObj = expander.localVariable(section[2], linkId, parseTree, true);
+      isSetter = true;
+    } else if (section[3]) {
+      eObj = expander.relativeObject(section[3], section[4]);
     } else if (section[5]) {
-      eObj = expander.globalVariable(section[5], globals, parseTree);
+      eObj = expander.localVariable(section[5], linkId, parseTree);
     } else if (section[6]) {
-      eObj = expander.numberWithUnit(section[6]);
-    } else if (section[9]) {
+      eObj = expander.globalVariable(section[6], globals, parseTree);
+    } else if (section[7]) {
+      eObj = expander.numberWithUnit(section[7]);
+    } else if (section[10]) {
       _ref = matchParens(regex, expString, end), contained = _ref.body, tailingUnit = _ref.unit;
       if (!contained) {
         contained = expString.substring(end, expString.length - 1);
@@ -1132,7 +1141,7 @@ window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, 
       if (tailingUnit) {
         length += tailingUnit.length;
       }
-      eObj = expander["function"](section[9], contained, tailingUnit, linkId, parseTree, funcs, globals);
+      eObj = expander["function"](section[10], contained, tailingUnit, linkId, parseTree, funcs, globals);
     }
     if (!eObj) {
       continue;
@@ -1147,7 +1156,7 @@ window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, 
     units.push(eObj.unit || '');
   }
   _ref1 = $wf.$parser.determineExpressionType(types, units), type = _ref1.type, unit = _ref1.unit;
-  if (expString.match(/\s\=\s/g)) {
+  if (isSetter) {
     unit = void 0;
   }
   script = $wf.$parser.wrapExpressionScript(script, top, type, unit);
@@ -1186,7 +1195,7 @@ window.fashion.$parser.matchParenthesis = function(regex, string, index) {
       acc += string.substr(lastIndex, section.index - lastIndex);
       return {
         body: acc,
-        unit: section[10]
+        unit: section[11]
       };
     } else {
       acc += string.substr(lastIndex, (section.index - lastIndex) + section[0].length);
@@ -1234,8 +1243,11 @@ window.fashion.$parser.determineExpressionType = function(types, units) {
 };
 
 window.fashion.$parser.expressionExpander = {
-  localVariable: function(name, selectorId, parseTree) {
+  localVariable: function(name, selectorId, parseTree, isSetter) {
     var isIndividual, isIndividualized, mode, script, selector, selectors, type, unit, vObj, vars;
+    if (isSetter == null) {
+      isSetter = false;
+    }
     vars = parseTree.variables;
     selectors = vars[name];
     if (!selectors) {
@@ -1251,8 +1263,12 @@ window.fashion.$parser.expressionExpander = {
       type = vObj.type;
       unit = vObj.unit;
     }
-    parseTree.addVariableBinding(selectorId, name);
-    script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value";
+    if (isSetter) {
+      script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value = ";
+    } else {
+      parseTree.addVariableBinding(selectorId, name);
+      script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value";
+    }
     mode = $wf.$runtimeMode.generate(true, isIndividual);
     return new Expression(script, type, unit, mode);
   },
@@ -1426,7 +1442,7 @@ window.fashion.$processor.blocks = function(parseTree, blocks) {
   return parseTree;
 };
 window.fashion.$processor.properties = function(parseTree, propertyModules) {
-  var API, funcs, index, property, selector, _i, _j, _len, _len1, _ref, _ref1;
+  var API, funcs, index, property, propertyModule, selector, _i, _j, _len, _len1, _ref, _ref1;
   funcs = window.fashion.$processor.api;
   _ref = parseTree.selectors;
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -1436,7 +1452,8 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
       property = _ref1[_j];
       index++;
-      if (propertyModules[property.name] && propertyModules[property.name]['compile']) {
+      propertyModule = propertyModules[property.name];
+      if (propertyModule && propertyModule.compile) {
         API = {
           throwError: funcs.throwError.bind(0, property),
           setProperty: funcs.setProperty.bind(0, selector, index, property.mode),
@@ -1446,7 +1463,7 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
           determineUnit: funcs.determineUnit
         };
         propertyModules[property.name].compile.call(API, property.value);
-        if (propertyModules[property.name].replace) {
+        if (propertyModule.replace && propertyModule.mode !== $wf.$runtimeMode.individual) {
           selector.properties.splice(index--, 1);
         }
       }
@@ -1642,13 +1659,17 @@ window.fashion.$shared.timeInMs = function(valueObject) {
 };
 window.fashion.$actualizer = {
   actualize: function(parseTree) {
-    var capabilities, css, cssSelectors, hMap, js, jsSelectors, runtimeData, selectors, _ref;
+    var capabilities, css, cssMap, cssSelectors, cullOffsets, hMap, js, jsSelectors, rMode, runtimeData, selectors, _ref, _ref1;
+    rMode = $wf.$runtimeMode;
     $wf.$actualizer.separateTransitions(parseTree);
     _ref = $wf.$actualizer.regroupProperties(parseTree), selectors = _ref.selectors, hMap = _ref.map;
-    cssSelectors = $wf.$actualizer.cullSelectors(selectors, $wf.$runtimeMode.individual);
-    jsSelectors = $wf.$actualizer.cullSelectors(selectors, $wf.$runtimeMode["static"]);
-    runtimeData = $wf.$actualizer.generateRuntimeData(parseTree, jsSelectors, hMap);
-    capabilities = $wf.$actualizer.determineRuntimeCapabilities(runtimeData);
+    _ref1 = $wf.$actualizer.cullIndividuality(selectors, hMap), cssSelectors = _ref1.sel, cssMap = _ref1.map, cullOffsets = _ref1.offsets;
+    jsSelectors = $wf.$actualizer.filterSelectors(cssSelectors, rMode["static"]);
+    runtimeData = $wf.$actualizer.generateRuntimeData(parseTree, jsSelectors, cssMap);
+    capabilities = $wf.$actualizer.determineRuntimeCapabilities(runtimeData, selectors);
+    if (capabilities.has($wf.$runtimeCapability.individualProps)) {
+      $wf.$actualizer.addIndividualProperties(runtimeData, selectors, cullOffsets);
+    }
     $wf.$actualizer.addRuntimeFunctions(runtimeData, parseTree, capabilities);
     css = $wf.$actualizer.createCSS(runtimeData, cssSelectors);
     js = $wf.$actualizer.createJS(runtimeData, parseTree.scripts);
@@ -1657,18 +1678,6 @@ window.fashion.$actualizer = {
       js: js
     };
   }
-};
-
-window.fashion.$actualizer.cullSelectors = function(allSelectors, cullMode) {
-  var id, nonStaticSelectors, selector;
-  nonStaticSelectors = {};
-  for (id in allSelectors) {
-    selector = allSelectors[id];
-    if (selector.mode !== cullMode) {
-      nonStaticSelectors[id] = selector;
-    }
-  }
-  return nonStaticSelectors;
 };
 
 window.fashion.$actualizer.createJS = function(runtimeData, scripts) {
@@ -1754,6 +1763,69 @@ window.fashion.$actualizer.splitSelectorByModes = function(selector) {
   }
   return newSelectors;
 };
+window.fashion.$actualizer.cullIndividuality = function(allSelectors, map) {
+  var currentOffset, exclude, id, inner, inners, mapIndividualCount, newId, newMap, offsets, outer, passingSelectors, selector, _i, _len;
+  passingSelectors = {};
+  offsets = {};
+  exclude = {};
+  currentOffset = 0;
+  for (id in allSelectors) {
+    selector = allSelectors[id];
+    if (selector.mode === $wf.$runtimeMode.individual) {
+      currentOffset++;
+      exclude[id] = true;
+    } else {
+      newId = id - currentOffset;
+      passingSelectors[newId] = selector;
+    }
+    offsets[id] = currentOffset;
+  }
+  newMap = [];
+  mapIndividualCount = 0;
+  for (outer in map) {
+    inners = map[outer];
+    newMap.push([]);
+    for (_i = 0, _len = inners.length; _i < _len; _i++) {
+      inner = inners[_i];
+      if (exclude[inner] === true) {
+        newMap[outer].push("i" + mapIndividualCount++);
+      } else {
+        newMap[outer].push(inner - parseInt(offsets[inner]));
+      }
+    }
+  }
+  return {
+    sel: passingSelectors,
+    map: newMap,
+    offsets: offsets
+  };
+};
+
+window.fashion.$actualizer.filterSelectors = function(allSelectors, filterMode) {
+  var id, passingSelectors, selector;
+  passingSelectors = {};
+  for (id in allSelectors) {
+    selector = allSelectors[id];
+    if (selector.mode !== filterMode) {
+      passingSelectors[id] = selector;
+    }
+  }
+  return passingSelectors;
+};
+
+window.fashion.$actualizer.addIndividualProperties = function(rData, selectors, offsets) {
+  var id, selector, _results;
+  _results = [];
+  for (id in selectors) {
+    selector = selectors[id];
+    if (!(selector.mode === $wf.$runtimeMode.individual)) {
+      continue;
+    }
+    selector.index = id - offsets[id];
+    _results.push(rData.addIndividualSelector(selector));
+  }
+  return _results;
+};
 var RuntimeData;
 
 RuntimeData = (function() {
@@ -1761,14 +1833,15 @@ RuntimeData = (function() {
     this.config = $wf.runtimeConfig;
     this.selectors = selectors;
     this.variables = variables;
-    this.globals = parseTree.dependencies.globals;
-    this.functions = parseTree.dependencies.functions;
-    this.watchSelectors = [];
+    this.modules = parseTree.dependencies;
     this.runtime = {};
   }
 
-  RuntimeData.prototype.addWatchSelector = function(selectorName) {
-    return this.watchSelectors.push(selectorName);
+  RuntimeData.prototype.addIndividualSelector = function(selector) {
+    if (!this.individual) {
+      this.individual = [];
+    }
+    return this.individual.push(selector);
   };
 
   RuntimeData.prototype.addRuntimeModule = function(runtimeModule) {
@@ -1811,14 +1884,14 @@ RuntimeVariable = (function() {
   return RuntimeVariable;
 
 })();
-window.fashion.$actualizer.generateRuntimeData = function(parseTree, hSelectors, hMap) {
+window.fashion.$actualizer.generateRuntimeData = function(parseTree, jsSelectors, cssMap) {
   var rdata, variables;
-  variables = $wf.$actualizer.actualizeVariables(parseTree, hSelectors, hMap);
-  rdata = new RuntimeData(parseTree, hSelectors, variables);
+  variables = $wf.$actualizer.actualizeVariables(parseTree, jsSelectors, cssMap);
+  rdata = new RuntimeData(parseTree, jsSelectors, variables);
   return rdata;
 };
 
-window.fashion.$actualizer.actualizeVariables = function(parseTree, hSelectors, hMap) {
+window.fashion.$actualizer.actualizeVariables = function(parseTree, jsSelectors, cssMap) {
   var bindings, name, rvar, scopes, type, unit, varName, varObj, variables, _ref;
   variables = {};
   _ref = parseTree.variables;
@@ -1840,7 +1913,7 @@ window.fashion.$actualizer.actualizeVariables = function(parseTree, hSelectors, 
       rvar.addScope(name, varObj.value);
     }
     bindings = parseTree.bindings.variables[varName];
-    rvar.dependents = $wf.$actualizer.mapVariableDependents(rvar, bindings, hSelectors, hMap);
+    rvar.dependents = $wf.$actualizer.mapVariableDependents(rvar, bindings, jsSelectors, cssMap);
     variables[varName] = rvar;
   }
   return variables;
@@ -1854,8 +1927,12 @@ window.fashion.$actualizer.mapVariableDependents = function(runtimeVar, bindings
     _ref = map[boundSelectorId];
     for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
       selectorId = _ref[_j];
-      selector = selectors[selectorId];
-      if (selector && selector.mode !== $wf.$runtimeMode["static"]) {
+      if (typeof selectorId === "number") {
+        selector = selectors[selectorId];
+        if (selector && selector.mode !== $wf.$runtimeMode["static"]) {
+          hDependents.push(selectorId);
+        }
+      } else {
         hDependents.push(selectorId);
       }
     }
@@ -1863,7 +1940,7 @@ window.fashion.$actualizer.mapVariableDependents = function(runtimeVar, bindings
   return hDependents;
 };
 window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
-  var css, cssProperties, cssValue, evalFunction, id, property, selector, value, _i, _len, _ref;
+  var css, cssProperties, cssValue, evalFunction, id, property, selector, selectorName, value, _i, _len, _ref;
   evalFunction = $wf.$actualizer.evaluationFunction(runtimeData.variables);
   css = "";
   for (id in cssSelectors) {
@@ -1884,7 +1961,8 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
       }
       cssProperties.push($wf.$actualizer.cssPropertyTemplate(property.name, cssValue));
     }
-    css += $wf.$actualizer.cssSelectorTemplate(selector.name, cssProperties);
+    selectorName = evalFunction(selector.name);
+    css += $wf.$actualizer.cssSelectorTemplate(selectorName, cssProperties);
   }
   return css;
 };
@@ -1978,7 +2056,7 @@ var RuntimeCapabilities,
 window.fashion.$runtimeCapability = {
   variables: "variables",
   scopedVariables: "scopedVariables",
-  individualProps: "watchSelector",
+  individualProps: "individualized",
   liveProps: "liveProperties"
 };
 
@@ -2009,10 +2087,17 @@ RuntimeCapabilities = (function() {
     return _results;
   };
 
+  RuntimeCapabilities.prototype.has = function(requirement) {
+    if (!this.capabilities) {
+      return false;
+    }
+    return (__indexOf.call(this.capabilities, requirement) >= 0);
+  };
+
   return RuntimeCapabilities;
 
 })();
-window.fashion.$actualizer.determineRuntimeCapabilities = function(runtimeData) {
+window.fashion.$actualizer.determineRuntimeCapabilities = function(runtimeData, selectors) {
   var capabilities, variable, _i, _len, _ref;
   capabilities = new RuntimeCapabilities();
   if (JSON.stringify(runtimeData.variables) !== "{}") {
@@ -2025,20 +2110,19 @@ window.fashion.$actualizer.determineRuntimeCapabilities = function(runtimeData) 
       }
     }
   }
-  if ($wf.$actualizer.hasPropertyMode(runtimeData, $wf.$runtimeMode.individual)) {
+  if ($wf.$actualizer.hasPropertyMode(selectors, $wf.$runtimeMode.individual)) {
     capabilities.add($wf.$runtimeCapability.individualProps);
   }
-  if ($wf.$actualizer.hasPropertyMode(runtimeData, $wf.$runtimeMode.live)) {
+  if ($wf.$actualizer.hasPropertyMode(selectors, $wf.$runtimeMode.live)) {
     capabilities.add($wf.$runtimeCapability.liveProps);
   }
   return capabilities;
 };
 
-window.fashion.$actualizer.hasPropertyMode = function(runtimeData, mode) {
-  var selectorBlock, _i, _len, _ref;
-  _ref = runtimeData.selectors;
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    selectorBlock = _ref[_i];
+window.fashion.$actualizer.hasPropertyMode = function(selectors, mode) {
+  var id, selectorBlock;
+  for (id in selectors) {
+    selectorBlock = selectors[id];
     if (selectorBlock.mode === mode) {
       return true;
     }
@@ -2067,7 +2151,7 @@ window.fashion.$actualizer.addRuntimeFunctions = function(runtimeData, parseTree
       _ref = module.initializers;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         key = _ref[_i];
-        functionName = "window." + $wf.runtimeObject + ".runtime." + key;
+        functionName = "window." + $wf.runtimeObject + ".runtime." + key + ".bind(FASHION.runtime)";
         parseTree.addScript("window.addEventListener('load', " + functionName + ", false);");
       }
     }
@@ -2108,7 +2192,7 @@ $wf.addRuntimeModule("types", [], {
 $wf.addRuntimeModule("evaluation", ["variables"], {
   evaluate_Shared: window.fashion.$shared.evaluate,
   evaluate: function(value, element) {
-    return this.evaluate_Shared(value, FASHION.variables, FASHION.globals, FASHION.functions, FASHION.runtime, element);
+    return this.evaluate_Shared(value, FASHION.variables, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, element);
   }
 });
 
@@ -2120,7 +2204,7 @@ $wf.addRuntimeModule("errors", [], {
 $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"], {
   getVariable: window.fashion.$shared.getVariable,
   variableValue: function(varName, element) {
-    return this.getVariable(FASHION.variables, FASHION.globals, FASHION.functions, FASHION.runtime, varName, element).value;
+    return this.getVariable(FASHION.variables, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, varName, element).value;
   },
   setVariable: function(varName, value, element) {
     if (element === void 0) {
@@ -2190,11 +2274,23 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
   runtimeModes: window.fashion.$runtimeMode,
   regenerateSelector: function(selectorId) {
     var cssElem, selector, stylesheet;
-    selector = FASHION.selectors[selectorId];
-    if (!selector) {
-      return this.throwError("Selector " + selectorId + " does not exist");
-    }
-    if (selector.mode === this.runtimeModes.dynamic) {
+    if (typeof selectorId === 'string' && selectorId[0] === "i") {
+      selector = FASHION.individual[parseInt(selectorId.substr(1))];
+      if (!selector) {
+        this.throwError("Could not find individual property " + selectorId);
+      }
+      if (!this.updateSelectorElements) {
+        return this.throwError("The 'individualized' module was not included.");
+      }
+      if (this.evaluate(selector.name) !== selector.elementsSelector) {
+        this.updateSelectorElements(selector);
+      }
+      return this.regenerateIndividualSelector(selector);
+    } else {
+      selector = FASHION.selectors[selectorId];
+      if (!selector) {
+        return this.throwError("Selector " + selectorId + " does not exist");
+      }
       cssElem = document.getElementById("" + FASHION.config.cssId);
       stylesheet = cssElem.sheet;
       stylesheet.deleteRule(selectorId);
@@ -2203,24 +2299,138 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
   },
   CSSPropertyTemplate: window.fashion.$actualizer.cssPropertyTemplate,
   CSSSelectorTemplate: window.fashion.$actualizer.cssSelectorTemplate,
-  CSSRuleForSelector: function(selector) {
-    var cssProperties, propertyObject, selectorName;
-    if (selector.name.script) {
-      selectorName = this.evaluate(valueObject);
-    } else {
-      selectorName = selector.name;
-    }
+  CSSRuleForSelector: function(selector, element, name) {
+    var cssProperties, propertyObject, selectorName, value;
+    selectorName = name || this.evaluate(selector.name, element);
     cssProperties = (function() {
       var _i, _len, _ref, _results;
       _ref = selector.properties;
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         propertyObject = _ref[_i];
-        _results.push(this.CSSPropertyTemplate(propertyObject.name, this.evaluate(propertyObject.value)));
+        value = this.evaluate(propertyObject.value, element);
+        _results.push(this.CSSPropertyTemplate(propertyObject.name, value));
       }
       return _results;
     }).call(this);
     return this.CSSSelectorTemplate(selectorName, cssProperties);
+  }
+});
+$wf.addRuntimeModule("individualized", ["selectors", "elements"], {
+  $initializeIndividualProperties: function() {
+    var selector, sheet, _i, _j, _len, _len1, _ref, _ref1, _results;
+    sheet = document.createElement("style");
+    sheet.setAttribute("type", "text/css");
+    sheet.setAttribute("id", "" + FASHION.config.individualCSSID);
+    document.head.appendChild(sheet);
+    FASHION.individualSheet = sheet.sheet;
+    _ref = FASHION.individual;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      selector = _ref[_i];
+      this.updateSelectorElements(selector);
+    }
+    _ref1 = FASHION.individual;
+    _results = [];
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      selector = _ref1[_j];
+      _results.push(this.regenerateIndividualSelector(selector));
+    }
+    return _results;
+  },
+  updateSelectorElements: function(selector) {
+    var element, matchedElements, selectorName, _i, _len, _results;
+    selectorName = this.evaluate(selector.name);
+    selector.elementsSelector = selectorName;
+    selector.elements = {};
+    matchedElements = this.elementsForSelector(selectorName);
+    _results = [];
+    for (_i = 0, _len = matchedElements.length; _i < _len; _i++) {
+      element = matchedElements[_i];
+      if (!element.id) {
+        element.setAttribute('id', this.generateRandomId());
+      }
+      _results.push(selector.elements[element.id] = {
+        element: element,
+        cssid: -1
+      });
+    }
+    return _results;
+  },
+  generateRandomId: function(length) {
+    var guid, i;
+    if (length == null) {
+      length = 20;
+    }
+    guid = ((function() {
+      var _i, _results;
+      _results = [];
+      for (i = _i = 0; 0 <= length ? _i <= length : _i >= length; i = 0 <= length ? ++_i : --_i) {
+        _results.push(Math.round(Math.random() * 36).toString(36));
+      }
+      return _results;
+    })()).join("");
+    return FASHION.config.idPrefix + guid;
+  },
+  elementsForSelector: function(selectorName) {
+    return Array.prototype.slice.call(document.querySelectorAll(selectorName));
+  },
+  regenerateIndividualSelector: function(selector) {
+    var css, element, id, individual, _ref, _results;
+    _ref = selector.elements;
+    _results = [];
+    for (id in _ref) {
+      individual = _ref[id];
+      if (individual.cssid !== -1) {
+        FASHION.individualSheet.deleteRule(individual.cssid);
+      } else {
+        individual.cssid = FASHION.individualSheet.rules.length;
+      }
+      element = this.createElementObject(individual.element);
+      css = this.CSSRuleForSelector(selector, element, "#" + id);
+      _results.push(FASHION.individualSheet.insertRule(css, individual.cssid));
+    }
+    return _results;
+  }
+});
+$wf.addRuntimeModule("elements", [], {
+  createElementObject: function(DOMElement) {
+    var attribute, cs, eObj, _i, _len, _ref;
+    if (!DOMElement) {
+      return {};
+    }
+    eObj = {
+      element: DOMElement
+    };
+    if (DOMElement.attributes) {
+      _ref = DOMElement.attributes;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        attribute = _ref[_i];
+        eObj[attribute.name] = attribute.value;
+      }
+    }
+    Object.defineProperty(eObj, "parent", {
+      get: (function(_this) {
+        return function() {
+          return _this.buildObjectForElement(DOMElement.parentNode);
+        };
+      })(this)
+    });
+    eObj.width = DOMElement.clientWidth;
+    eObj.height = DOMElement.clientHeight;
+    cs = window.getComputedStyle(DOMElement);
+    if (cs) {
+      Object.defineProperty(eObj, "outerWidth", {
+        get: function() {
+          return parseFloat(cs.marginLeft) + parseFloat(cs.marginRight) + eObj.width;
+        }
+      });
+      Object.defineProperty(eObj, "outerHeight", {
+        get: function() {
+          return parseFloat(cs.marginTop) + parseFloat(cs.marginBottom) + eObj.height;
+        }
+      });
+    }
+    return eObj;
   }
 });
 window.fashion.$functions = {
