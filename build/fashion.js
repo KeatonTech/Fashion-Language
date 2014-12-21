@@ -1502,6 +1502,7 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
         };
         if (propertyModule.mode === $wf.$runtimeMode.individual) {
           parseTree.addPropertyDependency(property.name, propertyModule);
+          property.mode |= $wf.$runtimeMode.individual;
         } else {
           propertyModules[property.name].compile.call(API, property.value);
           if (propertyModule.replace) {
@@ -1698,6 +1699,125 @@ window.fashion.$shared.timeInMs = function(valueObject) {
     return valueObject.value * 1000;
   } else {
     return 0;
+  }
+};
+window.fashion.color = {
+  cssTOjs: function(cssString, colorTools) {
+    var rgbMatch;
+    if (colorTools == null) {
+      colorTools = $wf.color;
+    }
+    if (cssString[0] === "#") {
+      return colorTools.hexTOrgb(cssString);
+    }
+    if (rgbMatch = cssString.match(/rgba?\((.*?),(.*?),([^,]*),?(.*?)\)/)) {
+      return {
+        r: parseInt(rgbMatch[1]),
+        g: parseInt(rgbMatch[2]),
+        b: parseInt(rgbMatch[3]),
+        a: parseFloat(rgbMatch[4] || 1)
+      };
+    }
+  },
+  hexTOrgb: function(hex) {
+    var result, shorthandRegex;
+    if (hex === void 0) {
+      return {
+        r: 0,
+        g: 0,
+        b: 0
+      };
+    }
+    shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, function(m, r, g, b) {
+      return r + r + g + g + b + b;
+    });
+    result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!result) {
+      return {
+        r: 0,
+        g: 0,
+        b: 0
+      };
+    }
+    return {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    };
+  },
+  rgbTOhex: function(r, g, b) {
+    var ntoHex, _ref;
+    if (typeof r === 'object') {
+      _ref = [r.r, r.g, r.b], r = _ref[0], g = _ref[1], b = _ref[2];
+    }
+    ntoHex = function(c) {
+      var hex;
+      if (typeof c === 'string') {
+        c = parseInt(c);
+      }
+      hex = c.toString(16);
+      if (hex.length === 1) {
+        return "0" + hex;
+      } else {
+        return hex;
+      }
+    };
+    return "#" + ntoHex(parseInt(r)) + ntoHex(parseInt(g)) + ntoHex(parseInt(b));
+  },
+  hsbTOrgb: function(h, s, b) {
+    var c, m, _ref;
+    if (typeof h === 'object') {
+      _ref = [h.h, h.s, h.b], h = _ref[0], s = _ref[1], b = _ref[2];
+    }
+    m = Math;
+    s = s / 255;
+    b = b / 255;
+    c = function(o) {
+      return 255 * (s * b * m.max(m.min(m.abs(((h + o) / 60 % 6) - 3) - 1, 1), 0) + b * (1 - s));
+    };
+    return {
+      r: c(0),
+      g: c(240),
+      b: c(120)
+    };
+  },
+  rgbTOhsb: function(r, g, b) {
+    var h, hof, max, min, pcd, s, scd, val, _ref, _ref1, _ref2, _ref3;
+    if (typeof r === 'object') {
+      _ref = [r.r, r.g, r.b], r = _ref[0], g = _ref[1], b = _ref[2];
+    }
+    val = Math.max(r, g, b);
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    max = Math.max(r, g, b);
+    min = Math.min(r, g, b);
+    if (max === min) {
+      return {
+        h: 0,
+        s: 0,
+        b: val
+      };
+    }
+    pcd = max - min;
+    switch (min) {
+      case r:
+        _ref1 = [g - b, 3], scd = _ref1[0], hof = _ref1[1];
+        break;
+      case g:
+        _ref2 = [b - r, 5], scd = _ref2[0], hof = _ref2[1];
+        break;
+      case b:
+        _ref3 = [r - g, 1], scd = _ref3[0], hof = _ref3[1];
+    }
+    h = ((hof - scd / pcd) * 60) % 360;
+    s = pcd / max * 255;
+    return {
+      h: h,
+      s: s,
+      b: val
+    };
   }
 };
 window.fashion.$actualizer = {
@@ -1970,7 +2090,7 @@ window.fashion.$actualizer.actualizeVariables = function(parseTree, jsSelectors,
 };
 window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
   var css, cssProperties, cssValue, evalFunction, id, property, selector, selectorName, value, _i, _len, _ref;
-  evalFunction = $wf.$actualizer.evaluationFunction(runtimeData.variables);
+  evalFunction = $wf.$actualizer.evaluationFunction(runtimeData);
   css = "";
   for (id in cssSelectors) {
     selector = cssSelectors[id];
@@ -2062,9 +2182,9 @@ window.fashion.$actualizer.transitionStrings = function(evalFunction, transition
   return _results;
 };
 
-window.fashion.$actualizer.evaluationFunction = function(variables) {
+window.fashion.$actualizer.evaluationFunction = function(runtimeData) {
   return function(value) {
-    return window.fashion.$shared.evaluate.call(window.fashion.$shared, value, variables, $wf.$globals, $wf.$functions);
+    return window.fashion.$shared.evaluate.call(window.fashion.$shared, value, runtimeData.variables, $wf.$globals, $wf.$functions, runtimeData.runtime);
   };
 };
 
@@ -2250,16 +2370,20 @@ window.fashion.$actualizer.mapBindings = function(bindings, selectors, map) {
   hDependents = [];
   for (_i = 0, _len = bindings.length; _i < _len; _i++) {
     boundSelectorId = bindings[_i];
-    _ref = map[boundSelectorId];
-    for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-      selectorId = _ref[_j];
-      if (typeof selectorId === "number") {
-        selector = selectors[selectorId];
-        if (selector && selector.mode !== $wf.$runtimeMode["static"]) {
+    if (typeof boundSelectorId === 'string' && boundSelectorId[0] === "$") {
+      hDependents.push(boundSelectorId);
+    } else {
+      _ref = map[boundSelectorId];
+      for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+        selectorId = _ref[_j];
+        if (typeof selectorId === "number") {
+          selector = selectors[selectorId];
+          if (selector && selector.mode !== $wf.$runtimeMode["static"]) {
+            hDependents.push(selectorId);
+          }
+        } else {
           hDependents.push(selectorId);
         }
-      } else {
-        hDependents.push(selectorId);
       }
     }
   }
@@ -2320,6 +2444,8 @@ $wf.addRuntimeModule("evaluation", ["variables"], {
   }
 });
 
+$wf.addRuntimeModule("colors", [], window.fashion.color);
+
 $wf.addRuntimeModule("errors", [], {
   throwError: function(message) {
     console.log("[FASHION] Runtime error: " + message);
@@ -2330,6 +2456,15 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
   getVariable: window.fashion.$shared.getVariable,
   variableValue: function(varName, element) {
     return this.getVariable(FASHION.variables, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, varName, element).value;
+  },
+  updateVariable: function(varName) {
+    var newValue, vObj;
+    vObj = FASHION.variables[varName];
+    if (!vObj) {
+      return this.throwError("Variable '$" + varName + "' does not exist");
+    }
+    newValue = this.evaluate(vObj["default"]);
+    return this.setVariable(varName, newValue);
   },
   setVariable: function(varName, value, element) {
     if (element === void 0) {
@@ -2363,7 +2498,11 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       selectorId = _ref[_i];
-      _results.push(this.regenerateSelector(selectorId));
+      if (typeof selectorId === 'string' && selectorId[0] === "$") {
+        _results.push(this.updateVariable(selectorId.substr(1)));
+      } else {
+        _results.push(this.regenerateSelector(selectorId));
+      }
     }
     return _results;
   }

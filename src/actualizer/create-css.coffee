@@ -1,6 +1,6 @@
 # Determines what functionality needs to be included in the generated JS
 window.fashion.$actualizer.createCSS = (runtimeData, cssSelectors) ->
-	evalFunction = $wf.$actualizer.evaluationFunction runtimeData.variables
+	evalFunction = $wf.$actualizer.evaluationFunction runtimeData
 
 	# Accumulate CSS here
 	css = ""
@@ -86,9 +86,11 @@ window.fashion.$actualizer.transitionStrings = (evalFunction, transitions, runti
 
 
 # Helpful function that returns a function that easily evaluates expressions
-window.fashion.$actualizer.evaluationFunction = (variables) -> (value) ->
-	window.fashion.$shared.evaluate.call(window.fashion.$shared, value, variables,
-		$wf.$globals, $wf.$functions)
+window.fashion.$actualizer.evaluationFunction = (runtimeData) -> (value) ->
+	window.fashion.$shared.evaluate.call(window.fashion.$shared, value, 
+		runtimeData.variables,
+		$wf.$globals, $wf.$functions,
+		runtimeData.runtime)
 
 
 # Templates used in generating CSS

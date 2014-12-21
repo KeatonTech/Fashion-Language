@@ -26,6 +26,8 @@ $wf.addRuntimeModule "evaluation", ["variables"],
 			element							# The current element - for individualized
 		)
 
+$wf.addRuntimeModule "colors", [], window.fashion.color
+
 # Register basic functionality
 $wf.addRuntimeModule "errors", [],
 	throwError: (message) -> 

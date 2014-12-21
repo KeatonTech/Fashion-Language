@@ -2,16 +2,23 @@
 window.fashion.$actualizer.mapBindings = (bindings, selectors, map) ->
 	hDependents = []
 	for boundSelectorId in bindings
-		for selectorId in map[boundSelectorId]
 
-			# We should get rid of static properties, since the JS doesn't know about those
-			if typeof selectorId is "number"
-				selector = selectors[selectorId]
-				if selector and selector.mode isnt $wf.$runtimeMode.static
-					hDependents.push selectorId
+		# Variable bindings don't need to be mapped
+		if typeof boundSelectorId is 'string' and boundSelectorId[0] is "$"
+			hDependents.push boundSelectorId
 
-			# If it's a string, it's probably an individual property
-			else hDependents.push selectorId
+		# Selector bindings
+		else
+			for selectorId in map[boundSelectorId]
+
+				# We should get rid of static properties; the JS doesn't know about those
+				if typeof selectorId is "number"
+					selector = selectors[selectorId]
+					if selector and selector.mode isnt $wf.$runtimeMode.static
+						hDependents.push selectorId
+
+				# If it's a string, it's probably an individual property
+				else hDependents.push selectorId
 
 	return hDependents
 

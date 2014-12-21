@@ -10,10 +10,21 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 			varName, element
 		).value
 
+	# Updates an expression variable
+	# TODO: Make this work on non top level variables
+	updateVariable: (varName) ->
+		vObj = FASHION.variables[varName]
+		if !vObj then return @throwError "Variable '$#{varName}' does not exist"
+
+		newValue = @evaluate vObj.default
+		@setVariable varName, newValue
+
+
 	# Set the value of a variable
 	setVariable: (varName, value, element) ->
 		if element is undefined then return @setTopLevelVariable varName, value
 		console.log "Scoped variable setting coming soon"
+
 
 	# Set a top-level variable
 	setTopLevelVariable: (varName, value) ->
@@ -40,7 +51,10 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 
 		# Update all of the dependents
 		for selectorId in vObj.dependents
-			@regenerateSelector selectorId
+			if typeof selectorId is 'string' and selectorId[0] is "$"
+				@updateVariable selectorId.substr(1)
+			else
+				@regenerateSelector selectorId
 
 
 # Register the module that gets and sets dynamic variables

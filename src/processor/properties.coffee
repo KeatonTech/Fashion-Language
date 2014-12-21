@@ -27,6 +27,7 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 				# Remove the property if necessary
 				if propertyModule.mode is $wf.$runtimeMode.individual
 					parseTree.addPropertyDependency property.name, propertyModule
+					property.mode |= $wf.$runtimeMode.individual
 
 				else
 					# Process it!
