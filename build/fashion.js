@@ -2094,12 +2094,32 @@ RuntimeCapabilities = (function() {
   function RuntimeCapabilities() {}
 
   RuntimeCapabilities.prototype.constuctor = function() {
-    return this.capabilities = window.fashion.runtimeModules;
+    var module;
+    return this.capabilities = (function() {
+      var _i, _len, _ref, _results;
+      _ref = window.fashion.runtimeModules;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        module = _ref[_i];
+        _results.push(module);
+      }
+      return _results;
+    })();
   };
 
   RuntimeCapabilities.prototype.add = function(runtimeRequirement) {
+    var module;
     if (!this.capabilities) {
-      this.capabilities = window.fashion.runtimeModules;
+      this.capabilities = (function() {
+        var _i, _len, _ref, _results;
+        _ref = window.fashion.runtimeModules;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          module = _ref[_i];
+          _results.push(module);
+        }
+        return _results;
+      })();
     }
     if (__indexOf.call(this.capabilities, runtimeRequirement) >= 0) {
       return;

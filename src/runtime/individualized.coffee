@@ -2,6 +2,7 @@ $wf.addRuntimeModule "individualized", ["selectors", "elements"],
 
 	# Start up by listing each element that matches each individual selector
 	$initializeIndividualProperties: ()->
+		#if !FASHION.individual then return
 
 		# Create a new stylesheet just for individual properties
 		sheet = document.createElement "style"

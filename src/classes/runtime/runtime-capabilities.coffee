@@ -10,10 +10,11 @@ window.fashion.$runtimeCapability =
 # Class to store these
 class RuntimeCapabilities
 	constuctor: () ->
-		@capabilities = window.fashion.runtimeModules
+		@capabilities = (module for module in window.fashion.runtimeModules)
 
 	add: (runtimeRequirement) ->
-		if !@capabilities then @capabilities = window.fashion.runtimeModules
+		if !@capabilities
+			@capabilities = (module for module in window.fashion.runtimeModules)
 		if runtimeRequirement in @capabilities then return
 		@capabilities.push runtimeRequirement
 
