@@ -63,7 +63,7 @@ window.fashion.$actualizer.addRuntimeFunctions = (runtimeData, parseTree, capabi
 		if module.initializers.length > 0
 			for key in module.initializers
 				functionName = "window.#{$wf.runtimeObject}.runtime.#{key}.bind(FASHION.runtime)"
-				parseTree.addScript "window.addEventListener('load', #{functionName}, false);"
+				parseTree.addScript "FSREADY(#{functionName});"
 
 
 # Adds in capabilities from runtime modules

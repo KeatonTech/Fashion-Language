@@ -53,6 +53,10 @@ window.fashion.$actualizer.createJS = (runtimeData, scripts) ->
 	|*| #{$wf.url} - #{$wf.author}
 	\\*/
 	window.#{$wf.runtimeObject} = #{$wf.$stringify runtimeData};
+	FSREADY = function(r){d=document;c="complete";
+		if(d.readyState==c)r()
+		else d.addEventListener('readystatechange',function(){if(d.readyState==c)r()})
+	}
 	#{scripts.join('\n')}
 	"""
 

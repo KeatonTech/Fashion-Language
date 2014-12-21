@@ -30,7 +30,7 @@ THE SOFTWARE.
 var $wf, wait;
 
 $wf = window.fashion = {
-  version: "0.1",
+  version: "0.2",
   url: "http://writefashion.org",
   author: "Keaton Brandt",
   mimeType: "text/x-fashion",
@@ -165,20 +165,10 @@ window.fashion.live = {
   loadedEvent: "fashion-loaded"
 };
 
-document.onreadystatechange = function() {
-  var allLoaded, fileCount, scriptIndex;
+document.addEventListener('readystatechange', function() {
   if (document.readyState === "complete") {
-    scriptIndex = 0;
-    fileCount = 0;
-    allLoaded = function() {
-      var event;
-      event = new Event(window.fashion.live.loadedEvent);
-      event.variableObject = window[window.fashion.variableObject];
-      return document.dispatchEvent(event);
-    };
-    fileCount = window.fashion.$loader.countScripts();
-    return window.fashion.$loader.loadScriptsFromTags(function(scriptText) {
-      var css, js, parseTree, start, _ref;
+    return window.fashion.$loader.loadStyles(function(scriptText) {
+      var css, event, js, parseTree, start, _ref;
       start = new Date().getTime();
       parseTree = window.fashion.$parser.parse(scriptText);
       parseTree = window.fashion.$processor.process(parseTree);
@@ -186,12 +176,12 @@ document.onreadystatechange = function() {
       $wf.$dom.addStylesheet(css);
       $wf.$dom.addScript(js);
       console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
-      if (--fileCount <= 0) {
-        return allLoaded();
-      }
+      event = new Event(window.fashion.live.loadedEvent);
+      event.variableObject = window[window.fashion.variableObject];
+      return document.dispatchEvent(event);
     });
   }
-};
+});
 var __slice = [].slice;
 
 window.fashion.$extend = function(object, anotherObject) {
@@ -758,38 +748,74 @@ window.fashion.$runtimeMode = {
   }
 };
 window.fashion.$loader = {
+  loadStyles: function(scriptsCallback) {
+    var acc, count, loaded;
+    count = $wf.$loader.countScripts();
+    loaded = 0;
+    acc = "";
+    return $wf.$loader.loadIndividualStyles(function(individualScript) {
+      acc += individualScript;
+      if (++loaded === count) {
+        return scriptsCallback(acc);
+      }
+    });
+  },
+  loadIndividualStyles: function(scriptCallback) {
+    return window.fashion.$loader.loadStyleTags(scriptCallback);
+  },
   loadStyleTags: function(scriptCallback) {
-    var i, scriptTags, tagType, _i, _ref, _results;
-    scriptTags = document.getElementsByTagName("style");
+    var i, styleTags, tagType, url, _i, _ref, _results;
+    styleTags = document.getElementsByTagName("style");
     _results = [];
-    for (i = _i = 0, _ref = scriptTags.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
-      tagType = scriptTags[i].getAttribute("type");
+    for (i = _i = 0, _ref = styleTags.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
+      tagType = styleTags[i].getAttribute("type");
       if (tagType !== window.fashion.mimeType) {
         continue;
       }
-      if (scriptTags[i].textContent !== "") {
-        _results.push(scriptCallback(scriptTags[i].textContent));
+      if (styleTags[i].textContent !== "") {
+        _results.push(scriptCallback(styleTags[i].textContent));
+      } else if (styleTags[i].getAttribute("src") !== "") {
+        url = styleTags[i].getAttribute("src");
+        _results.push($wf.$loader.loadExternalScript(url, scriptCallback));
       } else {
         _results.push(void 0);
       }
     }
     return _results;
   },
-  loadScriptsFromTags: function(scriptCallback) {
-    return window.fashion.$loader.loadStyleTags(scriptCallback);
-  },
   countScripts: function() {
-    var fileCount, i, scriptTags, tagType, _i, _ref;
+    var fileCount, i, linkTags, styleTags, tagType, _i, _j, _ref, _ref1;
     fileCount = 0;
-    scriptTags = document.getElementsByTagName("style");
-    for (i = _i = 0, _ref = scriptTags.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
-      tagType = scriptTags[i].getAttribute("type");
+    styleTags = document.getElementsByTagName("style");
+    for (i = _i = 0, _ref = styleTags.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
+      tagType = styleTags[i].getAttribute("type");
+      if (tagType !== window.fashion.mimeType) {
+        continue;
+      }
+      fileCount++;
+    }
+    linkTags = document.getElementsByTagName("link");
+    for (i = _j = 0, _ref1 = linkTags.length; 0 <= _ref1 ? _j < _ref1 : _j > _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+      tagType = linkTags[i].getAttribute("type");
       if (tagType !== window.fashion.mimeType) {
         continue;
       }
       fileCount++;
     }
     return fileCount;
+  },
+  loadExternalScript: function(url, callback) {
+    var req;
+    req = new XMLHttpRequest();
+    req.onreadystatechange = function() {
+      if (req.readyState === 4 && req.status === 200) {
+        return callback(req.responseText);
+      } else if (req.status > 400) {
+        return console.log("[FASHION] Could not load script: " + url + " (" + req.status + ")");
+      }
+    };
+    req.open("GET", url, true);
+    return req.send();
   }
 };
 window.fashion.$parser = {
@@ -1699,7 +1725,7 @@ window.fashion.$actualizer = {
 };
 
 window.fashion.$actualizer.createJS = function(runtimeData, scripts) {
-  return "/*\\\n|*| GENERATED BY FASHION " + $wf.version + "\n|*| " + $wf.url + " - " + $wf.author + "\n\\*/\nwindow." + $wf.runtimeObject + " = " + ($wf.$stringify(runtimeData)) + ";\n" + (scripts.join('\n'));
+  return "/*\\\n|*| GENERATED BY FASHION " + $wf.version + "\n|*| " + $wf.url + " - " + $wf.author + "\n\\*/\nwindow." + $wf.runtimeObject + " = " + ($wf.$stringify(runtimeData)) + ";\nFSREADY = function(r){d=document;c=\"complete\";\n	if(d.readyState==c)r()\n	else d.addEventListener('readystatechange',function(){if(d.readyState==c)r()})\n}\n" + (scripts.join('\n'));
 };
 window.fashion.$actualizer.regroupProperties = function(parseTree) {
   var expansionMap, homogenousSelectors, properties, selector, selectorIds, splitSelector, splitSelectors, _i, _j, _len, _len1, _ref;
@@ -2160,7 +2186,7 @@ window.fashion.$actualizer.addRuntimeFunctions = function(runtimeData, parseTree
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         key = _ref[_i];
         functionName = "window." + $wf.runtimeObject + ".runtime." + key + ".bind(FASHION.runtime)";
-        parseTree.addScript("window.addEventListener('load', " + functionName + ", false);");
+        parseTree.addScript("FSREADY(" + functionName + ");");
       }
     }
   }
