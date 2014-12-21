@@ -2457,15 +2457,6 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
   variableValue: function(varName, element) {
     return this.getVariable(FASHION.variables, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, varName, element).value;
   },
-  updateVariable: function(varName) {
-    var newValue, vObj;
-    vObj = FASHION.variables[varName];
-    if (!vObj) {
-      return this.throwError("Variable '$" + varName + "' does not exist");
-    }
-    newValue = this.evaluate(vObj["default"]);
-    return this.setVariable(varName, newValue);
-  },
   setVariable: function(varName, value, element) {
     if (element === void 0) {
       return this.setTopLevelVariable(varName, value);
@@ -2473,7 +2464,7 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
     return console.log("Scoped variable setting coming soon");
   },
   setTopLevelVariable: function(varName, value) {
-    var selectorId, vObj, _i, _len, _ref, _results;
+    var vObj;
     vObj = FASHION.variables[varName];
     if (!vObj) {
       return this.throwError("Variable '$" + varName + "' does not exist");
@@ -2494,12 +2485,17 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
     		else vObj.value = value
      */
     vObj["default"] = value;
+    return this.updateDependencies(varName);
+  },
+  updateDependencies: function(varName) {
+    var selectorId, vObj, _i, _len, _ref, _results;
+    vObj = FASHION.variables[varName];
     _ref = vObj.dependents;
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       selectorId = _ref[_i];
       if (typeof selectorId === 'string' && selectorId[0] === "$") {
-        _results.push(this.updateVariable(selectorId.substr(1)));
+        _results.push(this.updateDependencies(selectorId.substr(1)));
       } else {
         _results.push(this.regenerateSelector(selectorId));
       }

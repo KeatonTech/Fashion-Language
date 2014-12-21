@@ -10,15 +10,6 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 			varName, element
 		).value
 
-	# Updates an expression variable
-	# TODO: Make this work on non top level variables
-	updateVariable: (varName) ->
-		vObj = FASHION.variables[varName]
-		if !vObj then return @throwError "Variable '$#{varName}' does not exist"
-
-		newValue = @evaluate vObj.default
-		@setVariable varName, newValue
-
 
 	# Set the value of a variable
 	setVariable: (varName, value, element) ->
@@ -48,11 +39,17 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 
 		# Instead, just trust that the user knows what they're doing *gasp*
 		vObj.default = value
+		@updateDependencies varName
+
+
+	# Set a top-level variable
+	updateDependencies: (varName) ->
+		vObj = FASHION.variables[varName]
 
 		# Update all of the dependents
 		for selectorId in vObj.dependents
 			if typeof selectorId is 'string' and selectorId[0] is "$"
-				@updateVariable selectorId.substr(1)
+				@updateDependencies selectorId.substr(1)
 			else
 				@regenerateSelector selectorId
 
