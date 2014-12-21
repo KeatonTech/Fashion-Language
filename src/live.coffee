@@ -18,6 +18,9 @@ window.fashion.live = {
 	loadedEvent: "fashion-loaded"
 }
 
+# Useful later
+currentScript = document.currentScript || document.scripts[document.scripts.length - 1]
+
 # Load and parse style and link tags
 document.addEventListener 'readystatechange', ()->
 	if document.readyState is "complete"
@@ -48,6 +51,37 @@ document.addEventListener 'readystatechange', ()->
 			event = new Event(window.fashion.live.loadedEvent)
 			event.variableObject = window[window.fashion.variableObject]
 			document.dispatchEvent event
+
+			# Remove all the compiler code, including this
+			$wf.removeCompiler()
+
+
+# Remove the uncompiled stuff from the DOM, just to simplify things
+window.fashion.removeCompiler = ()->
+
+	deleteAll = (elements) ->
+		element.parentNode.removeChild(element) for element in elements
+
+	deleteAll document.querySelectorAll "[type='text/x-fashion']"
+	currentScript.parentNode.removeChild currentScript
+
+
+# Convert the code into something that can be copy/pasted for production
+window.fashion.makeProduction = ()->
+	for element in document.querySelectorAll "style[id*=FASHION]"
+
+		if element.id is "FASHION-stylesheet"
+			head = document.getElementsByTagName('head').item(0)
+			style = document.createElement("style")
+			style.type = "text/css"
+			style.id = "FASHION-stylesheet"
+			cssText = ""
+			cssText += rule.cssText + "\n" for rule in element.sheet.rules
+			style.appendChild document.createTextNode cssText
+			head.appendChild style
+
+		# All style tags get deleted
+		element.parentNode.removeChild(element)
 
 
 # Include helper files, used by everything

@@ -161,9 +161,13 @@ into CSS and Javascript. It is not reccommended for production apps.
 
 ------------------------------------------------------------------------------
  */
+var currentScript;
+
 window.fashion.live = {
   loadedEvent: "fashion-loaded"
 };
+
+currentScript = document.currentScript || document.scripts[document.scripts.length - 1];
 
 document.addEventListener('readystatechange', function() {
   if (document.readyState === "complete") {
@@ -178,10 +182,51 @@ document.addEventListener('readystatechange', function() {
       console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
       event = new Event(window.fashion.live.loadedEvent);
       event.variableObject = window[window.fashion.variableObject];
-      return document.dispatchEvent(event);
+      document.dispatchEvent(event);
+      return $wf.removeCompiler();
     });
   }
 });
+
+window.fashion.removeCompiler = function() {
+  var deleteAll;
+  deleteAll = function(elements) {
+    var element, _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = elements.length; _i < _len; _i++) {
+      element = elements[_i];
+      _results.push(element.parentNode.removeChild(element));
+    }
+    return _results;
+  };
+  deleteAll(document.querySelectorAll("[type='text/x-fashion']"));
+  return currentScript.parentNode.removeChild(currentScript);
+};
+
+window.fashion.makeProduction = function() {
+  var cssText, element, head, rule, style, _i, _j, _len, _len1, _ref, _ref1, _results;
+  _ref = document.querySelectorAll("style[id*=FASHION]");
+  _results = [];
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    element = _ref[_i];
+    if (element.id === "FASHION-stylesheet") {
+      head = document.getElementsByTagName('head').item(0);
+      style = document.createElement("style");
+      style.type = "text/css";
+      style.id = "FASHION-stylesheet";
+      cssText = "";
+      _ref1 = element.sheet.rules;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        rule = _ref1[_j];
+        cssText += rule.cssText + "\n";
+      }
+      style.appendChild(document.createTextNode(cssText));
+      head.appendChild(style);
+    }
+    _results.push(element.parentNode.removeChild(element));
+  }
+  return _results;
+};
 var __slice = [].slice;
 
 window.fashion.$extend = function(object, anotherObject) {
@@ -2745,7 +2790,11 @@ $wf.addRuntimeModule("globals", ["selectors"], {
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       selectorId = _ref[_i];
-      _results.push(this.regenerateSelector(selectorId));
+      if (typeof selectorId === 'string' && selectorId[0] === "$") {
+        _results.push(this.updateDependencies(selectorId.substr(1)));
+      } else {
+        _results.push(this.regenerateSelector(selectorId));
+      }
     }
     return _results;
   }

@@ -17,4 +17,7 @@ $wf.addRuntimeModule "globals", ["selectors"],
 
 		# Update all of the dependents
 		for selectorId in global.dependents
-			@regenerateSelector selectorId
+			if typeof selectorId is 'string' and selectorId[0] is "$"
+				@updateDependencies selectorId.substr(1)
+			else
+				@regenerateSelector selectorId
