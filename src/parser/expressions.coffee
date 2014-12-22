@@ -6,7 +6,7 @@
 # NOTE(keatontech): Yes, this is a very long function that violates the 40 line rule.
 # I'm accepting suggestions for how to fix that.
 window.fashion.$parser.parseExpression = 
-(expString, linkId, parseTree, funcs, globals, top = true) ->
+(expString, linkId, parseTree, funcs, globals, top = true, suppressUnits = false) ->
 
 	expander = $wf.$parser.expressionExpander
 	matchParens = window.fashion.$parser.matchParenthesis
@@ -100,7 +100,7 @@ window.fashion.$parser.parseExpression =
 	if isSetter then unit = undefined
 
 	# Wrap the script with return statements and such
-	script = $wf.$parser.wrapExpressionScript script, top, type, unit
+	script = $wf.$parser.wrapExpressionScript script, top, type, unit, suppressUnits
 	
 	# Return something useful for the parser
 	expr = new Expression script, type, unit, mode
@@ -111,9 +111,10 @@ window.fashion.$parser.parseExpression =
 # Wrap the script text in something useful
 # Top level returns a string, for the property
 # Other levels return an object, for function calls
-window.fashion.$parser.wrapExpressionScript = (script, top, type, unit) ->
+window.fashion.$parser.wrapExpressionScript = (script, top, type, unit, suppressUnits) ->
 	if top
-		if unit and typeof unit is "string" then "return (#{script}) + '#{unit}'"
+		if !suppressUnits and unit and typeof unit is "string"
+			"return (#{script}) + '#{unit}'"
 		else "return #{script}" 
 	else "{value: #{script}, type: #{type}, unit: '#{unit}'}"
 

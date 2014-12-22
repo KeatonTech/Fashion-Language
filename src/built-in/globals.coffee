@@ -41,3 +41,13 @@ window.fashion.$globals =
 			window.addEventListener "mousemove", (e)->
 				window.mouseX = e.pageX
 				onchange()
+
+	pixelratio: new GlobalModule
+		type: $wf.$type.Number
+		get: () -> window.devicePixelRatio
+		watch: (onchange) ->
+			lastRatio = window.devicePixelRatio
+			setInterval((()->
+				if window.devicePixelRatio isnt lastRatio then onchange()
+				lastRatio = window.devicePixelRatio
+			),1000)

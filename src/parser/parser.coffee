@@ -6,6 +6,9 @@ window.fashion.$parser =
 
 		parseTree = new ParseTree()
 
+		# Remove comments
+		fashionText = $wf.$parser.removeComments fashionText
+
 		# Split the file into top-level sections
 		parseTree = $wf.$parser.parseSections(fashionText, parseTree)
 
@@ -17,11 +20,17 @@ window.fashion.$parser =
 		return parseTree
 
 
+# Remove comments
+# TODO: Unit tests for this
+window.fashion.$parser.removeComments = (fashionText) ->
+	return fashionText.replace /\/\*.*?\*\/|\/\/.*?\n/g, ""
+
+
 # Adds a variable object
 window.fashion.$parser.addVariable = (parseTree, name, value, scope) ->
 
 	# Parse the value into an expression if necessary
-	value = $wf.$parser.parseSingleValue(value, "$"+name, parseTree)
+	value = $wf.$parser.parseSingleValue(value, "$"+name, parseTree, true)
 
 	# Make a variable object
 	variableObject = new Variable name, value, scope

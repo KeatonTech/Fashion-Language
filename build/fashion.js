@@ -867,6 +867,7 @@ window.fashion.$parser = {
   parse: function(fashionText) {
     var i, parseTree, sel, _ref;
     parseTree = new ParseTree();
+    fashionText = $wf.$parser.removeComments(fashionText);
     parseTree = $wf.$parser.parseSections(fashionText, parseTree);
     _ref = parseTree.selectors;
     for (i in _ref) {
@@ -877,9 +878,13 @@ window.fashion.$parser = {
   }
 };
 
+window.fashion.$parser.removeComments = function(fashionText) {
+  return fashionText.replace(/\/\*.*?\*\/|\/\/.*?\n/g, "");
+};
+
 window.fashion.$parser.addVariable = function(parseTree, name, value, scope) {
   var type, typedValue, unit, unittedValue, val, variableObject;
-  value = $wf.$parser.parseSingleValue(value, "$" + name, parseTree);
+  value = $wf.$parser.parseSingleValue(value, "$" + name, parseTree, true);
   variableObject = new Variable(name, value, scope);
   parseTree.addVariable(variableObject);
   if (value instanceof Expression) {
@@ -1170,19 +1175,25 @@ window.fashion.$parser.identifyExpression = function() {
   return /(([\s][\+\-\/\*\=][\s])|\s(\&\&|\|\|)\s|[\(\)\[\]]|\@|\$)/g;
 };
 
-window.fashion.$parser.parseSingleValue = function(value, linkId, parseTree) {
+window.fashion.$parser.parseSingleValue = function(value, linkId, parseTree, isVar) {
+  if (isVar == null) {
+    isVar = false;
+  }
   if (!value || typeof value !== 'string') {
     return value;
   }
   if (value.match($wf.$parser.identifyExpression())) {
-    return window.fashion.$parser.parseExpression(value, linkId, parseTree, window.fashion.$functions, window.fashion.$globals);
+    return window.fashion.$parser.parseExpression(value, linkId, parseTree, window.fashion.$functions, window.fashion.$globals, true, isVar);
   }
   return value;
 };
-window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, funcs, globals, top) {
+window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, funcs, globals, top, suppressUnits) {
   var contained, eObj, end, expander, expr, isSetter, length, matchParens, mode, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, tailingUnit, type, types, unit, units, _ref, _ref1;
   if (top == null) {
     top = true;
+  }
+  if (suppressUnits == null) {
+    suppressUnits = false;
   }
   expander = $wf.$parser.expressionExpander;
   matchParens = window.fashion.$parser.matchParenthesis;
@@ -1241,7 +1252,7 @@ window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, 
   if (isSetter) {
     unit = void 0;
   }
-  script = $wf.$parser.wrapExpressionScript(script, top, type, unit);
+  script = $wf.$parser.wrapExpressionScript(script, top, type, unit, suppressUnits);
   expr = new Expression(script, type, unit, mode);
   if (top) {
     expr.generate();
@@ -1249,9 +1260,9 @@ window.fashion.$parser.parseExpression = function(expString, linkId, parseTree, 
   return expr;
 };
 
-window.fashion.$parser.wrapExpressionScript = function(script, top, type, unit) {
+window.fashion.$parser.wrapExpressionScript = function(script, top, type, unit, suppressUnits) {
   if (top) {
-    if (unit && typeof unit === "string") {
+    if (!suppressUnits && unit && typeof unit === "string") {
       return "return (" + script + ") + '" + unit + "'";
     } else {
       return "return " + script;
@@ -2648,6 +2659,9 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements"], {
     sheet.setAttribute("id", "" + FASHION.config.individualCSSID);
     document.head.appendChild(sheet);
     FASHION.individualSheet = sheet.sheet;
+    if (!FASHION.individualSheet.rules) {
+      FASHION.individualSheet.rules = FASHION.individualSheet.cssRules;
+    }
     _ref = FASHION.individual;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       selector = _ref[_i];
@@ -3205,6 +3219,22 @@ window.fashion.$globals = {
         window.mouseX = e.pageX;
         return onchange();
       });
+    }
+  }),
+  pixelratio: new GlobalModule({
+    type: $wf.$type.Number,
+    get: function() {
+      return window.devicePixelRatio;
+    },
+    watch: function(onchange) {
+      var lastRatio;
+      lastRatio = window.devicePixelRatio;
+      return setInterval((function() {
+        if (window.devicePixelRatio !== lastRatio) {
+          onchange();
+        }
+        return lastRatio = window.devicePixelRatio;
+      }), 1000);
     }
   })
 };

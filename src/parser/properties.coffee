@@ -115,13 +115,13 @@ window.fashion.$parser.identifyExpression = () ->
 
 
 # Convert a property value into a linked object or expression, if necessary
-window.fashion.$parser.parseSingleValue = (value, linkId, parseTree) ->
+window.fashion.$parser.parseSingleValue = (value, linkId, parseTree, isVar = false) ->
 	if !value or typeof value isnt 'string' then return value
 
 	# Check to see if it's an expression
 	if value.match $wf.$parser.identifyExpression()
 		return window.fashion.$parser.parseExpression(value, linkId, parseTree,
-			window.fashion.$functions, window.fashion.$globals)
+			window.fashion.$functions, window.fashion.$globals, true, isVar)
 
 	# Nope, this is just a normal property
 	return value

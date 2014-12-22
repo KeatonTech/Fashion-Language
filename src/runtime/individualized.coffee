@@ -11,6 +11,10 @@ $wf.addRuntimeModule "individualized", ["selectors", "elements"],
 		document.head.appendChild sheet
 		FASHION.individualSheet = sheet.sheet
 
+		# Fix for firefox
+		if !FASHION.individualSheet.rules
+			FASHION.individualSheet.rules = FASHION.individualSheet.cssRules
+
 		# Figure out which elements each selector applies to
 		@updateSelectorElements(selector) for selector in FASHION.individual
 
