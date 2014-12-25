@@ -2,9 +2,9 @@
 window.fashion.$parser =
 
 	# Entry point into the parser
-	parse: (fashionText) ->
+	parse: (fashionText, extendsTree) ->
 
-		parseTree = new ParseTree()
+		parseTree = new ParseTree(extendsTree)
 
 		# Remove comments
 		fashionText = $wf.$parser.removeComments fashionText
@@ -21,7 +21,6 @@ window.fashion.$parser =
 
 
 # Remove comments
-# TODO: Unit tests for this
 window.fashion.$parser.removeComments = (fashionText) ->
 	return fashionText.replace /\/\*.*?\*\/|\/\/.*?\n/g, ""
 

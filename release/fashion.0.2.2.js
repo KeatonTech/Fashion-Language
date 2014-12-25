@@ -30,7 +30,7 @@ THE SOFTWARE.
 var $wf, wait;
 
 $wf = window.fashion = {
-  version: "0.2.1",
+  version: "0.2.2",
   url: "http://writefashion.org",
   author: "Keaton Brandt",
   mimeType: "text/x-fashion",
@@ -339,8 +339,8 @@ window.fashion.$stringifyArray = function(array) {
 var ParseTree;
 
 ParseTree = (function() {
-  function ParseTree() {
-    this.variables = {};
+  function ParseTree(extendsTree) {
+    this.variables = extendsTree.variables || {};
     this.selectors = [];
     this.blocks = [];
     this.scripts = [];
@@ -404,7 +404,7 @@ ParseTree = (function() {
 
   ParseTree.prototype.addVariableBinding = function(bindingLink, variableName) {
     if (!this.bindings.variables[variableName]) {
-      throw new Error("Variable " + variableName + " does not exist or cannot be bound.");
+      this.bindings.variables[variableName] = [];
     }
     return this.bindings.variables[variableName].push(bindingLink);
   };
@@ -493,7 +493,7 @@ var Selector;
 
 Selector = (function() {
   function Selector(name, mode) {
-    this.name = name;
+    this.rawName = this.name = name;
     this.properties = [];
     this.index = -1;
     if (mode) {
@@ -863,9 +863,9 @@ window.fashion.$loader = {
   }
 };
 window.fashion.$parser = {
-  parse: function(fashionText) {
+  parse: function(fashionText, extendsTree) {
     var i, parseTree, sel, _ref;
-    parseTree = new ParseTree();
+    parseTree = new ParseTree(extendsTree);
     fashionText = $wf.$parser.removeComments(fashionText);
     parseTree = $wf.$parser.parseSections(fashionText, parseTree);
     _ref = parseTree.selectors;
@@ -932,7 +932,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   sq = dq = bt = false;
   acc = "";
   ret = [];
-  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\(\)\"\'\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\(\)\"\'\`\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
+  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\"\'\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\"\'\`\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
   while (token = regex.exec(value)) {
     if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
       ret.push(acc);
@@ -961,7 +961,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
 };
 window.fashion.$parser.parseSections = function(fashionText, parseTree) {
   var blockArgs, regex, segment, startIndex;
-  regex = /([\s]*(\$([\w\-]+)\:[\s]*(.*?)\;|\@([\w\-]+)[\s]*(.*?)[\s]*\{|(.*?)[\s]*?\{)|\{|\})/g;
+  regex = /([\s]*(\$([\w\-]+)\:[\s]*(.*?)[;\n]|\@([\w\-]+)[\s]*(.*?)[\s]*\{|(.*?)[\s]*?\{)|\{|\})/g;
   while (segment = regex.exec(fashionText)) {
     if (segment.length < 8 || !segment[0]) {
       break;
@@ -1006,11 +1006,11 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
       topSel.addToBody(fashionText.substring(segment.index, lastIndex));
     } else if (segment[7]) {
       if (segment[7][0] === "&") {
-        name = topSel.name + segment[7].substr(1);
+        name = topSel.rawName + segment[7].substr(1);
       } else if (segment[7][0] === "~") {
-        name = topSel.name + " " + segment[7].substr(1);
+        name = topSel.rawName + " " + segment[7].substr(1);
       } else {
-        name = topSel.name + " > " + segment[7];
+        name = topSel.rawName + " > " + segment[7];
       }
       selectors.push($wf.$parser.createSelector(parseTree, name));
       selectorStack.push(selectors.length - 1);
@@ -1208,9 +1208,10 @@ window.fashion.$parser.parseExpression = function(expString, bindingLink, parseT
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\(|\)([\S]*))/g;
+  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([\S]*))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
+    eObj = void 0;
     start = section.index;
     length = section[0].length;
     end = start + length;
@@ -1529,12 +1530,16 @@ window.fashion.$processor.blocks = function(parseTree, blocks) {
       addRule: funcs.addRule.bind(0, parseTree),
       addScript: funcs.addScript.bind(0, parseTree),
       parseValue: funcs.parseValue,
-      parse: $wf.$parser.parse,
+      parse: funcs.parseBody.bind(0, parseTree),
       runtimeObject: parseTree.dependencies.blocks[block.type].runtimeObject
     };
     blockObj.compile.call(API, block["arguments"], block.body);
   }
   return parseTree;
+};
+
+window.fashion.$processor.api.parseBody = function(parseTree, body) {
+  return $wf.$parser.parse(body, parseTree);
 };
 window.fashion.$processor.properties = function(parseTree, propertyModules) {
   var API, funcs, index, property, propertyModule, selector, _i, _j, _len, _len1, _ref, _ref1;
@@ -1601,8 +1606,12 @@ window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime
   }
 };
 
-window.fashion.$shared.evaluate = function(valueObject, variables, globals, funcs, runtime, element) {
-  var evaluateSingleValue, value, vi, vo;
+window.fashion.$shared.evaluate = function(valueObject, variables, globals, funcs, runtime, element, cssMode) {
+  var evaluateSingleValue, getSuffix, isImportant, string, value, vi, vo;
+  if (cssMode == null) {
+    cssMode = true;
+  }
+  isImportant = false;
   evaluateSingleValue = (function(_this) {
     return function(valueObject) {
       var v, val, varLookup, varObjects, _i, _len;
@@ -1625,6 +1634,9 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
       };
       if (valueObject.evaluate) {
         val = valueObject.evaluate(varLookup, globals, funcs, runtime, element);
+        if (valueObject.important === true) {
+          isImportant = true;
+        }
         if (valueObject.setter) {
           for (_i = 0, _len = varObjects.length; _i < _len; _i++) {
             v = varObjects[_i];
@@ -1639,6 +1651,13 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
       }
     };
   })(this);
+  getSuffix = function(isImportant) {
+    if (isImportant && cssMode) {
+      return " !important";
+    } else {
+      return "";
+    }
+  };
   if (valueObject instanceof Array) {
     if (valueObject.length === 0) {
       return '';
@@ -1660,9 +1679,9 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
           })()).join(' '));
         }
         return _results;
-      })()).join(', ');
+      })()).join(', ') + getSuffix(isImportant);
     } else {
-      return ((function() {
+      string = ((function() {
         var _i, _len, _results;
         _results = [];
         for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
@@ -1671,9 +1690,10 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         }
         return _results;
       })()).join(' ');
+      return string + getSuffix(isImportant);
     }
   } else {
-    return evaluateSingleValue(valueObject);
+    return evaluateSingleValue(valueObject) + getSuffix(isImportant);
   }
 };
 var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
@@ -1911,6 +1931,9 @@ window.fashion.$actualizer.regroupProperties = function(parseTree) {
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     selector = _ref[_i];
     properties = selector.properties;
+    if (!properties || properties.length === 0) {
+      continue;
+    }
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.dynamic);
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.live);
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.individual);

@@ -116,11 +116,19 @@
       expect(result.variables["selected"][".menu"]["value"]).toEqual("main");
       return expect(result.variables["selected"][".menu"]["type"]).toEqual(type.String);
     });
-    return it("should allow variables within nested selectors", function() {
+    it("should allow variables within nested selectors", function() {
       var result;
       result = parse(".menu {\n	.main {\n		$isSelected: true;\n	}\n}");
       expect(result.variables["isSelected"][".menu > .main"]["value"]).toEqual("true");
       return expect(result.variables["isSelected"][".menu > .main"]["type"]).toEqual(type.Unknown);
+    });
+    return it("should accept variable definitions without semicolons", function() {
+      var result;
+      result = parse("$var1: 1px\n.menu {\n	$var2: 10px\n}");
+      expect(result.variables["var1"][0]["value"]).toEqual(1);
+      expect(result.variables["var1"][0]["type"]).toEqual(type.Number);
+      expect(result.variables["var2"][".menu"]["value"]).toEqual(10);
+      return expect(result.variables["var2"][".menu"]["type"]).toEqual(type.Number);
     });
   };
 
@@ -133,6 +141,14 @@
     it("should parse complex selectors", function() {
       var result;
       result = parse("* {height: 30px;}\nul.test td:last-child {\n	background: black;\n}");
+      expect(result.selectors[0].name).toBe("*");
+      expect(result.selectors[0].properties[0].value).toBe("30px");
+      expect(result.selectors[1].name).toBe("ul.test td:last-child");
+      return expect(result.selectors[1].properties[0].value).toBe("black");
+    });
+    it("should filter out comments", function() {
+      var result;
+      result = parse("// This is a one-line comment\n* {height: 30px;}\n\n/*  \nThis is a multiline-style comment\nof the sort you might find in JS\n*/\nul.test td:last-child {\n\n	/*|*| Mozilla-style comment\n	\*/\n	background: black;\n}");
       expect(result.selectors[0].name).toBe("*");
       expect(result.selectors[0].properties[0].value).toBe("30px");
       expect(result.selectors[1].name).toBe("ul.test td:last-child");

@@ -15,7 +15,7 @@ window.fashion.$processor.blocks = (parseTree, blocks) ->
 			addRule: funcs.addRule.bind 0, parseTree
 			addScript: funcs.addScript.bind 0, parseTree
 			parseValue: funcs.parseValue,
-			parse: $wf.$parser.parse,
+			parse: funcs.parseBody.bind 0, parseTree
 			runtimeObject: parseTree.dependencies.blocks[block.type].runtimeObject
 
 		# Run the block module's compile function
@@ -23,3 +23,8 @@ window.fashion.$processor.blocks = (parseTree, blocks) ->
 
 	# Pass it back
 	return parseTree
+
+
+# Used for parsing the interior of blocks
+window.fashion.$processor.api.parseBody = (parseTree, body) ->
+	$wf.$parser.parse body, parseTree

@@ -103,11 +103,39 @@ window.fashiontests.processor.blocks = ()->
 
 		# Parse and process a file with the block
 		parseTree = process parse("""
-			$borderWidth: 1px;
 			@parserTest {
 				$innerBlockVariable: 10px;
 				.innerBlockSelector {
 					innerBlockProperty: $innerBlockVariable;
+				}
+			}
+			""")
+
+		# Make sure the test can't cheat by not calling the function with expectations
+		expect(compileSpy).toHaveBeenCalled()
+
+
+	it "should be able to use variables defined outside its body", ()->
+
+		# Create a fake compile function
+		compileSpy = jasmine.createSpy("Compile Block").and.callFake (args, body)->
+
+			# Parse the block's body as its own Fashion document
+			parseTree = @parse body
+
+			# Make sure the parse tree gave us useful results
+			expect(parseTree.variables["borderWidth"][0].value).toBe(1)
+			expect(parseTree.selectors[0].name).toBe(".innerBlockSelector")
+			expect(parseTree.selectors[0].properties[0].name).toBe("border")
+
+		$wf.addBlock "parserVariableTest", compileSpy
+
+		# Parse and process a file with the block
+		parseTree = process parse("""
+			$borderWidth: 1px;
+			@parserVariableTest {
+				.innerBlockSelector {
+					border: $borderWidth solid black;
 				}
 			}
 			""")

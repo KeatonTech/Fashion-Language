@@ -18,6 +18,31 @@ window.fashiontests.parser.selectors = ()->
 		expect(result.selectors[1].properties[0].value).toBe("black")
 
 
+	it "should filter out comments", ()->
+		result = parse("""
+						// This is a one-line comment
+						* {height: 30px;}
+
+						/*  
+						This is a multiline-style comment
+						of the sort you might find in JS
+						*/
+						ul.test td:last-child {
+
+							/*\
+							|*| Mozilla-style comment
+							\*/
+							background: black;
+						}
+						""")
+
+		expect(result.selectors[0].name).toBe("*")
+		expect(result.selectors[0].properties[0].value).toBe("30px")
+
+		expect(result.selectors[1].name).toBe("ul.test td:last-child")
+		expect(result.selectors[1].properties[0].value).toBe("black")
+
+
 	it "should parse nested selectors", ()->
 		result = parse("""
 						.outer {

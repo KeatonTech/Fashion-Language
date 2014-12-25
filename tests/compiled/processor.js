@@ -54,7 +54,7 @@ window.fashiontests.processor.blocks = function() {
     expect(parseTree.selectors[0].properties[0].value[0].script).toBeDefined();
     return expect(parseTree.bindings.variables["borderWidth"][0]).toEqual([0, 0]);
   });
-  return it("should be able to parse its body as a full fashion document", function() {
+  it("should be able to parse its body as a full fashion document", function() {
     var compileSpy, parseTree;
     compileSpy = jasmine.createSpy("Compile Block").and.callFake(function(args, body) {
       var parseTree;
@@ -65,7 +65,20 @@ window.fashiontests.processor.blocks = function() {
       return expect(parseTree.selectors[0].properties[0].value.script).toBeDefined();
     });
     $wf.addBlock("parserTest", compileSpy);
-    parseTree = process(parse("$borderWidth: 1px;\n@parserTest {\n	$innerBlockVariable: 10px;\n	.innerBlockSelector {\n		innerBlockProperty: $innerBlockVariable;\n	}\n}"));
+    parseTree = process(parse("@parserTest {\n	$innerBlockVariable: 10px;\n	.innerBlockSelector {\n		innerBlockProperty: $innerBlockVariable;\n	}\n}"));
+    return expect(compileSpy).toHaveBeenCalled();
+  });
+  return it("should be able to use variables defined outside its body", function() {
+    var compileSpy, parseTree;
+    compileSpy = jasmine.createSpy("Compile Block").and.callFake(function(args, body) {
+      var parseTree;
+      parseTree = this.parse(body);
+      expect(parseTree.variables["borderWidth"][0].value).toBe(1);
+      expect(parseTree.selectors[0].name).toBe(".innerBlockSelector");
+      return expect(parseTree.selectors[0].properties[0].name).toBe("border");
+    });
+    $wf.addBlock("parserVariableTest", compileSpy);
+    parseTree = process(parse("$borderWidth: 1px;\n@parserVariableTest {\n	.innerBlockSelector {\n		border: $borderWidth solid black;\n	}\n}"));
     return expect(compileSpy).toHaveBeenCalled();
   });
 };

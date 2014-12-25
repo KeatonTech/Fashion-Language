@@ -20,6 +20,19 @@ window.fashiontests.actualizer.css = ()->
 		expect(css).toBe(cssString)
 
 
+	it 'should maintain the !important tag', () ->
+		{css} = actualize process parse """
+			$width: 100px;
+			body {
+				background-color: blue !important;
+				width: $width / 2 !important
+			}
+			"""
+
+		cssString = 'body {background-color: blue !important;}\nbody {width: 50px !important;}\n'
+		expect(css).toBe(cssString)
+
+
 	it 'should be able to lookup variable values', () ->
 		{css} = actualize process parse """
 			$minHeight: 100px;
@@ -99,6 +112,30 @@ window.fashiontests.actualizer.css = ()->
 
 			"""
 
+		expect(css).toBe(cssString)
+
+
+	it 'should generate multi-part properties with embedded expressions', () ->
+		{css} = actualize process parse """
+			$borderWidth: 1px;
+			body {
+				border: $borderWidth solid black;
+			}
+			"""
+
+		cssString = 'body {border: 1px solid black;}\n'
+		expect(css).toBe(cssString)
+
+
+	it 'should generate multiple multi-part properties with embedded expressions', () ->
+		{css} = actualize process parse """
+			$borderWidth: 1px;
+			body {
+				border: $borderWidth solid black, $borderWidth * 2 solid red;
+			}
+			"""
+
+		cssString = 'body {border: 1px solid black, 2px solid red;}\n'
 		expect(css).toBe(cssString)
 
 

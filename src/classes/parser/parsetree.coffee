@@ -9,10 +9,10 @@
 class ParseTree
 
 	# Create an empty parse tree
-	constructor: ()->
+	constructor: (extendsTree)->
 
 		# The components that make up a Fashion document
-		@variables = {}
+		@variables = extendsTree.variables || {}
 		@selectors = []
 		@blocks = []
 		@scripts = []
@@ -63,8 +63,7 @@ class ParseTree
 
 	# Variable bindings can only happen to variables that already exist
 	addVariableBinding: (bindingLink, variableName) ->
-		if !@bindings.variables[variableName]
-			throw new Error "Variable #{variableName} does not exist or cannot be bound."
+		if !@bindings.variables[variableName] then @bindings.variables[variableName] = []
 		@bindings.variables[variableName].push bindingLink
 
 	# Global bindings are fairly straightforward

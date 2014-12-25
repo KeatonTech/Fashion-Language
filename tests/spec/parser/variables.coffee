@@ -145,3 +145,19 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["isSelected"][".menu > .main"]["type"]).toEqual type.Unknown
 
 
+	it "should accept variable definitions without semicolons", ()->
+
+		result = parse( """
+						$var1: 1px
+						.menu {
+							$var2: 10px
+						}
+						""")
+
+		expect(result.variables["var1"][0]["value"]).toEqual(1);
+		expect(result.variables["var1"][0]["type"]).toEqual type.Number
+
+		expect(result.variables["var2"][".menu"]["value"]).toEqual(10);
+		expect(result.variables["var2"][".menu"]["type"]).toEqual type.Number
+
+

@@ -24,7 +24,8 @@ window.fashion.$shared.getVariable =
 
 # Turn a value object into an actual string value for the sheet
 window.fashion.$shared.evaluate =
-(valueObject, variables, globals, funcs, runtime, element) ->
+(valueObject, variables, globals, funcs, runtime, element, cssMode = true) ->
+	isImportant = false
 
 	# Evaluates a single value, not an array
 	evaluateSingleValue = (valueObject) =>
@@ -43,6 +44,7 @@ window.fashion.$shared.evaluate =
 		# Handle expressions
 		if valueObject.evaluate
 			val = valueObject.evaluate varLookup, globals, funcs, runtime, element
+			if valueObject.important is true then isImportant = true
 
 			# Check to see if the expression changed any variable values
 			if valueObject.setter
@@ -54,6 +56,8 @@ window.fashion.$shared.evaluate =
 		# Handle valued objects (used with transitiong)
 		else if valueObject.value then return valueObject.value
 
+	# Get the suffix to use on the property, but leave it out if we're not in 'css mode'
+	getSuffix = (isImportant) -> if isImportant and cssMode then " !important" else ""
 
 	# Check to see if this is an array of values
 	if valueObject instanceof Array
@@ -63,12 +67,12 @@ window.fashion.$shared.evaluate =
 		if valueObject[0] instanceof Array
 			return (
 				(evaluateSingleValue(vi) for vi in vo).join(' ') for vo in valueObject
-			).join(', ')
+			).join(', ') + getSuffix(isImportant)
 
 		# We have a multi-value property
 		else
-			return (evaluateSingleValue(value) for value in valueObject).join(' ')
+			string = (evaluateSingleValue(value) for value in valueObject).join(' ')
+			return string + getSuffix(isImportant)
 
 	# Nope, just one value
-	else return evaluateSingleValue(valueObject);
-
+	else return evaluateSingleValue(valueObject) + getSuffix(isImportant)

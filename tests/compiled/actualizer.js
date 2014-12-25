@@ -174,6 +174,12 @@
       cssString = 'body {background-color: blue;width: 100%;content: "body string";}\n';
       return expect(css).toBe(cssString);
     });
+    it('should maintain the !important tag', function() {
+      var css, cssString;
+      css = actualize(process(parse("$width: 100px;\nbody {\n	background-color: blue !important;\n	width: $width / 2 !important\n}"))).css;
+      cssString = 'body {background-color: blue !important;}\nbody {width: 50px !important;}\n';
+      return expect(css).toBe(cssString);
+    });
     it('should be able to lookup variable values', function() {
       var css, cssString;
       css = actualize(process(parse("$minHeight: 100px;\nbody {\n	width:100%;\n	min-height: $minHeight;\n}"))).css;
@@ -202,6 +208,18 @@
       var css, cssString;
       css = actualize(process(parse("$height: 100px;\nbody {\n	width: $height * 2;\n	height: $height;\n	color: @self.color;\n}"))).css;
       cssString = "body {width: 200px;height: 100px;}\n";
+      return expect(css).toBe(cssString);
+    });
+    it('should generate multi-part properties with embedded expressions', function() {
+      var css, cssString;
+      css = actualize(process(parse("$borderWidth: 1px;\nbody {\n	border: $borderWidth solid black;\n}"))).css;
+      cssString = 'body {border: 1px solid black;}\n';
+      return expect(css).toBe(cssString);
+    });
+    it('should generate multiple multi-part properties with embedded expressions', function() {
+      var css, cssString;
+      css = actualize(process(parse("$borderWidth: 1px;\nbody {\n	border: $borderWidth solid black, $borderWidth * 2 solid red;\n}"))).css;
+      cssString = 'body {border: 1px solid black, 2px solid red;}\n';
       return expect(css).toBe(cssString);
     });
     it('should generate the CSS for transitions', function() {
