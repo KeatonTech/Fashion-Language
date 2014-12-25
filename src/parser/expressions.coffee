@@ -37,12 +37,13 @@ window.fashion.$parser.parseExpression =
 			\d+(\.\d+)*)			# Number with unit (decimal in middle)
 			[a-zA-Z]{1,4})|			# Number with unit (unit)
 			([\w\-\@\$]*)\(|		# Function definition
-			\(|\)([\S]*)			# Track depth and pull out function units
+			\)([\S]*)				# Pull out function units
 			)///g
 	
 	# Handle each piece
 	shouldBreak = false
 	while !shouldBreak and section = regex.exec expString
+		eObj = undefined
 		start = section.index; length = section[0].length; end = start + length;
 
 		# Sets a local variable (top-level or scoped)

@@ -30,7 +30,7 @@ THE SOFTWARE.
 var $wf, wait;
 
 $wf = window.fashion = {
-  version: "0.2.1",
+  version: "0.2",
   url: "http://writefashion.org",
   author: "Keaton Brandt",
   mimeType: "text/x-fashion",
@@ -932,7 +932,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   sq = dq = bt = false;
   acc = "";
   ret = [];
-  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\(\)\"\'\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\(\)\"\'\`\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
+  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\"\'\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\"\'\`\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
   while (token = regex.exec(value)) {
     if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
       ret.push(acc);
@@ -1208,9 +1208,10 @@ window.fashion.$parser.parseExpression = function(expString, bindingLink, parseT
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\(|\)([\S]*))/g;
+  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([\S]*))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
+    eObj = void 0;
     start = section.index;
     length = section[0].length;
     end = start + length;
@@ -1911,6 +1912,9 @@ window.fashion.$actualizer.regroupProperties = function(parseTree) {
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     selector = _ref[_i];
     properties = selector.properties;
+    if (!properties || properties.length === 0) {
+      continue;
+    }
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.dynamic);
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.live);
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.individual);

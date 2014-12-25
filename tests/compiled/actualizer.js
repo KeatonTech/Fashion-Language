@@ -180,6 +180,18 @@
       cssString = "body {width: 100%;}\nbody {min-height: 100px;}\n";
       return expect(css).toBe(cssString);
     });
+    it('should ignore empty selectors', function() {
+      var css, cssString;
+      css = actualize(process(parse("body {\n	background-color: blue;\n	width: 100%;\n	content: \"body string\";\n}\np {}"))).css;
+      cssString = 'body {background-color: blue;width: 100%;content: "body string";}\n';
+      return expect(css).toBe(cssString);
+    });
+    it('should allow nesting-only selectors', function() {
+      var css, cssString;
+      css = actualize(process(parse("body {\n	p {\n		background-color: blue;\n		width: 100%;\n		content: \"body string\";\n	}\n}"))).css;
+      cssString = 'body > p {background-color: blue;width: 100%;content: "body string";}\n';
+      return expect(css).toBe(cssString);
+    });
     it('should be able to evaluate expressions', function() {
       var css, cssString;
       css = actualize(process(parse("$height: 100px;\nbody {\n	width: $height * 2;\n	height: $height;\n}"))).css;

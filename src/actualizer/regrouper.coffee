@@ -8,6 +8,7 @@ window.fashion.$actualizer.regroupProperties = (parseTree) ->
 	# For each original selector
 	for selector in parseTree.selectors
 		properties = selector.properties
+		if !properties or properties.length is 0 then continue
 
 		# Backwards passes through the properties to try and group like modes together
 		# The order of these passes essentially determines the order of the properties

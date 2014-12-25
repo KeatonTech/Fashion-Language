@@ -269,3 +269,20 @@ window.fashiontests.parser.expressions = ()->
 		expect(expression.type).toBe($wf.$type.Number);
 		expect(expression.unit).toBe("px");
 		
+
+	it "should deal with parenthesis in expressions", ()->
+		result = parse( """
+						$padding: 10px;
+						$contentWidth: 100px;
+						div {
+							width: @width / 2 - ($contentWidth - $padding) / 2
+						}
+						""")
+
+		locals = (name) -> switch name 
+			when "contentWidth" then value: 100
+			when "padding" then value: 10
+		globals = {width: {get: () -> 400}}
+		expression = result.selectors[0].properties[0].value
+		expressionResult = expression.evaluate locals, globals, $wf.$functions
+		expect(expressionResult).toBe("155px")

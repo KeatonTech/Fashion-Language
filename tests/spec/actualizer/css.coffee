@@ -38,6 +38,35 @@ window.fashiontests.actualizer.css = ()->
 		expect(css).toBe(cssString)
 
 
+	it 'should ignore empty selectors', () ->
+		{css} = actualize process parse """
+			body {
+				background-color: blue;
+				width: 100%;
+				content: "body string";
+			}
+			p {}
+			"""
+
+		cssString = 'body {background-color: blue;width: 100%;content: "body string";}\n'
+		expect(css).toBe(cssString)
+
+
+	it 'should allow nesting-only selectors', () ->
+		{css} = actualize process parse """
+			body {
+				p {
+					background-color: blue;
+					width: 100%;
+					content: "body string";
+				}
+			}
+			"""
+
+		cssString = 'body > p {background-color: blue;width: 100%;content: "body string";}\n'
+		expect(css).toBe(cssString)
+
+
 	it 'should be able to evaluate expressions', () ->
 		{css} = actualize process parse """
 			$height: 100px;
