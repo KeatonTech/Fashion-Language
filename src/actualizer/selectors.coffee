@@ -47,7 +47,9 @@ window.fashion.$actualizer.filterSelectors = (allSelectors, filterMode) ->
 
 
 # Add each individual selector to the runtime data
-window.fashion.$actualizer.addIndividualProperties = (rData, selectors, offsets) ->
+window.fashion.$actualizer.addIndividualProperties = (selectors, offsets) ->
+	individualProperties = []
 	for id, selector of selectors when selector.mode is $wf.$runtimeMode.individual
 		selector.index = id - offsets[id]
-		rData.addIndividualSelector selector
+		individualProperties.push selector
+	return individualProperties

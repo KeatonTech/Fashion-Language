@@ -43,9 +43,7 @@ $wf = window.fashion = {
 	runtimeObject: "FASHION",
 
 	# Generated JS runtime
-	runtimeModules: [
-		"watchVariables"
-	]
+	runtimeModules: []
 }
 
 # Add settings that will be sent to the runtime

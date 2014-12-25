@@ -27,5 +27,13 @@ window.fashion.$functions =
 				if arg.value > maxSoFar then maxSoFar = arg.value
 			return maxSoFar
 
+	toggle: new FunctionModule
+		output: $wf.$type.Number
+		unitFrom: 0
+		evaluate: (currentVar, offValue, onValue) ->
+			if currentVar.value is offValue.value
+				return onValue.value
+			else return offValue.value
+
 #@prepros-append ./binding.coffee
 #@prepros-append ./color.coffee

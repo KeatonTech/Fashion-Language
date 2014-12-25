@@ -226,7 +226,7 @@
     actualize = function(parseTree) {
       return window.fashion.$actualizer.actualize(parseTree, 0);
     };
-    return it('should include all necessary runtime data', function() {
+    it('should include all necessary runtime data', function() {
       var js;
       js = actualize(process(parse("$colorVar: blue;\nbody {\n	background-color: $colorVar;\n	width: 100%;\n}"))).js;
       window.FASHION = {};
@@ -236,6 +236,88 @@
       expect(window.FASHION.selectors[1].name).toBe('body');
       expect(window.FASHION.selectors[1].properties.length).toBe(1);
       return expect(window.FASHION.selectors[1].properties[0].name).toBe('background-color');
+    });
+    it('should include all necessary basic runtime functions', function() {
+      var js;
+      js = actualize(process(parse("$colorVar: blue;\nbody {\n	background-color: $colorVar;\n	width: 100%;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      expect(window.FASHION.runtime.evaluate).toBeDefined();
+      expect(window.FASHION.runtime.setVariable).toBeDefined();
+      expect(window.FASHION.runtime.$initWatchers).toBeDefined();
+      expect(window.FASHION.runtime.regenerateSelector).toBeDefined();
+      expect(window.FASHION.runtime.throwError).toBeDefined();
+      expect(window.FASHION.runtime.determineType).toBeDefined();
+      expect(window.FASHION.runtime.regenerateIndividualSelector).not.toBeDefined();
+      expect(window.FASHION.runtime.createElementObject).not.toBeDefined();
+      expect(window.FASHION.runtime.updateGlobal).not.toBeDefined();
+      return expect(window.FASHION.runtime.$initializeIndividualProperties).not.toBeDefined();
+    });
+    it('should include all necessary runtime functions for individual properties', function() {
+      var js;
+      js = actualize(process(parse("body {\n	background-color: @self.color;\n	width: 100%;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      expect(window.FASHION.runtime.evaluate).toBeDefined();
+      expect(window.FASHION.runtime.regenerateSelector).toBeDefined();
+      expect(window.FASHION.runtime.throwError).toBeDefined();
+      expect(window.FASHION.runtime.regenerateIndividualSelector).toBeDefined();
+      expect(window.FASHION.runtime.createElementObject).toBeDefined();
+      expect(window.FASHION.runtime.$initializeIndividualProperties).toBeDefined();
+      expect(window.FASHION.runtime.determineType).not.toBeDefined();
+      expect(window.FASHION.runtime.setVariable).not.toBeDefined();
+      expect(window.FASHION.runtime.$initWatchers).not.toBeDefined();
+      return expect(window.FASHION.runtime.updateGlobal).not.toBeDefined();
+    });
+    it('should include all necessary runtime functions for globals', function() {
+      var js;
+      js = actualize(process(parse("$bg: red;\nbody {\n	background-color: $bg;\n	width: @width;\n}"))).js;
+      window.FASHION = {};
+      window.FSREADYTEST = function(func) {};
+      eval(js.replace(/FSREADY\(/g, "FSREADYTEST("));
+      expect(window.FASHION.runtime.evaluate).toBeDefined();
+      expect(window.FASHION.runtime.regenerateSelector).toBeDefined();
+      expect(window.FASHION.runtime.throwError).toBeDefined();
+      expect(window.FASHION.runtime.updateGlobal).toBeDefined();
+      expect(window.FASHION.runtime.determineType).toBeDefined();
+      expect(window.FASHION.runtime.setVariable).toBeDefined();
+      expect(window.FASHION.runtime.$initWatchers).toBeDefined();
+      expect(window.FASHION.runtime.regenerateIndividualSelector).not.toBeDefined();
+      expect(window.FASHION.runtime.createElementObject).not.toBeDefined();
+      return expect(window.FASHION.runtime.$initializeIndividualProperties).not.toBeDefined();
+    });
+    it('should include a list of individual selectors', function() {
+      var divIndividual, js, pIndividual;
+      js = actualize(process(parse("div {\n	background-color: @self.color;\n	on-click: max(0,1)px;\n}\np {\n	pin: center;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      divIndividual = window.FASHION.individual[0];
+      expect(divIndividual.properties[0].name).toBe("background-color");
+      expect(divIndividual.properties[1].name).toBe("on-click");
+      pIndividual = window.FASHION.individual[1];
+      expect(pIndividual.properties[0].name).toBe("top");
+      return expect(pIndividual.properties[1].name).toBe("left");
+    });
+    it('should properly map variable bindings to the separated CSS selectors', function() {
+      var js;
+      js = actualize(process(parse("$padding: 10px;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding: $padding;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      return expect(FASHION.variables["padding"].dependents).toEqual([1, 3]);
+    });
+    it('should properly map variable bindings to the individual CSS selectors', function() {
+      var js;
+      js = actualize(process(parse("$padding: 10px;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding-left: @self.leftOffset + $padding;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      return expect(FASHION.variables["padding"].dependents).toEqual([1, 'i0']);
+    });
+    return it('should properly map global bindings to the separated CSS selectors', function() {
+      var js;
+      js = actualize(process(parse("div {\n	width: @height;\n	height: @height;\n	color: white;\n}"))).js;
+      window.FASHION = {};
+      eval(js.replace(/FSREADY\(/g, "FSREADYTEST("));
+      return expect(FASHION.modules.globals["height"].dependents).toEqual([1]);
     });
   };
 

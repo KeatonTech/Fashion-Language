@@ -19,12 +19,14 @@ class Selector
 
 	# When it's parsed, add a property
 	addProperty: (property) ->
-		@body = undefined # No longer needed
+		@body = undefined # Signals that the body is no longer needed
+		if !property.id then property.id = @properties.length
 		@properties.push property
 
 	# Insert a new property in at a given index
 	insertProperty: (property, index) ->
-		@body = undefined # No longer needed
+		@body = undefined # Signals that the body is no longer needed
+		if !property.id then property.id = @properties.length
 		@properties.splice index, 0, property
 
 	# ITERATION

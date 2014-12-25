@@ -6,7 +6,7 @@
 # NOTE(keatontech): Yes, this is a very long function that violates the 40 line rule.
 # I'm accepting suggestions for how to fix that.
 window.fashion.$parser.parseExpression = 
-(expString, linkId, parseTree, funcs, globals, top = true, suppressUnits = false) ->
+(expString, bindingLink, parseTree, funcs, globals, top = true, suppressUnits = false) ->
 
 	expander = $wf.$parser.expressionExpander
 	matchParens = window.fashion.$parser.matchParenthesis
@@ -47,7 +47,7 @@ window.fashion.$parser.parseExpression =
 
 		# Sets a local variable (top-level or scoped)
 		if section[2]
-			eObj = expander.localVariable section[2], linkId, parseTree, true
+			eObj = expander.localVariable section[2], bindingLink, parseTree, true
 			isSetter = true
 
 		# @self, @this or @parent objects
@@ -55,11 +55,11 @@ window.fashion.$parser.parseExpression =
 
 		# Local variable (top-level or scoped)
 		else if section[5]
-			eObj = expander.localVariable section[5], linkId, parseTree
+			eObj = expander.localVariable section[5], bindingLink, parseTree
 
 		# Global variable
 		else if section[6]
-			eObj = expander.globalVariable section[6], linkId, globals, parseTree
+			eObj = expander.globalVariable section[6], bindingLink, globals, parseTree
 
 		# Number with unit (constant)
 		else if section[7] then eObj = expander.numberWithUnit section[7]
@@ -78,7 +78,7 @@ window.fashion.$parser.parseExpression =
 			if tailingUnit then length += tailingUnit.length
 
 			# Wow this function has a lot of arguments!
-			eObj = expander.function(section[10], contained, tailingUnit, linkId, 
+			eObj = expander.function(section[10], contained, tailingUnit, bindingLink, 
 				parseTree, funcs, globals)
 
 
@@ -171,7 +171,7 @@ window.fashion.$parser.determineExpressionType = (types, units) ->
 window.fashion.$parser.expressionExpander =
 
 	# Expand local variables
-	localVariable: (name, selectorId, parseTree, isSetter = false) ->
+	localVariable: (name, bindingLink, parseTree, isSetter = false) ->
 		vars = parseTree.variables
 		selectors = vars[name]
 		if !selectors then return console.log "[FASHION] Variable $#{name} does not exist."
@@ -191,7 +191,7 @@ window.fashion.$parser.expressionExpander =
 
 		else
 			# Link this variable in the parse tree
-			parseTree.addVariableBinding selectorId, name
+			parseTree.addVariableBinding bindingLink, name
 			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value"
 
 		# Has to account for the fact that variables can also be expressions
@@ -200,14 +200,14 @@ window.fashion.$parser.expressionExpander =
 
 
 	# Expand global variables
-	globalVariable: (name, selectorId, globals, parseTree) ->
+	globalVariable: (name, bindingLink, globals, parseTree) ->
 		name = name.toLowerCase()
 		vObj = globals[name]
 		if !vObj then return console.log "[FASHION] Variable $#{name} does not exist."
 
 		# Add a global-module dependency
 		parseTree.addGlobalDependency name, vObj
-		parseTree.addGlobalBinding selectorId, name
+		parseTree.addGlobalBinding bindingLink, name
 
 		dynamicMode = $wf.$runtimeMode.dynamic
 		script = "g.#{name}.get()"
@@ -245,7 +245,7 @@ window.fashion.$parser.expressionExpander =
 
 
 	# Expand functions, which involves expanding any arguments of theirs into expressions
-	function: (name, argumentsString, inputUnit, linkId, parseTree, funcs, globals) ->
+	function: (name, argumentsString, inputUnit, bindingLink, parseTree, funcs, globals) ->
 		vars = parseTree.variables
 
 		# Make sure the function actually exists before continuing on
@@ -257,7 +257,7 @@ window.fashion.$parser.expressionExpander =
 			args = window.fashion.$parser.splitByTopLevelCommas argumentsString
 			expressions = (for arg in args
 				window.fashion.$parser.parseExpression(
-					arg, linkId, parseTree, funcs, globals, false)
+					arg, bindingLink, parseTree, funcs, globals, false)
 			)
 		else expressions = []
 

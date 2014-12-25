@@ -14,7 +14,7 @@ $wf.addRuntimeModule "types", [],
 	getUnit: window.fashion.$shared.getUnit
 	timeInMs: window.fashion.$shared.timeInMs
 
-$wf.addRuntimeModule "evaluation", ["variables"],
+$wf.addRuntimeModule "evaluation", [],
 	evaluate_Shared: window.fashion.$shared.evaluate
 	evaluate: (value, element) ->
 		@evaluate_Shared(

@@ -62,17 +62,15 @@ class ParseTree
 		@dependencies.properties[name] = moduleObject
 
 	# Variable bindings can only happen to variables that already exist
-	addVariableBinding: (selectorId, variableName) ->
+	addVariableBinding: (bindingLink, variableName) ->
 		if !@bindings.variables[variableName]
 			throw new Error "Variable #{variableName} does not exist or cannot be bound."
-		if selectorId in @bindings.variables[variableName] then return
-		@bindings.variables[variableName].push selectorId
+		@bindings.variables[variableName].push bindingLink
 
 	# Global bindings are fairly straightforward
-	addGlobalBinding: (selectorId, globalName)->
+	addGlobalBinding: (bindingLink, globalName)->
 		if !@bindings.globals[globalName] then @bindings.globals[globalName] = []
-		if selectorId in @bindings.globals[globalName] then return
-		@bindings.globals[globalName].push selectorId
+		@bindings.globals[globalName].push bindingLink
 
 	# Dom bindings are hard to generalize because they can occur relative to a selector
 	# Therefore, we're just storing a big list of them

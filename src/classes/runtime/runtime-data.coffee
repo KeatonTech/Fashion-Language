@@ -9,15 +9,9 @@ class RuntimeData
 
 		# Dependencies
 		@modules = parseTree.dependencies
-		for name,block of @modules.blocks
-			@modules.blocks[name] = block.runtimeObject
 
 		# Stores Fashion Javascript functions
 		@runtime = {}
-
-	addIndividualSelector: (selector) ->
-		if !@individual then @individual = []
-		@individual.push selector
 
 	addRuntimeModule: (runtimeModule) ->
 		for name, func of runtimeModule.functions

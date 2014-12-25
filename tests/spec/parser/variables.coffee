@@ -81,9 +81,9 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["copy"][0]["value"].script).toBeDefined();
 
 		v = (name) -> if name is "main" then value: 10
-		expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("10px");
+		expect(result.variables["copy"][0]["value"].evaluate(v)).toBe(10);
 		v = (name) -> if name is "main" then value: 20
-		expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("20px");
+		expect(result.variables["copy"][0]["value"].evaluate(v)).toBe(20);
 
 		# Check types
 		expect(result.variables["main"][0]["type"]).toEqual(type.Number);
@@ -110,9 +110,9 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["offset"][0]["value"]).toEqual(3);
 
 		v = (name) -> if name is "main" then value: 10 else if "offset" then value: 3
-		expect(result.variables["height"][0]["value"].evaluate(v)).toBe("8px");
+		expect(result.variables["height"][0]["value"].evaluate(v)).toBe(8);
 		v = (name) -> if name is "main" then value: 20 else if "offset" then value: 5
-		expect(result.variables["height"][0]["value"].evaluate(v)).toBe("15px");
+		expect(result.variables["height"][0]["value"].evaluate(v)).toBe(15);
 
 		# Check link
 		expect(result.bindings.variables["main"][0]).toBe("$height");

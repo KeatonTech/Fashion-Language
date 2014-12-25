@@ -28,5 +28,7 @@ $wf.addRuntimeModule "elements", [],
 		# Functionality
 		eObj.addEventListener = (evt, func, bubble) ->
 			DOMElement.addEventListener evt, func, bubble
+		eObj.getAttribute = (attr) -> DOMElement.getAttribute(attr)
+		eObj.setAttribute = (attr, val) -> DOMElement.setAttribute(attr, val)
 
 		return eObj

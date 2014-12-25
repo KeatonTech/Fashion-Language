@@ -17,23 +17,25 @@ window.fashion.$actualizer =
 			$wf.$actualizer.cullIndividuality(selectors, hMap)
 
 		# Javascript doesn't need to know about static blocks, so they are filtered out
-		jsSelectors = $wf.$actualizer.filterSelectors(cssSelectors, rMode.static)
+		jsSels = $wf.$actualizer.filterSelectors(cssSelectors, rMode.static)
+
+		# Get all the individual selectors
+		indSels = $wf.$actualizer.addIndividualProperties selectors, cullOffsets
 
 		# Generate a runtime data object containing everything the Javascript will need
-		runtimeData = $wf.$actualizer.generateRuntimeData parseTree, jsSelectors, cssMap
+		runtimeData = $wf.$actualizer.generateRuntimeData parseTree, jsSels, indSels, cssMap
 
 		# Add bindings (selector dependents) for globals and functions
-		$wf.$actualizer.addBindings runtimeData, parseTree, jsSelectors, cssMap
+		$wf.$actualizer.addBindings runtimeData, parseTree, jsSels, cssMap
 
 		# Figure out what capabilities will be needed in the Javascript
 		capabilities = $wf.$actualizer.determineRuntimeCapabilities runtimeData, selectors
 
-		# Catalog all of the individual-mode properties, if necessary
-		if capabilities.has $wf.$runtimeCapability.individualProps
-			$wf.$actualizer.addIndividualProperties runtimeData, selectors, cullOffsets
-
 		# Add all of the necessary runtime functions to the runtime data
 		$wf.$actualizer.addRuntimeFunctions runtimeData, parseTree, capabilities
+
+		# Remove unnecessary module fields from the runtime data (keeps stuff clean)
+		$wf.$actualizer.removeUnnecessaryModuleData runtimeData
 
 		# Create the CSS file as a string
 		css = $wf.$actualizer.createCSS runtimeData, cssSelectors

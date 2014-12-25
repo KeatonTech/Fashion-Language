@@ -13,7 +13,7 @@ window.fashion.$shared.getVariable =
 		@throwError "Scoped variables are not yet supported"
 
 	# Top-level variables
-	else if vObj.default 
+	else if vObj.default isnt undefined
 		if vObj.default.script
 			return value: @evaluate vObj.default, variables, globals, funcs, runtime, elem
 		else return value: vObj.default 

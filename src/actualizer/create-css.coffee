@@ -37,7 +37,7 @@ window.fashion.$actualizer.cssPrefixes = ["", "-webkit-", "-moz-", "-ms-"]
 
 # Separate transitions into their own properties, grouped by mode
 window.fashion.$actualizer.separateTransitions = (parseTree) ->
-	evalFunction = $wf.$actualizer.evaluationFunction parseTree.variables
+	evalFunction = $wf.$actualizer.evaluationFunction null, parseTree
 	prefixes = window.fashion.$actualizer.cssPrefixes
 
 	# Collect each transition
@@ -86,11 +86,11 @@ window.fashion.$actualizer.transitionStrings = (evalFunction, transitions, runti
 
 
 # Helpful function that returns a function that easily evaluates expressions
-window.fashion.$actualizer.evaluationFunction = (runtimeData) -> (value) ->
+window.fashion.$actualizer.evaluationFunction = (runtimeData, parseTree) -> (value) ->
 	window.fashion.$shared.evaluate.call(window.fashion.$shared, value, 
-		runtimeData.variables,
+		if runtimeData then runtimeData.variables else parseTree.variables,
 		$wf.$globals, $wf.$functions,
-		runtimeData.runtime)
+		if runtimeData then runtimeData.runtime else {})
 
 
 # Templates used in generating CSS

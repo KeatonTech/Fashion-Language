@@ -1,7 +1,7 @@
 window.fashion.$blocks["transition"] = new BlockModule
 
 	# This block does property manipulation, so that must be added to the runtime
-	capabilities: ["selectors", "evaluation"]
+	capabilities: ["selectors", "evaluation", "types"]
 
 	# Compile the block (acts as a parser mostly)
 	compile: (args, body) ->

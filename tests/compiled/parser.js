@@ -63,7 +63,7 @@
           };
         }
       };
-      expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("10px");
+      expect(result.variables["copy"][0]["value"].evaluate(v)).toBe(10);
       v = function(name) {
         if (name === "main") {
           return {
@@ -71,7 +71,7 @@
           };
         }
       };
-      expect(result.variables["copy"][0]["value"].evaluate(v)).toBe("20px");
+      expect(result.variables["copy"][0]["value"].evaluate(v)).toBe(20);
       expect(result.variables["main"][0]["type"]).toEqual(type.Number);
       expect(result.variables["copy"][0]["type"]).toEqual(type.Number);
       expect(result.variables["main"][0]["unit"]).toEqual(unit.Number.px);
@@ -94,7 +94,7 @@
           };
         }
       };
-      expect(result.variables["height"][0]["value"].evaluate(v)).toBe("8px");
+      expect(result.variables["height"][0]["value"].evaluate(v)).toBe(8);
       v = function(name) {
         if (name === "main") {
           return {
@@ -106,7 +106,7 @@
           };
         }
       };
-      expect(result.variables["height"][0]["value"].evaluate(v)).toBe("15px");
+      expect(result.variables["height"][0]["value"].evaluate(v)).toBe(15);
       expect(result.bindings.variables["main"][0]).toBe("$height");
       return expect(result.bindings.variables["offset"][0]).toBe("$height");
     });
@@ -337,8 +337,8 @@
       expect(expression.evaluate(v)).toBe("20px");
       expect(pExpression.evaluate(v)).toBe("16px");
       expect(result.bindings.variables["fullHeight"].length).toBe(2);
-      expect(result.bindings.variables["fullHeight"][0]).toBe(0);
-      return expect(result.bindings.variables["fullHeight"][1]).toBe(1);
+      expect(result.bindings.variables["fullHeight"][0]).toEqual([0, 0]);
+      return expect(result.bindings.variables["fullHeight"][1]).toEqual([1, 0]);
     });
     it("should allow untyped variables in expressions", function() {
       var expression, result, v;
@@ -358,7 +358,7 @@
         };
       };
       expect(expression.evaluate(v)).toBe("3px");
-      return expect(result.bindings.variables["heightDivisor"][0]).toBe(0);
+      return expect(result.bindings.variables["heightDivisor"][0]).toEqual([0, 0]);
     });
     it("should parse functions with no arguments", function() {
       var expression, expressionResult, result;

@@ -54,8 +54,7 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 				@regenerateSelector selectorId
 
 
-# Register the module that gets and sets dynamic variables
-$wf.addRuntimeModule "watchVariables", [],
+	# Register the module that gets and sets dynamic variables
 	$initWatchers: ()->
 		
 		# Create the style object

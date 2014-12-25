@@ -10,7 +10,11 @@ $wf.$extend window.fashion.$properties, new class then constructor: ->
 	]
 
 	applyForEvent = (evt) -> 
-		body = "element.addEventListener('#{evt}', evaluate, false);"
+		body = 	"""
+				if(element.getAttribute('data-hastrigger-#{evt}'))return;
+				element.addEventListener('#{evt}', evaluate, true);
+				element.setAttribute('data-hastrigger-#{evt}', 'true');
+				"""
 		return new Function "element", "value", "evaluate", body
 
 	for evt in events
