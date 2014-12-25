@@ -30,7 +30,7 @@ THE SOFTWARE.
 var $wf, wait;
 
 $wf = window.fashion = {
-  version: "0.2",
+  version: "0.2.1",
   url: "http://writefashion.org",
   author: "Keaton Brandt",
   mimeType: "text/x-fashion",
