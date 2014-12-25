@@ -340,7 +340,7 @@ var ParseTree;
 
 ParseTree = (function() {
   function ParseTree(extendsTree) {
-    this.variables = extendsTree.variables || {};
+    this.variables = extendsTree ? extendsTree.variables : {};
     this.selectors = [];
     this.blocks = [];
     this.scripts = [];
