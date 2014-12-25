@@ -101,4 +101,52 @@ window.fashiontests.parser.selectors = ()->
 		expect(result.bindings.variables["contentDiv"][0]).toBe(0)
 		expect(result.bindings.variables["contentSub"].length).toBe(1)
 		expect(result.bindings.variables["contentSub"][0]).toBe(0)
+
+
+	it "should allow nested selectors inside of variable selectors", ()->
+		result = parse("""
+						$contentDiv: .content;
+						$contentDiv {
+							width: 100px
+							h3 {
+								color: black;
+							}
+						}
+						""")
+
+		# Make sure the properties are marked as dynamic
+		expect(result.selectors[0].properties[0].mode).toBe($wf.$runtimeMode.dynamic)
+
+		# Make sure the expression for the name works
+		v = (name) -> value: ".content"
+		expect(result.selectors[0].name.evaluate(v)).toBe(".content")
+		expect(result.selectors[1].name.evaluate(v)).toBe(".content > h3")
+
+		# Test linkback
+		expect(result.bindings.variables["contentDiv"].length).toBe(2)
+		expect(result.bindings.variables["contentDiv"][0]).toBe(0)
+		expect(result.bindings.variables["contentDiv"][1]).toBe(1)
+
+
+	it "should allow nested variable selectors", ()->
+		result = parse("""
+						$contentDiv: .content;
+						div {
+							width: 100px;
+							$contentDiv {
+								color: black;
+							}
+						}
+						""")
+
+		# Make sure the properties are marked as dynamic
+		expect(result.selectors[1].properties[0].mode).toBe($wf.$runtimeMode.dynamic)
+
+		# Make sure the expression for the name works
+		v = (name) -> value: ".content"
+		expect(result.selectors[1].name.evaluate(v)).toBe("div > .content")
+
+		# Test linkback
+		expect(result.bindings.variables["contentDiv"].length).toBe(1)
+		expect(result.bindings.variables["contentDiv"][0]).toBe(1)
 	

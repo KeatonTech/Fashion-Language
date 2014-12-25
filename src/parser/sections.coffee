@@ -81,11 +81,11 @@ window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, las
 
 			# Selectors that start with & don't have a space
 			if segment[7][0] is "&"
-				name = topSel.name + segment[7].substr(1)
+				name = topSel.rawName + segment[7].substr(1)
 			else if segment[7][0] is "~"
-				name = topSel.name + " " + segment[7].substr(1)
+				name = topSel.rawName + " " + segment[7].substr(1)
 			else
-				name = topSel.name + " > " + segment[7]
+				name = topSel.rawName + " > " + segment[7]
 
 			# Add this selector
 			selectors.push($wf.$parser.createSelector(parseTree, name))

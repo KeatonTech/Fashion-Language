@@ -3,7 +3,7 @@ class Selector
 
 	# Create a selector object, which is really pretty boring
 	constructor: (name, mode) -> 
-		@name = name
+		@rawName = @name = name
 		@properties = []
 		@index = -1
 

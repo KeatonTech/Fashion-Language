@@ -493,7 +493,7 @@ var Selector;
 
 Selector = (function() {
   function Selector(name, mode) {
-    this.name = name;
+    this.rawName = this.name = name;
     this.properties = [];
     this.index = -1;
     if (mode) {
@@ -1006,11 +1006,11 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
       topSel.addToBody(fashionText.substring(segment.index, lastIndex));
     } else if (segment[7]) {
       if (segment[7][0] === "&") {
-        name = topSel.name + segment[7].substr(1);
+        name = topSel.rawName + segment[7].substr(1);
       } else if (segment[7][0] === "~") {
-        name = topSel.name + " " + segment[7].substr(1);
+        name = topSel.rawName + " " + segment[7].substr(1);
       } else {
-        name = topSel.name + " > " + segment[7];
+        name = topSel.rawName + " > " + segment[7];
       }
       selectors.push($wf.$parser.createSelector(parseTree, name));
       selectorStack.push(selectors.length - 1);

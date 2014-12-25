@@ -171,7 +171,7 @@
       expect(result.bindings.variables["contentDiv"].length).toBe(1);
       return expect(result.bindings.variables["contentDiv"][0]).toBe(0);
     });
-    return it("should allow variables to be part of selectors", function() {
+    it("should allow variables to be part of selectors", function() {
       var nameExpression, result, v;
       result = parse("$contentDiv: .content;\n$contentSub: p;\n$contentDiv h3 $contentSub {\n	color: black;\n}");
       expect(result.selectors[0].properties[0].mode).toBe($wf.$runtimeMode.dynamic);
@@ -193,6 +193,34 @@
       expect(result.bindings.variables["contentDiv"][0]).toBe(0);
       expect(result.bindings.variables["contentSub"].length).toBe(1);
       return expect(result.bindings.variables["contentSub"][0]).toBe(0);
+    });
+    it("should allow nested selectors inside of variable selectors", function() {
+      var result, v;
+      result = parse("$contentDiv: .content;\n$contentDiv {\n	width: 100px\n	h3 {\n		color: black;\n	}\n}");
+      expect(result.selectors[0].properties[0].mode).toBe($wf.$runtimeMode.dynamic);
+      v = function(name) {
+        return {
+          value: ".content"
+        };
+      };
+      expect(result.selectors[0].name.evaluate(v)).toBe(".content");
+      expect(result.selectors[1].name.evaluate(v)).toBe(".content > h3");
+      expect(result.bindings.variables["contentDiv"].length).toBe(2);
+      expect(result.bindings.variables["contentDiv"][0]).toBe(0);
+      return expect(result.bindings.variables["contentDiv"][1]).toBe(1);
+    });
+    return it("should allow nested variable selectors", function() {
+      var result, v;
+      result = parse("$contentDiv: .content;\ndiv {\n	width: 100px;\n	$contentDiv {\n		color: black;\n	}\n}");
+      expect(result.selectors[1].properties[0].mode).toBe($wf.$runtimeMode.dynamic);
+      v = function(name) {
+        return {
+          value: ".content"
+        };
+      };
+      expect(result.selectors[1].name.evaluate(v)).toBe("div > .content");
+      expect(result.bindings.variables["contentDiv"].length).toBe(1);
+      return expect(result.bindings.variables["contentDiv"][0]).toBe(1);
     });
   };
 
