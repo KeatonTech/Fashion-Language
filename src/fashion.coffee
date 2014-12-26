@@ -40,6 +40,7 @@ $wf = window.fashion = {
 	cssId: "FASHION-stylesheet"
 
 	# Generated JS properties
+	minifiedObject: "FSMIN",
 	runtimeObject: "FASHION",
 
 	# Generated JS runtime

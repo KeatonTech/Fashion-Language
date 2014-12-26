@@ -14,7 +14,7 @@ window.fashion.$shared.getVariable =
 
 	# Top-level variables
 	else if vObj.default isnt undefined
-		if vObj.default.script
+		if vObj.default.evaluate
 			return value: @evaluate vObj.default, variables, globals, funcs, runtime, elem
 		else return value: vObj.default 
 
@@ -57,7 +57,8 @@ window.fashion.$shared.evaluate =
 		else if valueObject.value then return valueObject.value
 
 	# Get the suffix to use on the property, but leave it out if we're not in 'css mode'
-	getSuffix = (isImportant) -> if isImportant and cssMode then " !important" else ""
+	addSuffix = (property, isImportant) -> 
+		if isImportant and cssMode then property+" !important" else property
 
 	# Check to see if this is an array of values
 	if valueObject instanceof Array
@@ -65,14 +66,14 @@ window.fashion.$shared.evaluate =
 
 		# We have a comma-separated multi-part property 
 		if valueObject[0] instanceof Array
-			return (
+			return addSuffix (
 				(evaluateSingleValue(vi) for vi in vo).join(' ') for vo in valueObject
-			).join(', ') + getSuffix(isImportant)
+			).join(', '), isImportant
 
 		# We have a multi-value property
 		else
 			string = (evaluateSingleValue(value) for value in valueObject).join(' ')
-			return string + getSuffix(isImportant)
+			return addSuffix string, isImportant
 
 	# Nope, just one value
-	else return evaluateSingleValue(valueObject) + getSuffix(isImportant)
+	else return addSuffix evaluateSingleValue(valueObject), isImportant

@@ -16,10 +16,10 @@ $wf.addRuntimeModule "individualized", ["selectors", "elements"],
 			FASHION.individualSheet.rules = FASHION.individualSheet.cssRules
 
 		# Figure out which elements each selector applies to
-		@updateSelectorElements(selector) for selector in FASHION.individual
+		@updateSelectorElements(selector) for id,selector of FASHION.individual
 
 		# Generate each selector
-		@regenerateIndividualSelector(selector) for selector in FASHION.individual
+		@regenerateIndividualSelector(selector) for id,selector of FASHION.individual
 
 
 	# List elements for selector

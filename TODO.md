@@ -1,12 +1,26 @@
-## Features
+# Fashion 0.3
+
+* Node.js-based build system - not relying on makeProduction() in browser
+* Minification system for output JS. Goal is 66% of the current side for downplay.fm.
+* Updated @transition block with support for keyframe ranges
+* Hide objects with individual properties until the page finishes loading
+* A few new modules from the set listed below.
+* 100+ Unit Tests
+
+# Fashion 0.4
 
 * Binding function, with DOM observers to update its value
-* Variable scoping to allow per-element values. (Big changes to parser, actualizer & runtime)
+* Full support for scoped variables - treated as individualized properties.
 * Allow ternaries (CS and JS formats) in expressions
-* Add custom selectors like :dragging and :moving, as well as some of the jQuery stuff like :has()
-* Create a preprocessor in Node so that the compiler doesn't have to be run on the client
-* Custom easing functions using @keyframes
+* Revamped 'pin' and a new fit property, based on binding.
 
+# Future Releases
+
+## Features
+
+* Optimization to convert some scoped variables into CSS selectors
+* Add custom selectors like :dragging and :moving, as well as some of the jQuery stuff like :has()
+* Custom easing functions using @keyframes
 
 ## Built-in Modules
 
@@ -22,7 +36,7 @@
 * @spriteSheet block, creating useful variables to access different images
 
 #### Globals
-* pixelRatio, isMobile, hasTouch
+* isMobile, hasTouch
 * browser.name, browser.version, browser.os
 
 #### Functions

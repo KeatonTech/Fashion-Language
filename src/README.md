@@ -44,6 +44,8 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***create-css.coffee:*** Create the text of a CSS file based on the homogenous selectors and runtime data.
 * ***selectors.coffee:*** After the regrouper, this piece splits selectors up based on what should go where.
 * ***bindings.coffee:*** Map and add 'dependents' objects to modules and variables.
+* ***minifier/runtime-data.coffee:*** Converts the runtime data into a compressed format that gets sent to the client.
+* ***minifier/expander.coffee:*** Code sent to the client that decompresses the minified data into something more usable.
 
 ### ./shared
 ##### Code used to deal with variables and expressions that is used by both the compiler and the outputted code

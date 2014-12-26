@@ -10,6 +10,9 @@ describe "Actualizer", ()->
 	describe "CSS Generator", window.fashiontests.actualizer.css
 
 	# Test the Javascript generator
+	describe "JS Minifier", window.fashiontests.actualizer.minifier
+
+	# Test the Javascript generator
 	describe "JS Generator", window.fashiontests.actualizer.js
 
 
@@ -17,4 +20,5 @@ describe "Actualizer", ()->
 #@prepros-prepend ./regrouper.coffee
 #@prepros-prepend ./transitions.coffee
 #@prepros-prepend ./css.coffee
+#@prepros-prepend ./minifier.coffee
 #@prepros-prepend ./js.coffee

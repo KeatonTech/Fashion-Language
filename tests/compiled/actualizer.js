@@ -248,6 +248,106 @@
 
 }).call(this);
 (function() {
+  window.fashiontests.actualizer.minifier = function() {
+    var $wf, actualize, parse, process;
+    $wf = window.fashion;
+    parse = window.fashion.$parser.parse;
+    process = window.fashion.$processor.process;
+    actualize = function(parseTree) {
+      return window.fashion.$actualizer.actualize(parseTree, 0);
+    };
+    it('should minify selectors and variables', function() {
+      var js;
+      js = actualize(process(parse("$size: 10px;\nbody {\n	padding: $size;\n	width: $size;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      expect(window.FSMIN.length).toBe(3);
+      expect(window.FSMIN[0].length).toBe(1);
+      expect(window.FSMIN[0][0]).toContain('body');
+      expect(window.FSMIN[0][0]).toContain($wf.$runtimeMode.dynamic);
+      expect(window.FSMIN[0][0][4][0]).toContain("padding");
+      expect(window.FSMIN[0][0][4][0][3][0]).toBe("e");
+      expect(window.FSMIN[0][0][4][1]).toContain("width");
+      expect(window.FSMIN[0][0][4][1][3][0]).toBe("e");
+      expect(window.FSMIN[1].length).toBe(1);
+      expect(window.FSMIN[1][0]).toContain('size');
+      expect(window.FSMIN[1][0]).toContain(10);
+      expect(window.FSMIN[1][0]).toContain('px');
+      return expect(window.FSMIN[2].length).toBe(0);
+    });
+    it('should expand minified selectors and variables', function() {
+      var minData, props, rd;
+      minData = [
+        [["s", 0, "body", 1, [["p", "padding", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]], ["p", "width", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]]]]], [
+          [
+            "v", "size", 1, "px", 10, [], {
+              "0": 10
+            }
+          ]
+        ]
+      ];
+      rd = {
+        selectors: {},
+        variables: {}
+      };
+      window.fashion.$actualizer.minifier.expandRuntimeData(minData, rd);
+      expect(rd.selectors[0].name).toBe("body");
+      expect(rd.selectors[0].mode).toBe(1);
+      expect(rd.selectors[0].properties.length).toBe(2);
+      props = rd.selectors[0].properties;
+      expect(props[0].name).toBe("padding");
+      expect(props[0].mode).toBe(1);
+      expect(props[0].value.evaluate).toBeDefined();
+      expect(props[1].name).toBe("width");
+      expect(rd.variables["size"].name).toBe("size");
+      expect(rd.variables["size"]["default"]).toBe(10);
+      expect(rd.variables["size"].unit).toBe("px");
+      return expect(rd.variables["size"].type).toBe($wf.$type.Number);
+    });
+    it('should minify individual properties', function() {
+      var js;
+      js = actualize(process(parse("body {\n	color: @self.color;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      expect(window.FSMIN[2].length).toBe(1);
+      expect(window.FSMIN[2].length).toBe(1);
+      expect(window.FSMIN[2][0]).toContain('body');
+      expect(window.FSMIN[2][0]).toContain($wf.$runtimeMode.individual);
+      expect(window.FSMIN[2][0][4][0]).toContain("color");
+      expect(window.FSMIN[2][0][4][0]).toContain($wf.$runtimeMode.individual);
+      return expect(window.FSMIN[2][0][4][0][3][0]).toBe("e");
+    });
+    it('should expand individual properties', function() {
+      var data, props, rd;
+      data = [[], [], [["s", 0, "body", 7, [["p", "color", 7, ["e", 7, 2, null, "return e.color"]]]]]];
+      rd = {
+        selectors: {},
+        variables: {},
+        individual: {}
+      };
+      window.fashion.$actualizer.minifier.expandRuntimeData(data, rd);
+      expect(rd.individual[0].name).toBe("body");
+      expect(rd.individual[0].mode).toBe(7);
+      expect(rd.individual[0].properties.length).toBe(1);
+      props = rd.individual[0].properties;
+      expect(props[0].name).toBe("color");
+      expect(props[0].mode).toBe(7);
+      return expect(props[0].value.evaluate).toBeDefined();
+    });
+    return it('should minify multipart properties', function() {
+      var js;
+      js = actualize(process(parse("$size: 10px;\nbody {\n	border: $size solid black;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      expect(window.FSMIN[0][0][4][0]).toContain("border");
+      expect(window.FSMIN[0][0][4][0][3][0][0]).toBe("e");
+      expect(window.FSMIN[0][0][4][0][3][1]).toBe("solid");
+      return expect(window.FSMIN[0][0][4][0][3][2]).toBe("black");
+    });
+  };
+
+}).call(this);
+(function() {
   window.fashiontests.actualizer.js = function() {
     var $wf, actualize, parse, process;
     $wf = window.fashion;
@@ -357,6 +457,7 @@
     describe("Regrouper", window.fashiontests.actualizer.regrouper);
     describe("CSS Transitions", window.fashiontests.actualizer.transitions);
     describe("CSS Generator", window.fashiontests.actualizer.css);
+    describe("JS Minifier", window.fashiontests.actualizer.minifier);
     return describe("JS Generator", window.fashiontests.actualizer.js);
   });
 

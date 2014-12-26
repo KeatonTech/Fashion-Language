@@ -20,6 +20,7 @@ window.fashion.$actualizer.regroupProperties = (parseTree) ->
 		splitSelectors = $wf.$actualizer.splitSelectorByModes selector
 		selectorIds = []
 		for splitSelector in splitSelectors
+			splitSelector.index = homogenousSelectors.length
 			homogenousSelectors.push splitSelector
 			selectorIds.push(homogenousSelectors.length - 1)
 

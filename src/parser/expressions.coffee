@@ -95,7 +95,7 @@ window.fashion.$parser.parseExpression =
 
 
 	# Determine the type and unit of the complete expression
-	{type: type, unit: unit} = $wf.$parser.determineExpressionType types, units
+	{type: type, unit: unit} = $wf.$parser.determineExpressionType types, units, expString
 
 	# If the script sets a value, don't bother with units
 	if isSetter then unit = undefined
@@ -139,10 +139,12 @@ window.fashion.$parser.matchParenthesis = (regex, string, index) ->
 			acc += string.substr(lastIndex, (section.index - lastIndex) + section[0].length)
 			lastIndex = section.index + section[0].length
 
+	console.log "[FASHION] Could not match parens: #{string}"
+
 
 # Determine the type and unit that an expression should return
 # In the future conversions will go in here too.
-window.fashion.$parser.determineExpressionType = (types, units) ->
+window.fashion.$parser.determineExpressionType = (types, units, expression) ->
 	topType = topUnit = undefined
 	for i, type of types
 
@@ -152,7 +154,7 @@ window.fashion.$parser.determineExpressionType = (types, units) ->
 		else if type isnt topType 
 			if type is $wf.$type.String then topType = $wf.$type.String
 			else
-				console.log "[FASHION] Found mixed types in expression"
+				console.log "[FASHION] Found mixed types in expression: '#{expression}'"
 				return {}
 
 		# Figure out the expression's unit
