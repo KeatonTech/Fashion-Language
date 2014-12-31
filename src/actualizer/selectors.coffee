@@ -8,7 +8,7 @@ window.fashion.$actualizer.cullIndividuality = (allSelectors, map) ->
 
 	# Move in the new selectors
 	for id, selector of allSelectors
-		if selector.mode is $wf.$runtimeMode.individual
+		if (selector.mode & $wf.$runtimeMode.individual) is $wf.$runtimeMode.individual
 			currentOffset++
 			exclude[id] = true
 		else
@@ -35,12 +35,12 @@ window.fashion.$actualizer.cullIndividuality = (allSelectors, map) ->
 
 
 # Returns an object that contains only selectors that need to be included in runtime data
-window.fashion.$actualizer.filterSelectors = (allSelectors, filterMode) ->
+window.fashion.$actualizer.filterStatic = (allSelectors, filterMode) ->
 	passingSelectors = {}
 
 	# Move in the new selectors
 	for id, selector of allSelectors
-		if selector.mode isnt filterMode
+		if selector.mode > 0
 			passingSelectors[id] = selector
 
 	return passingSelectors
@@ -49,7 +49,8 @@ window.fashion.$actualizer.filterSelectors = (allSelectors, filterMode) ->
 # Add each individual selector to the runtime data
 window.fashion.$actualizer.addIndividualProperties = (selectors, offsets) ->
 	individualProperties = []
-	for id, selector of selectors when selector.mode is $wf.$runtimeMode.individual
+	indMode = $wf.$runtimeMode.individual
+	for id, selector of selectors when (selector.mode & indMode) is indMode
 		selector.index = id - offsets[id]
 		individualProperties.push selector
 	return individualProperties

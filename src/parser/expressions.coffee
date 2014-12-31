@@ -29,7 +29,7 @@ window.fashion.$parser.parseExpression =
 	regex = ///(
 			\$([\w\-]+)\s*?\=|		# Expression sets a variable
 			\@(self|this|parent)	# Relative element reference (name)
-			\.?([^\s\)]*)|			# Relative element reference (property)
+			\.?([a-zA-Z0-9\-\_]*)|	# Relative element reference (property)
 			\$([\w\-]+)|			# Defined variable
 			\@([\w\-]+)|			# Global variable
 			([\-]{0,1}				# Number with unit (negative)
@@ -212,9 +212,8 @@ window.fashion.$parser.expressionExpander =
 		parseTree.addGlobalDependency name, vObj
 		parseTree.addGlobalBinding bindingLink, name
 
-		dynamicMode = $wf.$runtimeMode.dynamic
 		script = "g.#{name}.get()"
-		return new Expression script, vObj.type, vObj.unit, dynamicMode
+		return new Expression script, vObj.type, vObj.unit, vObj.mode
 
 
 	# Expand numbers with units
@@ -228,22 +227,30 @@ window.fashion.$parser.expressionExpander =
 
 	# Expand relative object references (disguised as globals)
 	relativeObject: (keyword, property) ->
-		varName = if keyword is "parent" then "e.parent" else "e"
+
+		# Handle parent
+		if keyword is "parent" then property = ".parent"+property
 
 		# Determine the type based on the last property
 		dotProperties = property.split(".")
 		lastProperty = dotProperties[dotProperties.length - 1]
 
 		# Try and guess the type of the value
-		if lastProperty in ["top","bottom","left","right","number","width","height"]
+		if !property?
+			type = $wf.$type.Element
+
+		else if lastProperty in ["top","bottom","left","right","number","width","height"]
 			type = $wf.$type.Number
 			unit = "px"
 		else 
 			type = $wf.$type.String
 
 		# Generate a very simple script that looks up a property of the object
-		script = varName
-		if property then script += "." + property
+		if property then script = "e('#{dotProperties.join('\',\'')}')"
+
+		# If there's no property, make it return the object itself
+		else script = "e(void 0, #{JSON.stringify keyword})"
+
 		return new Expression script, type, unit, $wf.$runtimeMode.individual
 
 

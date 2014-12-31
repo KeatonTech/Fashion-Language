@@ -177,10 +177,14 @@ document.addEventListener('readystatechange', function() {
       start = new Date().getTime();
       parseTree = window.fashion.$parser.parse(scriptText);
       parseTree = window.fashion.$processor.process(parseTree);
+      console.log(parseTree);
+      console.log(window.fashion.$actualizer.regroupProperties(parseTree));
       _ref = window.fashion.$actualizer.actualize(parseTree), css = _ref.css, js = _ref.js;
+      console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
+      start = new Date().getTime();
       $wf.$dom.addStylesheet(css);
       $wf.$dom.addScript(js);
-      console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
+      console.log("[FASHION] Page load finished in " + (new Date().getTime() - start) + "ms");
       event = new Event(window.fashion.live.loadedEvent);
       event.variableObject = window[window.fashion.variableObject];
       document.dispatchEvent(event);
@@ -660,6 +664,9 @@ GlobalModule = (function(_super) {
 
   function GlobalModule(args) {
     this.watch = args.watch;
+    if (!args.mode) {
+      args.mode = $wf.$runtimeMode.globalDynamic;
+    }
     GlobalModule.__super__.constructor.call(this, args);
   }
 
@@ -738,6 +745,7 @@ window.fashion.$type = {
   Number: 1,
   String: 2,
   Color: 3,
+  Element: 4,
   KGeneric: 100,
   KDisplay: 101,
   KCenter: 102,
@@ -775,21 +783,23 @@ window.fashion.$typeConstants = {
 };
 
 /*
-4-bit Mode -----------------------------------------------------------------------
-	0001 (Bit 0): Can change, needs to be included in the JS
-	0010 (Bit 1): Can rely on non-top-level variables
-	0100 (Bit 2): Can rely on relative styles & attributes
-	1000 (Bit 3): Needs to be continuously recomputed
+5-bit Mode -----------------------------------------------------------------------
+	00001 (Bit 0): Can change, needs to be included in the JS
+	00010 (Bit 1): Can rely on non-top-level variables
+	00100 (Bit 2): Can rely on relative styles & attributes
+	01000 (Bit 3): Needs to be continuously recomputed
+	10000 (Bit 4): Can rely on globals, cannot be pre-computed
 ----------------------------------------------------------------------------------
  */
 window.fashion.$runtimeMode = {
   "static": 0,
   dynamic: 1,
   scoped: 3,
+  globalDynamic: 17,
   individual: 7,
   live: 9,
-  generate: function(dynamic, individualized, live, scoped) {
-    return (dynamic ? 1 : 0) | (individualized ? 7 : 0) | (live ? 9 : 0) | (scoped ? 3 : 0);
+  generate: function(dynamic, individualized, live, scoped, globals) {
+    return (dynamic ? 1 : 0) | (individualized ? 7 : 0) | (live ? 9 : 0) | (scoped ? 3 : 0) | (globals ? 17 : 0);
   }
 };
 window.fashion.$loader = {
@@ -1209,7 +1219,7 @@ window.fashion.$parser.parseExpression = function(expString, bindingLink, parseT
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([\S]*))/g;
+  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([\S]*))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
     eObj = void 0;
@@ -1370,7 +1380,7 @@ window.fashion.$parser.expressionExpander = {
     return new Expression(script, type, unit, mode);
   },
   globalVariable: function(name, bindingLink, globals, parseTree) {
-    var dynamicMode, script, vObj;
+    var script, vObj;
     name = name.toLowerCase();
     vObj = globals[name];
     if (!vObj) {
@@ -1378,9 +1388,8 @@ window.fashion.$parser.expressionExpander = {
     }
     parseTree.addGlobalDependency(name, vObj);
     parseTree.addGlobalBinding(bindingLink, name);
-    dynamicMode = $wf.$runtimeMode.dynamic;
     script = "g." + name + ".get()";
-    return new Expression(script, vObj.type, vObj.unit, dynamicMode);
+    return new Expression(script, vObj.type, vObj.unit, vObj.mode);
   },
   numberWithUnit: function(value) {
     var numberType, staticMode, unitValue;
@@ -1393,19 +1402,24 @@ window.fashion.$parser.expressionExpander = {
     return new Expression(unitValue.value, numberType, unitValue.unit, staticMode);
   },
   relativeObject: function(keyword, property) {
-    var dotProperties, lastProperty, script, type, unit, varName;
-    varName = keyword === "parent" ? "e.parent" : "e";
+    var dotProperties, lastProperty, script, type, unit;
+    if (keyword === "parent") {
+      property = ".parent" + property;
+    }
     dotProperties = property.split(".");
     lastProperty = dotProperties[dotProperties.length - 1];
-    if (lastProperty === "top" || lastProperty === "bottom" || lastProperty === "left" || lastProperty === "right" || lastProperty === "number" || lastProperty === "width" || lastProperty === "height") {
+    if (property == null) {
+      type = $wf.$type.Element;
+    } else if (lastProperty === "top" || lastProperty === "bottom" || lastProperty === "left" || lastProperty === "right" || lastProperty === "number" || lastProperty === "width" || lastProperty === "height") {
       type = $wf.$type.Number;
       unit = "px";
     } else {
       type = $wf.$type.String;
     }
-    script = varName;
     if (property) {
-      script += "." + property;
+      script = "e('" + (dotProperties.join('\',\'')) + "')";
+    } else {
+      script = "e(void 0, " + (JSON.stringify(keyword)) + ")";
     }
     return new Expression(script, type, unit, $wf.$runtimeMode.individual);
   },
@@ -1616,7 +1630,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
   isImportant = false;
   evaluateSingleValue = (function(_this) {
     return function(valueObject) {
-      var v, val, varLookup, varObjects, _i, _len;
+      var elmLookup, v, val, varLookup, varObjects, _i, _len;
       if (typeof valueObject === "string") {
         return valueObject;
       }
@@ -1634,8 +1648,11 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         });
         return vObj;
       };
+      if (element != null) {
+        elmLookup = _this.elementFunction(element);
+      }
       if (valueObject.evaluate) {
-        val = valueObject.evaluate(varLookup, globals, funcs, runtime, element);
+        val = valueObject.evaluate(varLookup, globals, funcs, runtime, elmLookup);
         if (valueObject.important === true) {
           isImportant = true;
         }
@@ -1906,7 +1923,7 @@ window.fashion.$actualizer = {
     $wf.$actualizer.separateTransitions(parseTree);
     _ref = $wf.$actualizer.regroupProperties(parseTree), selectors = _ref.selectors, hMap = _ref.map;
     _ref1 = $wf.$actualizer.cullIndividuality(selectors, hMap), cssSelectors = _ref1.sel, cssMap = _ref1.map, cullOffsets = _ref1.offsets;
-    jsSels = $wf.$actualizer.filterSelectors(cssSelectors, rMode["static"]);
+    jsSels = $wf.$actualizer.filterStatic(cssSelectors);
     indSels = $wf.$actualizer.addIndividualProperties(selectors, cullOffsets);
     runtimeData = $wf.$actualizer.generateRuntimeData(parseTree, jsSels, indSels, cssMap);
     $wf.$actualizer.addBindings(runtimeData, parseTree, jsSels, cssMap);
@@ -1945,6 +1962,7 @@ window.fashion.$actualizer.regroupProperties = function(parseTree) {
       continue;
     }
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.dynamic);
+    $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.globalDynamic);
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.live);
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.individual);
     splitSelectors = $wf.$actualizer.splitSelectorByModes(selector);
@@ -2025,7 +2043,7 @@ window.fashion.$actualizer.cullIndividuality = function(allSelectors, map) {
   currentOffset = 0;
   for (id in allSelectors) {
     selector = allSelectors[id];
-    if (selector.mode === $wf.$runtimeMode.individual) {
+    if ((selector.mode & $wf.$runtimeMode.individual) === $wf.$runtimeMode.individual) {
       currentOffset++;
       exclude[id] = true;
     } else {
@@ -2055,12 +2073,12 @@ window.fashion.$actualizer.cullIndividuality = function(allSelectors, map) {
   };
 };
 
-window.fashion.$actualizer.filterSelectors = function(allSelectors, filterMode) {
+window.fashion.$actualizer.filterStatic = function(allSelectors, filterMode) {
   var id, passingSelectors, selector;
   passingSelectors = {};
   for (id in allSelectors) {
     selector = allSelectors[id];
-    if (selector.mode !== filterMode) {
+    if (selector.mode > 0) {
       passingSelectors[id] = selector;
     }
   }
@@ -2068,11 +2086,12 @@ window.fashion.$actualizer.filterSelectors = function(allSelectors, filterMode) 
 };
 
 window.fashion.$actualizer.addIndividualProperties = function(selectors, offsets) {
-  var id, individualProperties, selector;
+  var id, indMode, individualProperties, selector;
   individualProperties = [];
+  indMode = $wf.$runtimeMode.individual;
   for (id in selectors) {
     selector = selectors[id];
-    if (!(selector.mode === $wf.$runtimeMode.individual)) {
+    if (!((selector.mode & indMode) === indMode)) {
       continue;
     }
     selector.index = id - offsets[id];
@@ -2195,6 +2214,9 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
     _ref = selector.properties;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       property = _ref[_i];
+      if ((selector.mode & $wf.$runtimeMode.globalDynamic) > 2) {
+        continue;
+      }
       value = property.value;
       if (selector.mode === $wf.$runtimeMode["static"]) {
         if (typeof value === 'object' && value.value) {
@@ -2490,6 +2512,10 @@ window.fashion.$actualizer.mapBindings = function(bindings, selectors, individua
           }
         } else {
           selector = individual[parseInt(selectorId.substr(1))];
+          if (!selector) {
+            console.log("[FASHION] Selector at " + selectorId + " does not exist");
+            continue;
+          }
           if (values === true) {
             hDependents.push(selectorId);
           } else {
@@ -2993,7 +3019,7 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements"], {
     return Array.prototype.slice.call(document.querySelectorAll(selectorName));
   },
   regenerateIndividualSelector: function(selector) {
-    var css, element, id, individual, _ref, _results;
+    var css, id, individual, _ref, _results;
     _ref = selector.elements;
     _results = [];
     for (id in _ref) {
@@ -3003,61 +3029,10 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements"], {
       } else {
         individual.cssid = FASHION.individualSheet.rules.length;
       }
-      element = this.createElementObject(individual.element);
-      css = this.CSSRuleForSelector(selector, element, "#" + id);
+      css = this.CSSRuleForSelector(selector, individual.element, "#" + id);
       _results.push(FASHION.individualSheet.insertRule(css, individual.cssid));
     }
     return _results;
-  }
-});
-$wf.addRuntimeModule("elements", [], {
-  createElementObject: function(DOMElement) {
-    var attribute, cs, eObj, _i, _len, _ref;
-    if (!DOMElement) {
-      return {};
-    }
-    eObj = {
-      element: DOMElement
-    };
-    if (DOMElement.attributes) {
-      _ref = DOMElement.attributes;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        attribute = _ref[_i];
-        eObj[attribute.name] = attribute.value;
-      }
-    }
-    Object.defineProperty(eObj, "parent", {
-      get: (function(_this) {
-        return function() {
-          return _this.createElementObject(DOMElement.parentNode);
-        };
-      })(this)
-    });
-    eObj.width = DOMElement.clientWidth;
-    eObj.height = DOMElement.clientHeight;
-    cs = window.getComputedStyle(DOMElement);
-    if (cs) {
-      Object.defineProperty(eObj, "outerWidth", {
-        get: function() {
-          return parseFloat(cs.marginLeft) + parseFloat(cs.marginRight) + eObj.width;
-        }
-      });
-      Object.defineProperty(eObj, "outerHeight", {
-        get: function() {
-          return parseFloat(cs.marginTop) + parseFloat(cs.marginBottom) + eObj.height;
-        }
-      });
-    }
-    eObj.addEventListener = function(evt, func, bubble) {
-      return DOMElement.addEventListener(evt, func, bubble);
-    };
-    eObj.getAttribute = function(attr) {
-      return DOMElement.getAttribute(attr);
-    };
-    eObj.setAttribute = function(attr, val) {
-      return DOMElement.setAttribute(attr, val);
-    };
-    return eObj;
   }
 });
 $wf.addRuntimeModule("globals", ["selectors"], {
@@ -3090,6 +3065,27 @@ $wf.addRuntimeModule("globals", ["selectors"], {
       }
     }
     return _results;
+  }
+});
+$wf.addRuntimeModule("elements", [], {
+  elementFunction: function(element) {
+    return function(property, keyword) {
+      var parentProperty;
+      if ((property == null) && (keyword != null)) {
+        return element;
+      }
+      if (property.indexOf(".parent") === 0) {
+        parentProperty = property.replace(".parent", "");
+        return this.elementFunction(element.parentNode)(parentProperty);
+      }
+      if (property === "width") {
+        return element.clientWidth;
+      }
+      if (property === "height") {
+        return element.clientHeight;
+      }
+      return element.getAttribute(property);
+    };
   }
 });
 window.fashion.$functions = {

@@ -21,13 +21,15 @@ window.fashiontests.actualizer.css = ()->
 
 
 	it 'should maintain the !important tag', () ->
-		{css} = actualize process parse """
+		parseTree = process parse """
 			$width: 100px;
 			body {
 				background-color: blue !important;
 				width: $width / 2 !important
 			}
 			"""
+
+		{css} = actualize parseTree
 
 		cssString = 'body {background-color: blue !important;}\nbody {width: 50px !important;}\n'
 		expect(css).toBe(cssString)

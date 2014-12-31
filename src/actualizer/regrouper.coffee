@@ -13,6 +13,7 @@ window.fashion.$actualizer.regroupProperties = (parseTree) ->
 		# Backwards passes through the properties to try and group like modes together
 		# The order of these passes essentially determines the order of the properties
 		$wf.$actualizer.groupPropertiesWithMode properties, $wf.$runtimeMode.dynamic
+		$wf.$actualizer.groupPropertiesWithMode properties, $wf.$runtimeMode.globalDynamic
 		$wf.$actualizer.groupPropertiesWithMode properties, $wf.$runtimeMode.live
 		$wf.$actualizer.groupPropertiesWithMode properties, $wf.$runtimeMode.individual
 

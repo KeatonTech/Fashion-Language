@@ -41,9 +41,14 @@ window.fashion.$shared.evaluate =
 			varObjects.push {name: varName, object: vObj, value: vObj.value}
 			return vObj
 
+		# Create the element property lookup function, if necessary
+		# This requires the 'elements' module to be installed and only works on runtime
+		if element?
+			elmLookup = @elementFunction element
+
 		# Handle expressions
 		if valueObject.evaluate
-			val = valueObject.evaluate varLookup, globals, funcs, runtime, element
+			val = valueObject.evaluate varLookup, globals, funcs, runtime, elmLookup
 			if valueObject.important is true then isImportant = true
 
 			# Check to see if the expression changed any variable values

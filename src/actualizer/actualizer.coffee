@@ -17,7 +17,7 @@ window.fashion.$actualizer =
 			$wf.$actualizer.cullIndividuality(selectors, hMap)
 
 		# Javascript doesn't need to know about static blocks, so they are filtered out here
-		jsSels = $wf.$actualizer.filterSelectors(cssSelectors, rMode.static)
+		jsSels = $wf.$actualizer.filterStatic(cssSelectors)
 
 		# Get all the individual selectors on their own, for the javascript
 		indSels = $wf.$actualizer.addIndividualProperties selectors, cullOffsets

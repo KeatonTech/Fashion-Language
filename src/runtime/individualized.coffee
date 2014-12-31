@@ -63,11 +63,8 @@ $wf.addRuntimeModule "individualized", ["selectors", "elements"],
 				FASHION.individualSheet.deleteRule individual.cssid
 			else individual.cssid = FASHION.individualSheet.rules.length
 
-			# Generate the current element object
-			element = @createElementObject individual.element
-
 			# Generate the CSS rule
-			css = @CSSRuleForSelector selector, element, "##{id}"
+			css = @CSSRuleForSelector selector, individual.element, "##{id}"
 
 			# Add it to the individual sheet
 			FASHION.individualSheet.insertRule css, individual.cssid		

@@ -26,6 +26,10 @@ window.fashion.$actualizer.mapBindings = (bindings, selectors, individual, map) 
 				# We have to test these to see if they actually depend on the variable
 				else
 					selector = individual[parseInt(selectorId.substr(1))]
+					if !selector
+						console.log "[FASHION] Selector at #{selectorId} does not exist"
+						continue
+
 					if values is true
 						hDependents.push selectorId
 

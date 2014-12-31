@@ -36,16 +36,22 @@ document.addEventListener 'readystatechange', ()->
 
 			# Process that nice little tree to expand out things like properties
 			parseTree = window.fashion.$processor.process parseTree
+			console.log parseTree
+			console.log window.fashion.$actualizer.regroupProperties parseTree
 
 			# Convert the tree into JS and CSS elements
 			{css, js} = window.fashion.$actualizer.actualize parseTree
+
+			# Print the compile time
+			console.log "[FASHION] Compile finished in #{new Date().getTime() - start}ms"
+			start = new Date().getTime()
 
 			# Add those elements to the page
 			$wf.$dom.addStylesheet css
 			$wf.$dom.addScript js
 
-			# Print the runtime
-			console.log "[FASHION] Compile finished in #{new Date().getTime() - start}ms"
+			# Print the load time
+			console.log "[FASHION] Page load finished in #{new Date().getTime() - start}ms"
 
 			# Trigger the loaded event
 			event = new Event(window.fashion.live.loadedEvent)

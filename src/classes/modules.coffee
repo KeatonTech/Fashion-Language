@@ -41,6 +41,9 @@ class GlobalModule extends ReturnValueModule
 		# Function that runs a callback when the value changes
 		@watch = args.watch
 
+		# Default to global dynamic mode
+		if !args.mode then args.mode = $wf.$runtimeMode.globalDynamic
+
 		super args
 
 # Adds a new function that can be called from Fashion expressions

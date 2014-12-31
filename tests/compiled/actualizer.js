@@ -175,8 +175,9 @@
       return expect(css).toBe(cssString);
     });
     it('should maintain the !important tag', function() {
-      var css, cssString;
-      css = actualize(process(parse("$width: 100px;\nbody {\n	background-color: blue !important;\n	width: $width / 2 !important\n}"))).css;
+      var css, cssString, parseTree;
+      parseTree = process(parse("$width: 100px;\nbody {\n	background-color: blue !important;\n	width: $width / 2 !important\n}"));
+      css = actualize(parseTree).css;
       cssString = 'body {background-color: blue !important;}\nbody {width: 50px !important;}\n';
       return expect(css).toBe(cssString);
     });
@@ -392,7 +393,7 @@
       expect(window.FASHION.runtime.regenerateSelector).toBeDefined();
       expect(window.FASHION.runtime.throwError).toBeDefined();
       expect(window.FASHION.runtime.regenerateIndividualSelector).toBeDefined();
-      expect(window.FASHION.runtime.createElementObject).toBeDefined();
+      expect(window.FASHION.runtime.elementFunction).toBeDefined();
       expect(window.FASHION.runtime.$initializeIndividualProperties).toBeDefined();
       expect(window.FASHION.runtime.determineType).not.toBeDefined();
       expect(window.FASHION.runtime.setVariable).not.toBeDefined();

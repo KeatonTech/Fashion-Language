@@ -71,7 +71,7 @@ window.fashiontests.actualizer.js = ()->
 		expect(window.FASHION.runtime.regenerateSelector).toBeDefined()
 		expect(window.FASHION.runtime.throwError).toBeDefined()
 		expect(window.FASHION.runtime.regenerateIndividualSelector).toBeDefined()
-		expect(window.FASHION.runtime.createElementObject).toBeDefined()
+		expect(window.FASHION.runtime.elementFunction).toBeDefined()
 		expect(window.FASHION.runtime.$initializeIndividualProperties).toBeDefined()
 
 		# No variables
