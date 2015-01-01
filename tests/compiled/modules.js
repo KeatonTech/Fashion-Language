@@ -65,9 +65,7 @@
       expect(transitions['highlight']['100%'][0].name.script).toBeDefined();
       expect(transitions['highlight']['0%'][0].properties[0].value).toBe("black");
       expect(transitions['highlight']['100%'][0].properties[0].value).toBe("red");
-      return expect(transitions['highlight']["$vars"]).toEqual({
-        "itemId": "#item"
-      });
+      return expect(transitions['highlight']["$vars"]).toEqual(["itemId"]);
     });
   };
 
