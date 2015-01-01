@@ -12,7 +12,7 @@ class ParseTree
 	constructor: (extendsTree)->
 
 		# The components that make up a Fashion document
-		@variables = if extendsTree then extendsTree.variables else {}
+		@variables = {}
 		@selectors = []
 		@blocks = []
 		@scripts = []
@@ -29,6 +29,10 @@ class ParseTree
 			variables: {}
 			globals: {}
 			dom: []
+
+		# Extending
+		if extendsTree then @variables[k] = v for k,v of extendsTree.variables
+			
 
 	# CREATE
 

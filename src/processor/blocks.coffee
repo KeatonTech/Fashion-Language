@@ -3,7 +3,7 @@ window.fashion.$processor.blocks = (parseTree, blocks) ->
 	funcs = window.fashion.$processor.api
 
 	# Go through each selector (yes, this is tedious)
-	for block in parseTree.blocks
+	for bID,block of parseTree.blocks
 
 		# Get the module that will process this block
 		blockObj = blocks[block.type]
@@ -17,6 +17,7 @@ window.fashion.$processor.blocks = (parseTree, blocks) ->
 			parseValue: funcs.parseValue,
 			parse: funcs.parseBody.bind 0, parseTree
 			runtimeObject: parseTree.dependencies.blocks[block.type].runtimeObject
+			addVariable: funcs.addVariable.bind 0, parseTree
 
 		# Run the block module's compile function
 		blockObj.compile.call API, block.arguments, block.body
@@ -28,3 +29,7 @@ window.fashion.$processor.blocks = (parseTree, blocks) ->
 # Used for parsing the interior of blocks
 window.fashion.$processor.api.parseBody = (parseTree, body) ->
 	$wf.$parser.parse body, parseTree
+
+# Used for parsing the interior of blocks
+window.fashion.$processor.api.addVariable = (parseTree, name, value) ->
+	$wf.$parser.addVariable parseTree, name, value

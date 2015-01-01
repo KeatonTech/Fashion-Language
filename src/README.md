@@ -63,6 +63,7 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***individualized.coffee:*** Defines functions for setting and maintaining individual properties on objects
 * ***elements.coffee:*** Defines functions for converting HTML elements into Fashion expression elements
 * ***globals.coffee:*** Handles watching and setting global variables, ones that start with a @
+* ***sheets.coffee:*** Defines functions for creating and editing additional CSS stylesheets
 
 ***
 

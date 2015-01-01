@@ -1,0 +1,38 @@
+button {
+	display: block;
+	margin: 0 auto;
+	margin-top: 20px;
+	display: inline-block;
+}
+
+$boxSize: 200px;
+$boxMargin: 10px;
+
+.box {
+	width: $boxSize;
+	height: $boxSize;
+	line-height: $boxSize;
+
+	margin: $boxMargin;
+	display: inline-block;
+	background-color: green;
+	text-align: center;
+}
+
+@transition changeBoxColor {
+	$boxId: box1;
+	$color: purple;
+
+	0% {
+		#$boxId {
+			background-color: [ease-out 100%] $color;
+		}
+	}
+}
+
+.one-default {on-click: trigger("changeBoxColor", 300);}
+.two-default {on-click: trigger("changeBoxColor", 300, boxId: "box2");}
+.one-orange {on-click: trigger("changeBoxColor", 300, boxId: "box1", color: "orange");}
+.one-blue {on-click: trigger("changeBoxColor", 300, boxId: "box1", color: "blue");}
+.two-orange {on-click: trigger("changeBoxColor", 300, boxId: "box2", color: "orange");}
+.two-blue {on-click: trigger("changeBoxColor", 300, boxId: "box2", color: "blue");}

@@ -36,8 +36,6 @@ document.addEventListener 'readystatechange', ()->
 
 			# Process that nice little tree to expand out things like properties
 			parseTree = window.fashion.$processor.process parseTree
-			console.log parseTree
-			console.log window.fashion.$actualizer.regroupProperties parseTree
 
 			# Convert the tree into JS and CSS elements
 			{css, js} = window.fashion.$actualizer.actualize parseTree

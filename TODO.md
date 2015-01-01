@@ -1,7 +1,6 @@
 # Fashion 0.3
 
 * Node.js-based build system - not relying on makeProduction() in browser
-* Minification system for output JS. Goal is 66% of the current side for downplay.fm.
 * Updated @transition block with support for keyframe ranges
 * Hide objects with individual properties until the page finishes loading
 * A few new modules from the set listed below.
@@ -47,6 +46,7 @@
 
 ## Fixes
 
+* Make variables declared in @transition blocks take an isolated scope
 * Pin property should make its parent at least position relative
 * Pin property should respect relative-to
 * Binding functions should find a way to inherit the transition of their parent

@@ -265,16 +265,31 @@ window.fashion.$parser.expressionExpander =
 		# Evaluate each argument separately
 		if argumentsString.length > 1
 			args = window.fashion.$parser.splitByTopLevelCommas argumentsString
-			expressions = (for arg in args
-				window.fashion.$parser.parseExpression(
-					arg, bindingLink, parseTree, funcs, globals, false)
-			)
+			expressions = []
+			namedArgs = []
+			for arg in args
+
+				# Named argument
+				if argComponents = arg.match /([a-zA-Z0-9\-\'\"]+)\s*\:\s*(.*)/
+					objectProp = "'#{argComponents[1]}': "
+					objectProp += window.fashion.$parser.parseExpression(
+						argComponents[2], bindingLink, parseTree, funcs, globals, 0).script
+					namedArgs.push objectProp
+
+				# Normal argument
+				else
+					expressions.push window.fashion.$parser.parseExpression(
+						arg, bindingLink, parseTree, funcs, globals, false)
+
+			# Add the named arguments as an object at the end
+			if namedArgs.length > 0 then expressions.push script: "{#{namedArgs.join(',')}}"
+			
 		else expressions = []
 
 		# Bundle everything together
 		scripts = ["t"]
 		mode = fObj.mode
-		for expr in expressions when expr instanceof Expression
+		for expr in expressions when expr.script?
 			mode |= expr.mode
 			scripts.push expr.script
 

@@ -66,9 +66,3 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
 		# Return the templated selector
 		return @CSSSelectorTemplate selectorName, cssProperties
-
-	# Add a new selector
-	addSelector: (name, properties) ->
-		CSS = @CSSRuleForSelector {name: name, properties: properties}
-		stylesheet = document.getElementById("#{FASHION.config.cssId}").sheet
-		stylesheet.insertRule CSS, stylesheet.rules.length

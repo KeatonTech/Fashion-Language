@@ -37,4 +37,4 @@ window.fashion.$shared.getUnit = (rawValue, varType, type, unit) ->
 window.fashion.$shared.timeInMs = (valueObject) ->
 	if valueObject.unit is "ms" then return valueObject.value
 	else if valueObject.unit is "s" then return valueObject.value * 1000
-	else return 0
+	else return parseInt valueObject.value

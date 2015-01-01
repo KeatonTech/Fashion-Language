@@ -1,19 +1,10 @@
-$wf.addRuntimeModule "individualized", ["selectors", "elements"],
+$wf.addRuntimeModule "individualized", ["selectors", "elements", "stylesheet-dom"],
 
 	# Start up by listing each element that matches each individual selector
 	$initializeIndividualProperties: ()->
-		#if !FASHION.individual then return
 
 		# Create a new stylesheet just for individual properties
-		sheet = document.createElement "style"
-		sheet.setAttribute("type", "text/css")
-		sheet.setAttribute("id", "#{FASHION.config.individualCSSID}")
-		document.head.appendChild sheet
-		FASHION.individualSheet = sheet.sheet
-
-		# Fix for firefox
-		if !FASHION.individualSheet.rules
-			FASHION.individualSheet.rules = FASHION.individualSheet.cssRules
+		FASHION.individualSheet = @addStylesheet("#{FASHION.config.individualCSSID}").sheet
 
 		# Figure out which elements each selector applies to
 		@updateSelectorElements(selector) for id,selector of FASHION.individual

@@ -5,6 +5,9 @@ window.fashion.$shared.getVariable =
 		console.log "[FASHION] Could not find variable '#{varName}'"
 		return {value: undefined}
 
+	# Single, set variables
+	if typeof vObj is 'string' or typeof vObj is 'number' then return value: vObj
+
 	# Parsetree variables -- sent by the actualizer
 	if vObj[0] then return vObj[0]
 
