@@ -1225,7 +1225,7 @@ window.fashion.$parser.parseExpression = function(expString, bindingLink, parseT
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([\S]*))/g;
+  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([\S]*))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
     eObj = void 0;
@@ -1423,7 +1423,7 @@ window.fashion.$parser.expressionExpander = {
       type = $wf.$type.String;
     }
     if (property) {
-      script = "e('" + (dotProperties.join('\',\'')) + "')";
+      script = "e('" + property + "','" + keyword + "')";
     } else {
       script = "e(void 0, " + (JSON.stringify(keyword)) + ")";
     }
@@ -3096,39 +3096,50 @@ $wf.addRuntimeModule("globals", ["selectors"], {
 });
 $wf.addRuntimeModule("elements", [], {
   elementFunction: function(element) {
-    return function(property, keyword) {
-      var parentProperty;
-      if ((property == null) && (keyword != null)) {
-        return element;
-      }
-      if (property.indexOf(".parent") === 0) {
-        parentProperty = property.replace(".parent", "");
-        return this.elementFunction(element.parentNode)(parentProperty);
-      }
-      if (property === "width") {
-        return element.clientWidth;
-      }
-      if (property === "height") {
-        return element.clientHeight;
-      }
-      return element.getAttribute(property);
-    };
+    return (function(_this) {
+      return function(property, keyword) {
+        var parentProperty;
+        if ((property == null) && (keyword != null)) {
+          return element;
+        }
+        if (property.indexOf("parent") === 0) {
+          if (property === "parent") {
+            return element.parentNode;
+          }
+          parentProperty = property.replace("parent.", "");
+          return _this.elementFunction(element.parentNode)(parentProperty);
+        }
+        if (property === "width") {
+          return element.clientWidth;
+        }
+        if (property === "height") {
+          return element.clientHeight;
+        }
+        return element.getAttribute(property);
+      };
+    })(this);
   }
 });
 $wf.addRuntimeModule("stylesheet-dom", [], {
-  addStylesheet: function(id) {
+  addStylesheet: function(id, className) {
     var head, sheetElement;
     sheetElement = document.createElement("style");
     sheetElement.setAttribute("type", "text/css");
     if (id) {
       sheetElement.setAttribute("id", id);
     }
+    if (className) {
+      sheetElement.setAttribute("class", className);
+    }
     head = document.head || document.getElementsByTagName('head')[0];
     head.appendChild(sheetElement);
     return sheetElement;
   },
   removeStylesheet: function(element) {
-    return element.parentElement.removeChild(element);
+    if (!element || !element.parentNode) {
+      return;
+    }
+    return element.parentNode.removeChild(element);
   },
   getStylesheet: function(id) {
     var ss;
@@ -3141,6 +3152,15 @@ $wf.addRuntimeModule("stylesheet-dom", [], {
 });
 
 $wf.addRuntimeModule("sheets", ["stylesheet-dom"], {
+  moveSheetToTop: function(sheet) {
+    var head;
+    head = document.head || document.getElementsByTagName('head')[0];
+    if (head.lastChild === sheet) {
+      return;
+    }
+    this.removeStylesheet(sheet);
+    return head.appendChild(sheet);
+  },
   setRuleOnSheet: function(sheet, selector, property, value, prioritize) {
     var id, rule, ruleText, _ref;
     if (prioritize == null) {
@@ -3479,8 +3499,9 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
     if (transition == null) {
       return this.throwError("Transition '" + name + "' does not exist");
     }
-    transitionSheet = this.getStylesheet("FASHION-transition::temporary-" + name);
+    transitionSheet = this.addStylesheet(void 0, "FASHION-transition::temporary-" + name);
     propertySheet = this.getStylesheet("FASHION-transition::properties-" + name);
+    this.moveSheetToTop(propertySheet);
     for (keyframe in transition) {
       selectors = transition[keyframe];
       if (!(keyframe[0] !== '$')) {
@@ -3495,9 +3516,9 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
         startTime = intStartTime + this.transitionTiming.start;
       }
       if (keyframe.indexOf("-") !== -1) {
-        addSelectors = this.transitionKeyframeRange(selectors, duration, transitionSheet.sheet, propertySheet.sheet, variables);
+        addSelectors = this.transitionKeyframeRange(selectors, duration, transitionSheet.sheet, variables);
       } else {
-        addSelectors = this.transitionKeyframeSingle(selectors, duration, transitionSheet.sheet, propertySheet.sheet, variables);
+        addSelectors = this.transitionKeyframeSingle(selectors, duration, transitionSheet.sheet, variables);
       }
       if (startTime > 0) {
         this.wait(startTime, addSelectors.bind(this));
@@ -3512,10 +3533,11 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
       };
     })(this));
   },
-  transitionKeyframeSingle: function(selectors, duration, tSheet, pSheet, variables) {
+  transitionKeyframeSingle: function(selectors, duration, tSheet, variables) {
     return function() {
-      var id, properties, property, selName, selector, settleDelay, smoothProperties, tCSS, _i, _len;
+      var id, pSheet, properties, property, selName, selector, settleDelay, smoothProperties, tCSS, _i, _len;
       settleDelay = this.transitionTiming.settle;
+      pSheet = this.getStylesheet("FASHION-transition::properties-" + name);
       for (id in selectors) {
         selector = selectors[id];
         properties = selector.properties;
@@ -3546,7 +3568,7 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
       }
     };
   },
-  transitionKeyframeStatic: function(selectors, duration, tSheet, pSheet, variables) {
+  transitionKeyframeStatic: function(selectors, duration, tSheet, variables) {
     return function() {
       return console.log("[FASHION] The transition block does not support ranged keyframes yet");
     };

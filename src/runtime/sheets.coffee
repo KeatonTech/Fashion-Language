@@ -1,16 +1,19 @@
 $wf.addRuntimeModule "stylesheet-dom", [],
 
 	# Add a new stylesheet to the page	
-	addStylesheet: (id)->
+	addStylesheet: (id, className)->
 		sheetElement = document.createElement "style"
 		sheetElement.setAttribute("type", "text/css")
 		if id then sheetElement.setAttribute("id", id)
+		if className then sheetElement.setAttribute("class", className)
 		head = document.head || document.getElementsByTagName('head')[0]
 		head.appendChild(sheetElement)
 		return sheetElement
 
 	# Delete a stylesheet
-	removeStylesheet: (element)-> element.parentElement.removeChild element
+	removeStylesheet: (element)-> 
+		if !element or !element.parentNode then return
+		element.parentNode.removeChild element
 
 	# Create or return a stylesheet
 	getStylesheet: (id)->
@@ -19,6 +22,14 @@ $wf.addRuntimeModule "stylesheet-dom", [],
 
 
 $wf.addRuntimeModule "sheets", ["stylesheet-dom"],
+
+	# Moves the sheet in the DOM to have the highest priority
+	moveSheetToTop: (sheet) ->
+		head = document.head || document.getElementsByTagName('head')[0]
+		if head.lastChild is sheet then return
+		@removeStylesheet sheet
+		head.appendChild(sheet)
+
 
 	# Sets a rule on a stylesheet, overwriting it if necessary
 	setRuleOnSheet: (sheet, selector, property, value, prioritize = true) ->
@@ -34,7 +45,7 @@ $wf.addRuntimeModule "sheets", ["stylesheet-dom"],
 				ruleText = rule.cssText
 				sheet.removeRule id
 				sheet.insertRule ruleText, sheet.rules.length
-				
+
 			return
 
 		# Create a new style instead

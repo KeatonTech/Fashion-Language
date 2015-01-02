@@ -28,8 +28,8 @@ window.fashion.$parser.parseExpression =
 	# Detect functions and variables
 	regex = ///(
 			\$([\w\-]+)\s*?\=|		# Expression sets a variable
-			\@(self|this|parent)	# Relative element reference (name)
-			\.?([a-zA-Z0-9\-\_]*)|	# Relative element reference (property)
+			\@(self|this|parent)\.?	# Relative element reference (name)
+			([a-zA-Z0-9\-\_\.]*)|	# Relative element reference (property)
 			\$([\w\-]+)|			# Defined variable
 			\@([\w\-]+)|			# Global variable
 			([\-]{0,1}				# Number with unit (negative)
@@ -246,7 +246,7 @@ window.fashion.$parser.expressionExpander =
 			type = $wf.$type.String
 
 		# Generate a very simple script that looks up a property of the object
-		if property then script = "e('#{dotProperties.join('\',\'')}')"
+		if property then script = "e('#{property}','#{keyword}')"
 
 		# If there's no property, make it return the object itself
 		else script = "e(void 0, #{JSON.stringify keyword})"

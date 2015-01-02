@@ -81,8 +81,11 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 		if !transition? then return @throwError "Transition '#{name}' does not exist"
 
 		# Create a stylesheets for transition properties and for resulting properties
-		transitionSheet = @getStylesheet "FASHION-transition::temporary-#{name}"
+		transitionSheet = @addStylesheet undefined, "FASHION-transition::temporary-#{name}"
 		propertySheet = @getStylesheet "FASHION-transition::properties-#{name}"
+
+		# Make sure these have priority over older transitions
+		@moveSheetToTop propertySheet
 
 		# Go through each keyframe
 		for keyframe, selectors of transition when keyframe[0] isnt '$'
@@ -97,10 +100,10 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 			# Generate the magical function that'll be run later for each keyframe
 			if keyframe.indexOf("-") isnt -1
 				addSelectors = @transitionKeyframeRange(selectors, duration,
-					transitionSheet.sheet, propertySheet.sheet, variables)
+					transitionSheet.sheet, variables)
 			else
 				addSelectors = @transitionKeyframeSingle(selectors, duration,
-					transitionSheet.sheet, propertySheet.sheet, variables)
+					transitionSheet.sheet, variables)
 
 			# Wait until the limelight is on this keyframe
 			if startTime > 0
@@ -113,10 +116,14 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 
 
 	# Add stuff for the each keyframe to the CSS
-	transitionKeyframeSingle: (selectors, duration, tSheet, pSheet, variables) -> ()->
+	transitionKeyframeSingle: (selectors, duration, tSheet, variables) -> ()->
 
 		# Lets the CSS 'settle' so that newly added transitions will be used
 		settleDelay = @transitionTiming.settle
+
+		# Get the property sheet
+		# This used to get passed in, but moving it around the <head> confuses chrome
+		pSheet = @getStylesheet "FASHION-transition::properties-#{name}"
 
 		# Go through each selector
 		for id, selector of selectors
@@ -146,7 +153,7 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 
 
 	# Add stuff for the each keyframe to the CSS
-	transitionKeyframeStatic: (selectors, duration, tSheet, pSheet, variables) -> ()->
+	transitionKeyframeStatic: (selectors, duration, tSheet, variables) -> ()->
 		console.log "[FASHION] The transition block does not support ranged keyframes yet"
 
 

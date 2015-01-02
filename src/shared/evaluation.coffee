@@ -46,8 +46,7 @@ window.fashion.$shared.evaluate =
 
 		# Create the element property lookup function, if necessary
 		# This requires the 'elements' module to be installed and only works on runtime
-		if element?
-			elmLookup = @elementFunction element
+		if element? then elmLookup = @elementFunction element
 
 		# Handle expressions
 		if valueObject.evaluate

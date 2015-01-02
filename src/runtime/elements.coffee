@@ -1,13 +1,14 @@
 $wf.addRuntimeModule "elements", [],
 
-	elementFunction: (element)-> (property, keyword) ->
+	elementFunction: (element)-> (property, keyword) =>
 
 		# Return the element directly
 		if !property? and keyword? then return element
 		
 		# Handle properties that 'bubble up'
-		if property.indexOf(".parent") is 0
-			parentProperty = property.replace(".parent","")
+		if property.indexOf("parent") is 0
+			if property is "parent" then return element.parentNode
+			parentProperty = property.replace("parent.","")
 			return @elementFunction(element.parentNode)(parentProperty)
 
 		# Simple handlers
