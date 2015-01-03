@@ -79,13 +79,8 @@ window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, las
 		# We need to go deeper.
 		else if segment[7]
 
-			# Selectors that start with & don't have a space
-			if segment[7][0] is "&"
-				name = topSel.rawName + segment[7].substr(1)
-			else if segment[7][0] is "~"
-				name = topSel.rawName + " " + segment[7].substr(1)
-			else
-				name = topSel.rawName + " > " + segment[7]
+			# Generate the name of this new selector
+			name = $wf.$parser.nestSelector topSel.rawName, segment[7]
 
 			# Add this selector
 			selectors.push($wf.$parser.createSelector(parseTree, name))
@@ -96,6 +91,23 @@ window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, las
 
 	# Return the selectors
 	return selectors
+
+
+# Generates a nested selector from an inner one and an outer one
+window.fashion.$parser.nestSelector = (outer, inner) ->
+	acc = []
+	for ostring in outer.split ","
+		ostring = ostring.trim()
+		for istring in inner.split ","
+			istring = istring.trim()
+
+			# Properties prefixed with '&' are part of the same object
+			if istring[0] is "&"
+				acc.push ostring + istring.substr(1);
+			else
+				acc.push ostring + " " + istring
+
+	return acc.join ","
 
 
 # Make a new selector and parse the variables out of its name, if necessary

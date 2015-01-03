@@ -196,7 +196,7 @@
     it('should allow nesting-only selectors', function() {
       var css, cssString;
       css = actualize(process(parse("body {\n	p {\n		background-color: blue;\n		width: 100%;\n		content: \"body string\";\n	}\n}"))).css;
-      cssString = 'body > p {background-color: blue;width: 100%;content: "body string";}\n';
+      cssString = 'body p {background-color: blue;width: 100%;content: "body string";}\n';
       return expect(css).toBe(cssString);
     });
     it('should be able to evaluate expressions', function() {
@@ -205,10 +205,10 @@
       cssString = "body {width: 200px;height: 100px;}\n";
       return expect(css).toBe(cssString);
     });
-    it('should ignore individual properties', function() {
+    it('should ignore individual properties but include a hider', function() {
       var css, cssString;
       css = actualize(process(parse("$height: 100px;\nbody {\n	width: $height * 2;\n	height: $height;\n	color: @self.color;\n}"))).css;
-      cssString = "body {width: 200px;height: 100px;}\n";
+      cssString = "body {width: 200px;height: 100px;}\nbody {visibility: hidden;}\n";
       return expect(css).toBe(cssString);
     });
     it('should generate multi-part properties with embedded expressions', function() {

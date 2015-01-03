@@ -10,7 +10,7 @@ window.fashion.$actualizer.hideIndividualizedSelectors =
 
 	onLoadScript = 	"""FSREADY(function(){
 					ss = document.getElementById(FASHION.config.cssId);
-					rm = function(id){ss.sheet.deleteRule(id);};
+					rm = function(id){if(ss&&ss.sheet)ss.sheet.deleteRule(id);};
 					"""
 	for id in removeSelectors.reverse()
 		onLoadScript += "rm(#{id});"

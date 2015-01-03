@@ -1000,21 +1000,23 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
 
 window.fashion.$parser.nestSelector = function(outer, inner) {
   var acc, istring, ostring, _i, _j, _len, _len1, _ref, _ref1;
-  acc = "";
+  acc = [];
   _ref = outer.split(",");
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     ostring = _ref[_i];
+    ostring = ostring.trim();
     _ref1 = inner.split(",");
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
       istring = _ref1[_j];
+      istring = istring.trim();
       if (istring[0] === "&") {
-        acc += ostring + istring.substr(1);
+        acc.push(ostring + istring.substr(1));
       } else {
-        acc += ostring + " " + istring;
+        acc.push(ostring + " " + istring);
       }
     }
   }
-  return acc;
+  return acc.join(",");
 };
 
 window.fashion.$parser.createSelector = function(parseTree, name) {
@@ -2585,7 +2587,7 @@ window.fashion.$actualizer.hideIndividualizedSelectors = function(cssSelectors, 
     removeSelectors.push(cssSelectors.length);
     cssSelectors.push(hideSel);
   }
-  onLoadScript = "FSREADY(function(){\nss = document.getElementById(FASHION.config.cssId);\nrm = function(id){ss.sheet.deleteRule(id);};";
+  onLoadScript = "FSREADY(function(){\nss = document.getElementById(FASHION.config.cssId);\nrm = function(id){if(ss&&ss.sheet)ss.sheet.deleteRule(id);};";
   _ref = removeSelectors.reverse();
   for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
     id = _ref[_j];

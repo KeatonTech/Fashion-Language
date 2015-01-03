@@ -119,8 +119,8 @@
     it("should allow variables within nested selectors", function() {
       var result;
       result = parse(".menu {\n	.main {\n		$isSelected: true;\n	}\n}");
-      expect(result.variables["isSelected"][".menu > .main"]["value"]).toEqual("true");
-      return expect(result.variables["isSelected"][".menu > .main"]["type"]).toEqual(type.Unknown);
+      expect(result.variables["isSelected"][".menu .main"]["value"]).toEqual("true");
+      return expect(result.variables["isSelected"][".menu .main"]["type"]).toEqual(type.Unknown);
     });
     return it("should accept variable definitions without semicolons", function() {
       var result;
@@ -158,9 +158,9 @@
       var result;
       result = parse(".outer {\n	opacity: 1.0;\n	.middle {\n		opacity: 0.5;\n		.inner {opacity: 0.0;}\n		&.super {opacity: 0.75;}\n		height: 50px\n	}\n	height: 100px\n}");
       expect(result.selectors[0].name).toBe(".outer");
-      expect(result.selectors[1].name).toBe(".outer > .middle");
-      expect(result.selectors[2].name).toBe(".outer > .middle > .inner");
-      expect(result.selectors[3].name).toBe(".outer > .middle.super");
+      expect(result.selectors[1].name).toBe(".outer .middle");
+      expect(result.selectors[2].name).toBe(".outer .middle .inner");
+      expect(result.selectors[3].name).toBe(".outer .middle.super");
       expect(result.selectors[0].properties[0].value).toBe("1.0");
       expect(result.selectors[1].properties[0].value).toBe("0.5");
       expect(result.selectors[2].properties[0].value).toBe("0.0");
@@ -220,12 +220,12 @@
         };
       };
       expect(result.selectors[0].name.evaluate(v)).toBe(".content");
-      expect(result.selectors[1].name.evaluate(v)).toBe(".content > h3");
+      expect(result.selectors[1].name.evaluate(v)).toBe(".content h3");
       expect(result.bindings.variables["contentDiv"].length).toBe(2);
       expect(result.bindings.variables["contentDiv"][0]).toBe(0);
       return expect(result.bindings.variables["contentDiv"][1]).toBe(1);
     });
-    return it("should allow nested variable selectors", function() {
+    it("should allow nested variable selectors", function() {
       var result, v;
       result = parse("$contentDiv: .content;\ndiv {\n	width: 100px;\n	$contentDiv {\n		color: black;\n	}\n}");
       expect(result.selectors[1].properties[0].mode).toBe($wf.$runtimeMode.dynamic);
@@ -234,9 +234,39 @@
           value: ".content"
         };
       };
-      expect(result.selectors[1].name.evaluate(v)).toBe("div > .content");
+      expect(result.selectors[1].name.evaluate(v)).toBe("div .content");
       expect(result.bindings.variables["contentDiv"].length).toBe(1);
       return expect(result.bindings.variables["contentDiv"][0]).toBe(1);
+    });
+    it("should properly nest comma separated selectors", function() {
+      var result;
+      result = parse("div,article {\n	a, p {\n		color: red;\n	}\n}");
+      expect(result.selectors[0].name).toBe("div,article");
+      return expect(result.selectors[1].name).toBe("div a,div p,article a,article p");
+    });
+    it("should properly nest comma separated selectors with variables", function() {
+      var result, v;
+      result = parse("$contentDiv1: .content;\n$contentDiv2: .stuff;\ndiv {\n	width: 100px;\n	$contentDiv1, $contentDiv2 {\n		color: black;\n	}\n}");
+      expect(result.selectors[1].properties[0].mode).toBe($wf.$runtimeMode.dynamic);
+      v = function(name) {
+        switch (name) {
+          case 'contentDiv1':
+            return {
+              value: ".content"
+            };
+          default:
+            return {
+              value: ".stuff"
+            };
+        }
+      };
+      return expect(result.selectors[1].name.evaluate(v)).toBe("div .content,div .stuff");
+    });
+    return it("should properly nest comma separated selectors with an &", function() {
+      var result;
+      result = parse("div,article {\n	a, &:hover {\n		color: red;\n	}\n}");
+      expect(result.selectors[0].name).toBe("div,article");
+      return expect(result.selectors[1].name).toBe("div a,div:hover,article a,article:hover");
     });
   };
 

@@ -59,9 +59,9 @@ window.fashiontests.parser.selectors = ()->
 
 		# Check the name and order
 		expect(result.selectors[0].name).toBe(".outer")
-		expect(result.selectors[1].name).toBe(".outer > .middle")
-		expect(result.selectors[2].name).toBe(".outer > .middle > .inner")
-		expect(result.selectors[3].name).toBe(".outer > .middle.super")
+		expect(result.selectors[1].name).toBe(".outer .middle")
+		expect(result.selectors[2].name).toBe(".outer .middle .inner")
+		expect(result.selectors[3].name).toBe(".outer .middle.super")
 
 		# Check head values
 		expect(result.selectors[0].properties[0].value).toBe("1.0")
@@ -145,7 +145,7 @@ window.fashiontests.parser.selectors = ()->
 		# Make sure the expression for the name works
 		v = (name) -> value: ".content"
 		expect(result.selectors[0].name.evaluate(v)).toBe(".content")
-		expect(result.selectors[1].name.evaluate(v)).toBe(".content > h3")
+		expect(result.selectors[1].name.evaluate(v)).toBe(".content h3")
 
 		# Test linkback
 		expect(result.bindings.variables["contentDiv"].length).toBe(2)
@@ -169,9 +169,61 @@ window.fashiontests.parser.selectors = ()->
 
 		# Make sure the expression for the name works
 		v = (name) -> value: ".content"
-		expect(result.selectors[1].name.evaluate(v)).toBe("div > .content")
+		expect(result.selectors[1].name.evaluate(v)).toBe("div .content")
 
 		# Test linkback
 		expect(result.bindings.variables["contentDiv"].length).toBe(1)
 		expect(result.bindings.variables["contentDiv"][0]).toBe(1)
-	
+
+
+	it "should properly nest comma separated selectors", ()->
+		result = parse("""
+						div,article {
+							a, p {
+								color: red;
+							}
+						}
+						""")
+
+		# Check the name and order
+		expect(result.selectors[0].name).toBe("div,article")
+		expect(result.selectors[1].name).toBe("div a,div p,article a,article p")
+
+
+	it "should properly nest comma separated selectors with variables", ()->
+		result = parse("""
+						$contentDiv1: .content;
+						$contentDiv2: .stuff;
+						div {
+							width: 100px;
+							$contentDiv1, $contentDiv2 {
+								color: black;
+							}
+						}
+						""")
+
+		# Make sure the properties are marked as dynamic
+		expect(result.selectors[1].properties[0].mode).toBe($wf.$runtimeMode.dynamic)
+
+		# Make sure the expression for the name works
+		v = (name) -> 
+			switch name
+				when 'contentDiv1' then value: ".content"
+				else value: ".stuff"
+
+		expect(result.selectors[1].name.evaluate(v)).toBe("div .content,div .stuff")
+
+
+	it "should properly nest comma separated selectors with an &", ()->
+		result = parse("""
+						div,article {
+							a, &:hover {
+								color: red;
+							}
+						}
+						""")
+
+		# Check the name and order
+		expect(result.selectors[0].name).toBe("div,article")
+		expect(result.selectors[1].name).toBe("div a,div:hover,article a,article:hover")
+

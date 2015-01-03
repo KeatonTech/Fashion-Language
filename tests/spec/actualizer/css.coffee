@@ -78,7 +78,7 @@ window.fashiontests.actualizer.css = ()->
 			}
 			"""
 
-		cssString = 'body > p {background-color: blue;width: 100%;content: "body string";}\n'
+		cssString = 'body p {background-color: blue;width: 100%;content: "body string";}\n'
 		expect(css).toBe(cssString)
 
 
@@ -99,7 +99,7 @@ window.fashiontests.actualizer.css = ()->
 		expect(css).toBe(cssString)
 
 
-	it 'should ignore individual properties', () ->
+	it 'should ignore individual properties but include a hider', () ->
 		{css} = actualize process parse """
 			$height: 100px;
 			body {
@@ -111,6 +111,7 @@ window.fashiontests.actualizer.css = ()->
 
 		cssString = """
 			body {width: 200px;height: 100px;}
+			body {visibility: hidden;}
 
 			"""
 
