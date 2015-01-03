@@ -1,5 +1,8 @@
 (function() {;
 
+var window;
+
+window = {};
 
 /*
 
@@ -50,6 +53,7 @@ window.fashion.runtimeConfig = {
 wait = function(d, f) {
   return setTimeout(f, d);
 };
+
 window.fashion.addProperty = function(name, propertyModule, force) {
   if (force == null) {
     force = false;
@@ -157,79 +161,42 @@ window.fashion.addBlocks = function(obj, force) {
 /*
 ------------------------------------------------------------------------------
 
-This Live version runs in the browser to dynamically compile Fashion files
-into CSS and Javascript. It is not reccommended for production apps.
+This Compiler version runs on top of Node.js and converts HTML written for the
+live Fashion runtime into an HTML file with all of the Fashion code processed
+into standard CSS and Javascript. This is intended to prepare code for use on
+production websites where the compile time & file size could be problematic.
+
+------------------------------------------------------------------------------
+
+COMMAND LINE FORMAT: 
+	
+	Create HTML with inlined JS / CSS
+		node fashion.compiler.js input.html output.html
+
+	Create HTML with included JS / CSS
+		node fashion.compiler.js input.html ../built
+
+------------------------------------------------------------------------------
+
+STYLE NOTE: Normally all these different files would be included using Node's
+require() function, however since so much of the code is shared with the live
+in-browser version that approach is impractical. Therefore, require() is only
+used for importing node modules, everything else is built into the same file.
 
 ------------------------------------------------------------------------------
  */
-var currentScript;
+var inputFile, output;
 
-window.fashion.live = {
-  loadedEvent: "fashion-loaded"
-};
+if (process.argv.length < 4) {
+  console.log("-------------------------------------------------------------------\nIncorrect arguments, please call the compiler with this format:\n	\n    node fashion.compiler.js [input.html] [output.html]\n    node fashion.compiler.js [input.html] [../output]\n\n-------------------------------------------------------------------");
+  return;
+}
 
-currentScript = document.currentScript || document.scripts[document.scripts.length - 1];
+inputFile = process.argv[2];
 
-document.addEventListener('readystatechange', function() {
-  if (document.readyState === "complete") {
-    return window.fashion.$loader.loadStyles(function(scriptText) {
-      var css, event, js, parseTree, start, _ref;
-      start = new Date().getTime();
-      parseTree = window.fashion.$parser.parse(scriptText);
-      parseTree = window.fashion.$processor.process(parseTree);
-      _ref = window.fashion.$actualizer.actualize(parseTree), css = _ref.css, js = _ref.js;
-      console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
-      start = new Date().getTime();
-      $wf.$dom.addStylesheet(css);
-      $wf.$dom.addScript(js);
-      console.log("[FASHION] Page load finished in " + (new Date().getTime() - start) + "ms");
-      event = new Event(window.fashion.live.loadedEvent);
-      event.variableObject = window[window.fashion.variableObject];
-      document.dispatchEvent(event);
-      return $wf.removeCompiler();
-    });
-  }
-});
+output = process.argv[3];
 
-window.fashion.removeCompiler = function() {
-  var deleteAll;
-  deleteAll = function(elements) {
-    var element, _i, _len, _results;
-    _results = [];
-    for (_i = 0, _len = elements.length; _i < _len; _i++) {
-      element = elements[_i];
-      _results.push(element.parentNode.removeChild(element));
-    }
-    return _results;
-  };
-  deleteAll(document.querySelectorAll("[type='text/x-fashion']"));
-  return currentScript.parentNode.removeChild(currentScript);
-};
-
-window.fashion.makeProduction = function() {
-  var cssText, element, head, rule, style, _i, _j, _len, _len1, _ref, _ref1, _results;
-  _ref = document.querySelectorAll("style[id*=FASHION]");
-  _results = [];
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    element = _ref[_i];
-    if (element.id === "FASHION-stylesheet") {
-      head = document.getElementsByTagName('head').item(0);
-      style = document.createElement("style");
-      style.type = "text/css";
-      style.id = "FASHION-stylesheet";
-      cssText = "";
-      _ref1 = element.sheet.rules;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        rule = _ref1[_j];
-        cssText += rule.cssText + "\n";
-      }
-      style.appendChild(document.createTextNode(cssText));
-      head.appendChild(style);
-    }
-    _results.push(element.parentNode.removeChild(element));
-  }
-  return _results;
-};
+console.log(inputFile, output);
 var __slice = [].slice;
 
 window.fashion.$extend = function(object, anotherObject) {
@@ -3074,6 +3041,9 @@ $wf.addRuntimeModule("globals", ["selectors"], {
     _results = [];
     for (name in _ref) {
       global = _ref[name];
+      if (!(global.watch != null)) {
+        continue;
+      }
       global.watch(onChangeFunction(global));
       _results.push(this.updateGlobal(global));
     }
@@ -3274,6 +3244,36 @@ $wf.$extend(window.fashion.$functions, {
       return "rgba(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + "," + a.value + ")";
     }
   }),
+  "hsl": new FunctionModule({
+    output: $wf.$type.Color,
+    evaluate: function(h, s, l) {
+      return "hsl(" + (parseInt(h.value)) + "," + (parseInt(s.value)) + "%," + (parseInt(l.value)) + "%)";
+    }
+  }),
+  "hsla": new FunctionModule({
+    output: $wf.$type.Color,
+    evaluate: function(h, s, l, a) {
+      return "hsla(" + (parseInt(h.value)) + "," + (parseInt(s.value)) + "%," + (parseInt(l.value)) + "%," + a.value + ")";
+    }
+  }),
+  "hsb": new FunctionModule({
+    output: $wf.$type.Color,
+    capabilities: ["colors"],
+    evaluate: function(h, s, b) {
+      var g, r, _ref;
+      _ref = this.hsbTOrgb(h, s, b), r = _ref.r, g = _ref.g, b = _ref.b;
+      return "rgb(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + ")";
+    }
+  }),
+  "hsba": new FunctionModule({
+    output: $wf.$type.Color,
+    capabilities: ["colors"],
+    evaluate: function(h, s, b, a) {
+      var g, r, _ref;
+      _ref = this.hsbTOrgb(h, s, b), r = _ref.r, g = _ref.g, b = _ref.b;
+      return "rgba(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + "," + a.value + ")";
+    }
+  }),
   "changeAlpha": new FunctionModule({
     output: window.fashion.$type.Color,
     capabilities: ["colors"],
@@ -3328,27 +3328,40 @@ window.fashion.$properties = {
           }
           switch (value) {
             case "serif":
-              return families.push("serif");
+              families.push("serif");
+              break;
             case "sans-serif":
-              return families.push("sans-serif");
+              families.push("sans-serif");
+              break;
             case "monospace":
-              return families.push("monospace");
+              families.push("monospace");
+              break;
             case "italic":
-              return _this.setProperty("font-style", "italic");
+              _this.setProperty("font-style", "italic");
+              break;
             case "oblique":
-              return _this.setProperty("font-style", "oblique");
+              _this.setProperty("font-style", "oblique");
+              break;
             case "bold":
-              return _this.setProperty("font-weight", "bolder");
+              _this.setProperty("font-weight", "bolder");
+              break;
             case "light":
-              return _this.setProperty("font-weight", "lighter");
+              _this.setProperty("font-weight", "lighter");
+              break;
             case "underline":
-              return _this.setProperty("text-decoration", "underline");
+              _this.setProperty("text-decoration", "underline");
+              break;
             case "overline":
-              return _this.setProperty("text-decoration", "overline");
+              _this.setProperty("text-decoration", "overline");
+              break;
             case "line-through":
-              return _this.setProperty("text-decoration", "line-through");
+              _this.setProperty("text-decoration", "line-through");
+              break;
             case "strikethrough":
-              return _this.setProperty("text-decoration", "line-through");
+              _this.setProperty("text-decoration", "line-through");
+          }
+          if (value.indexOf("pt") !== -1 || value.indexOf("px") !== -1) {
+            return _this.setProperty("font-size", value);
           }
         };
       })(this);
