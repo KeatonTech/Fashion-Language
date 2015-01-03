@@ -5,9 +5,6 @@
 
 window.fashion.$actualizer.minifier.expandRuntimeData = (minData, expandTo) ->
 
-	# Start timer
-	start = new Date().getTime()
-
 	# Return an object from an array
 	expanderFunctions = 
 
@@ -51,6 +48,3 @@ window.fashion.$actualizer.minifier.expandRuntimeData = (minData, expandTo) ->
 		for selector in minData[2]
 			selobj = expand selector
 			expandTo.individual[selobj.id] = selobj
-
-	# Print the runtime
-	console.log "[FASHION] Expansion finished in #{new Date().getTime() - start}ms"

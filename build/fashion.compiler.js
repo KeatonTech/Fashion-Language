@@ -989,19 +989,32 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
     } else if (segment[3] && segment[4]) {
       topSel.addToBody(fashionText.substring(segment.index, lastIndex));
     } else if (segment[7]) {
-      if (segment[7][0] === "&") {
-        name = topSel.rawName + segment[7].substr(1);
-      } else if (segment[7][0] === "~") {
-        name = topSel.rawName + " " + segment[7].substr(1);
-      } else {
-        name = topSel.rawName + " > " + segment[7];
-      }
+      name = $wf.$parser.nestSelector(topSel.rawName, segment[7]);
       selectors.push($wf.$parser.createSelector(parseTree, name));
       selectorStack.push(selectors.length - 1);
       bracketDepth++;
     }
   }
   return selectors;
+};
+
+window.fashion.$parser.nestSelector = function(outer, inner) {
+  var acc, istring, ostring, _i, _j, _len, _len1, _ref, _ref1;
+  acc = "";
+  _ref = outer.split(",");
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    ostring = _ref[_i];
+    _ref1 = inner.split(",");
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      istring = _ref1[_j];
+      if (istring[0] === "&") {
+        acc += ostring + istring.substr(1);
+      } else {
+        acc += ostring + " " + istring;
+      }
+    }
+  }
+  return acc;
 };
 
 window.fashion.$parser.createSelector = function(parseTree, name) {
@@ -1921,6 +1934,7 @@ window.fashion.$actualizer = {
     capabilities = $wf.$actualizer.determineRuntimeCapabilities(runtimeData, selectors);
     $wf.$actualizer.addRuntimeFunctions(runtimeData, parseTree, capabilities);
     $wf.$actualizer.removeUnnecessaryModuleData(runtimeData);
+    $wf.$actualizer.hideIndividualizedSelectors(cssSelectors, parseTree.scripts, indSels);
     css = $wf.$actualizer.createCSS(runtimeData, cssSelectors);
     miniRuntimeData = $wf.$actualizer.minifier.runtimeData(runtimeData);
     js = $wf.$actualizer.createJS(runtimeData, miniRuntimeData, parseTree.scripts);
@@ -2028,7 +2042,7 @@ window.fashion.$actualizer.splitSelectorByModes = function(selector) {
 };
 window.fashion.$actualizer.cullIndividuality = function(allSelectors, map) {
   var currentOffset, exclude, id, inner, inners, mapIndividualCount, newId, newMap, offsets, outer, passingSelectors, selector, _i, _len;
-  passingSelectors = {};
+  passingSelectors = [];
   offsets = {};
   exclude = {};
   currentOffset = 0;
@@ -2039,7 +2053,7 @@ window.fashion.$actualizer.cullIndividuality = function(allSelectors, map) {
       exclude[id] = true;
     } else {
       newId = id - currentOffset;
-      passingSelectors[newId] = selector;
+      passingSelectors.push(selector);
     }
     offsets[id] = currentOffset;
   }
@@ -2561,6 +2575,24 @@ window.fashion.$actualizer.bindGlobals = function(runtimeData, globalBindings, s
   }
   return _results;
 };
+window.fashion.$actualizer.hideIndividualizedSelectors = function(cssSelectors, scripts, indSels) {
+  var hideSel, id, onLoadScript, removeSelectors, selector, _i, _j, _len, _len1, _ref;
+  removeSelectors = [];
+  for (_i = 0, _len = indSels.length; _i < _len; _i++) {
+    selector = indSels[_i];
+    hideSel = new Selector(selector.name, $wf.$runtimeMode["static"]);
+    hideSel.addProperty(new Property("visibility", "hidden"));
+    removeSelectors.push(cssSelectors.length);
+    cssSelectors.push(hideSel);
+  }
+  onLoadScript = "FSREADY(function(){\nss = document.getElementById(FASHION.config.cssId);\nrm = function(id){ss.sheet.deleteRule(id);};";
+  _ref = removeSelectors.reverse();
+  for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+    id = _ref[_j];
+    onLoadScript += "rm(" + id + ");";
+  }
+  return scripts.push(onLoadScript + "})");
+};
 window.fashion.$actualizer.minifier = {
   runtimeData: function(runtimeData) {
     var id, s, v;
@@ -2670,8 +2702,7 @@ window.fashion.$actualizer.minifier = {
   }
 };
 window.fashion.$actualizer.minifier.expandRuntimeData = function(minData, expandTo) {
-  var expand, expanderFunctions, selector, selobj, start, variable, vobj, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
-  start = new Date().getTime();
+  var expand, expanderFunctions, selector, selobj, variable, vobj, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results;
   expanderFunctions = {
     s: function(s) {
       return {
@@ -2746,13 +2777,14 @@ window.fashion.$actualizer.minifier.expandRuntimeData = function(minData, expand
   }
   if (minData[2]) {
     _ref2 = minData[2];
+    _results = [];
     for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
       selector = _ref2[_k];
       selobj = expand(selector);
-      expandTo.individual[selobj.id] = selobj;
+      _results.push(expandTo.individual[selobj.id] = selobj);
     }
+    return _results;
   }
-  return console.log("[FASHION] Expansion finished in " + (new Date().getTime() - start) + "ms");
 };
 var RuntimeModule;
 

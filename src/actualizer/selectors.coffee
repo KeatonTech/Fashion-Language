@@ -1,7 +1,7 @@
 # Returns an object that contains only selectors that need to be included in runtime data
 # ASIDE: This is my favorite function name ever.
 window.fashion.$actualizer.cullIndividuality = (allSelectors, map) ->
-	passingSelectors = {}
+	passingSelectors = []
 	offsets = {}
 	exclude = {}
 	currentOffset = 0
@@ -13,7 +13,7 @@ window.fashion.$actualizer.cullIndividuality = (allSelectors, map) ->
 			exclude[id] = true
 		else
 			newId = id - currentOffset
-			passingSelectors[newId] = selector
+			passingSelectors.push selector
 	
 		offsets[id] = currentOffset
 

@@ -49,7 +49,7 @@ document.addEventListener 'readystatechange', ()->
 			$wf.$dom.addScript js
 
 			# Print the load time
-			console.log "[FASHION] Page load finished in #{new Date().getTime() - start}ms"
+			console.log "[FASHION] Page initialize finished in #{new Date().getTime() - start}ms"
 
 			# Trigger the loaded event
 			event = new Event(window.fashion.live.loadedEvent)

@@ -35,6 +35,9 @@ window.fashion.$actualizer =
 		# Remove unnecessary module fields from the runtime data (keeps stuff clean)
 		$wf.$actualizer.removeUnnecessaryModuleData runtimeData
 
+		# Add CSS selectors to hide the individual properties
+		$wf.$actualizer.hideIndividualizedSelectors cssSelectors, parseTree.scripts, indSels
+
 		# Create the CSS file as a string
 		css = $wf.$actualizer.createCSS runtimeData, cssSelectors
 
@@ -79,5 +82,6 @@ window.fashion.$actualizer.createJS = (runtimeData, minifiedData, scripts) ->
 # @prepros-append ./create-css.coffee
 # @prepros-append ./capabilities.coffee
 # @prepros-append ./bindings.coffee
+# @prepros-append ./load-hider.coffee
 # @prepros-append ./minifier/runtime-data.coffee
 

@@ -2,7 +2,6 @@
 
 * Node.js-based build system - not relying on makeProduction() in browser
 * Updated @transition block with support for keyframe ranges
-* Hide objects with individual properties until the page finishes loading
 * A few new modules from the set listed below.
 * 100+ Unit Tests
 
@@ -29,8 +28,7 @@
 * Gradient properties (possibly prefixed with background-)
 
 #### Blocks
-* @transition block w/ Run function
-* Pass-through @media block
+* Pass-through @media and @keyframe blocks
 * @client block, with a way to add a new stylesheet to the DOM
 * @spriteSheet block, creating useful variables to access different images
 
