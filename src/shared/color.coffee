@@ -65,7 +65,7 @@ window.fashion.color =
 
 		# Value is just the maximum channel
 		# Calculated here to prevent rounding errors
-		val = Math.max(r,g,b); 
+		val = Math.max(r, g, b)
 
 		# Convert from 8-bit format to ratio format
 		r /= 255; g /= 255; b /= 255;

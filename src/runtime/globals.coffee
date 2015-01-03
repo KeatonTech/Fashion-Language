@@ -7,7 +7,7 @@ $wf.addRuntimeModule "globals", ["selectors"],
 		# Run when globals change
 		onChangeFunction = (global) => @updateGlobal.bind(this, global)
 
-		for name, global of FASHION.modules.globals
+		for name, global of FASHION.modules.globals when global.watch?
 			global.watch onChangeFunction global
 			@updateGlobal global
 

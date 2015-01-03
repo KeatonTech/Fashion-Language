@@ -15,6 +15,38 @@ $wf.$extend window.fashion.$functions,
 		evaluate: (r,g,b,a) -> 
 			"rgba(#{parseInt r.value},#{parseInt g.value},#{parseInt b.value},#{a.value})"
 
+	# NOTE: HSL() passes through to the default CSS implementation of HSL, which is now
+	# relatively well supported. However, HSB() is compiled into RGB() by Fashion.
+	# in other words, if you want good browser support, use HSB() instead.
+	"hsl": new FunctionModule
+		output: $wf.$type.Color
+		evaluate: (h,s,l) -> 
+			"hsl(#{parseInt h.value},#{parseInt s.value}%,#{parseInt l.value}%)"
+
+	"hsla": new FunctionModule
+		output: $wf.$type.Color
+		evaluate: (h,s,l,a) -> 
+			"hsla(#{parseInt h.value},#{parseInt s.value}%,#{parseInt l.value}%,#{a.value})"
+
+
+	# NON STANDARD CSS COLORS
+
+	"hsb": new FunctionModule
+		output: $wf.$type.Color,
+		capabilities: ["colors"],
+		evaluate: (h,s,b) -> 
+			{r,g,b} = @hsbTOrgb h, s, b
+			"rgb(#{parseInt r.value},#{parseInt g.value},#{parseInt b.value})"
+
+	"hsba": new FunctionModule
+		output: $wf.$type.Color,
+		capabilities: ["colors"],
+		evaluate: (h,s,b,a) -> 
+			{r,g,b} = @hsbTOrgb h, s, b
+			"rgba(#{parseInt r.value},#{parseInt g.value},#{parseInt b.value},#{a.value})"
+
+
+	# COLOR MANIPULATION FUNCTIONS
 
 	# Give a color an alpha value
 	"changeAlpha": new FunctionModule

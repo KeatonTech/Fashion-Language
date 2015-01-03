@@ -28,6 +28,9 @@ window.fashion.$properties =
 					when "line-through" then @setProperty "text-decoration", "line-through"
 					when "strikethrough" then @setProperty "text-decoration", "line-through"
 
+				if value.indexOf("pt") isnt -1 or value.indexOf("px") isnt -1
+					@setProperty "font-size", value
+
 			# Run that function
 			if values instanceof Array then compileSingleValue(v) for v in values
 			else compileSingleValue(values)
