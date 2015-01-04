@@ -206,31 +206,6 @@ window.fashion.removeCompiler = function() {
   deleteAll(document.querySelectorAll("[type='text/x-fashion']"));
   return currentScript.parentNode.removeChild(currentScript);
 };
-
-window.fashion.makeProduction = function() {
-  var cssText, element, head, rule, style, _i, _j, _len, _len1, _ref, _ref1, _results;
-  _ref = document.querySelectorAll("style[id*=FASHION]");
-  _results = [];
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    element = _ref[_i];
-    if (element.id === "FASHION-stylesheet") {
-      head = document.getElementsByTagName('head').item(0);
-      style = document.createElement("style");
-      style.type = "text/css";
-      style.id = "FASHION-stylesheet";
-      cssText = "";
-      _ref1 = element.sheet.rules;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        rule = _ref1[_j];
-        cssText += rule.cssText + "\n";
-      }
-      style.appendChild(document.createTextNode(cssText));
-      head.appendChild(style);
-    }
-    _results.push(element.parentNode.removeChild(element));
-  }
-  return _results;
-};
 var __slice = [].slice;
 
 window.fashion.$extend = function(object, anotherObject) {

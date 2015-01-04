@@ -185,7 +185,7 @@ used for importing node modules, everything else is built into the same file.
 
 ------------------------------------------------------------------------------
  */
-var inputFile, output;
+var fs, inlineStylesAndScripts, inputFile, installFashionExtensions, outputFile, pullOutFashionExtensions;
 
 if (process.argv.length < 4) {
   console.log("-------------------------------------------------------------------\nIncorrect arguments, please call the compiler with this format:\n	\n    node fashion.compiler.js [input.html] [output.html]\n    node fashion.compiler.js [input.html] [../output]\n\n-------------------------------------------------------------------");
@@ -194,9 +194,101 @@ if (process.argv.length < 4) {
 
 inputFile = process.argv[2];
 
-output = process.argv[3];
+outputFile = process.argv[3];
 
-console.log(inputFile, output);
+fs = require('fs');
+
+fs.readFile(inputFile, function(err, data) {
+  var html;
+  if (err) {
+    console.log("Could not read file: " + inputFile + ". It may be restricted or not exist.");
+    console.log(err);
+    return;
+  }
+  html = data.toString();
+  return window.fashion.$loader.extractFromHTML(html, inputFile, function(fssAndJs) {
+    var auxjs, css, fss, js, parseTree, start, strippedHTML, _ref;
+    fss = fssAndJs.fss, js = fssAndJs.js, strippedHTML = fssAndJs.strippedHTML;
+    start = new Date().getTime();
+    auxjs = pullOutFashionExtensions(js);
+    parseTree = window.fashion.$parser.parse(fss);
+    parseTree = window.fashion.$processor.process(parseTree);
+    _ref = window.fashion.$actualizer.actualize(parseTree), css = _ref.css, js = _ref.js;
+    js += ";" + auxjs;
+    js = require("uglify-js").minify(js, {
+      fromString: true
+    }).code;
+    html = inlineStylesAndScripts(strippedHTML, css, js);
+    return fs.writeFile(outputFile, html, function(err) {
+      if (err) {
+        console.log("Could not write file: " + outputFile + ". The folder may not exist.");
+        console.log(err);
+        return;
+      }
+      return console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
+    });
+  });
+});
+
+pullOutFashionExtensions = function(js) {
+  var acc, depth, extensions, insideExtension, lastIndex, match, regex;
+  insideExtension = false;
+  acc = "";
+  lastIndex = 0;
+  depth = 0;
+  extensions = [];
+  regex = /window\.fashion\.(.*?)\(|".*?"|'.*?'|\(|\)/g;
+  while (match = regex.exec(js)) {
+    if (match[1] != null) {
+      acc = "window.fashion." + match[1] + "(";
+      lastIndex = match.index + match[0].length;
+      insideExtension = true;
+      depth = 1;
+      continue;
+    } else if (!insideExtension) {
+      continue;
+    }
+    acc += js.substr(lastIndex, (match.index - lastIndex) + match[0].length);
+    lastIndex = match.index + match[0].length;
+    if (match[0] === "(") {
+      depth++;
+    } else if (match[0] === ")") {
+      if (--depth === 0) {
+        extensions.push(acc + ";");
+        insideExtension = false;
+      }
+    }
+  }
+  return installFashionExtensions(js, extensions);
+};
+
+installFashionExtensions = function(js, extensions) {
+  var e, extension, _i, _len;
+  for (_i = 0, _len = extensions.length; _i < _len; _i++) {
+    extension = extensions[_i];
+    try {
+      eval(extension);
+    } catch (_error) {
+      e = _error;
+      console.log("Could not add extension: " + extension);
+      console.log(e);
+    }
+    js = js.replace(extension, "");
+  }
+  js = js.replace(/\(function\(\)\s?{\s*?}\)(.call)?\((this)?\);?/g, "");
+  return js;
+};
+
+inlineStylesAndScripts = function(html, cssText, jsText) {
+  var fullHeader, head;
+  fullHeader = html.match(/<head>([\s\S]*?)<\/head>/i);
+  head = fullHeader[1];
+  head += "<style id='" + $wf.cssId + "' type='text/css'>" + cssText + "</style>";
+  head += "<script type='text/javascript'>" + jsText + "</script>";
+  return html.replace(fullHeader[0], function() {
+    return "<head>" + head + "</head>";
+  });
+};
 var __slice = [].slice;
 
 window.fashion.$extend = function(object, anotherObject) {
@@ -775,75 +867,106 @@ window.fashion.$runtimeMode = {
     return (dynamic ? 1 : 0) | (individualized ? 7 : 0) | (live ? 9 : 0) | (scoped ? 3 : 0) | (globals ? 17 : 0);
   }
 };
+var path;
+
+path = require('path');
+
 window.fashion.$loader = {
-  loadStyles: function(scriptsCallback) {
-    var acc, count, loaded;
-    count = $wf.$loader.countScripts();
-    loaded = 0;
-    acc = "";
-    return $wf.$loader.loadIndividualStyles(function(individualScript) {
-      acc += individualScript;
-      if (++loaded === count) {
-        return scriptsCallback(acc);
+  fashionIdentifier: "/*\nFASHION: Style + Smarts -",
+  extractFromHTML: function(html, htmlPath, fssCallback) {
+    var fss, head, js, stripped;
+    fss = js = void 0;
+    head = html.match(/<head>([\s\S]*?)<\/head>/i)[1];
+    stripped = html.replace($wf.$loader.styleRegex(), "");
+    stripped = stripped.replace($wf.$loader.scriptRegex(), "");
+    $wf.$loader.extractStyles(head, htmlPath, function(allFashion) {
+      fss = allFashion;
+      if (js != null) {
+        return fssCallback({
+          fss: fss,
+          js: js,
+          strippedHTML: stripped
+        });
+      }
+    });
+    return $wf.$loader.extractScripts(html, htmlPath, function(allJS) {
+      js = allJS;
+      if (fss != null) {
+        return fssCallback({
+          fss: fss,
+          js: js,
+          strippedHTML: stripped
+        });
       }
     });
   },
-  loadIndividualStyles: function(scriptCallback) {
-    return window.fashion.$loader.loadStyleTags(scriptCallback);
+  styleRegex: function() {
+    return /<style.*?type\s?=\s?"text\/x-fashion"[^>]*>([\s\S]*?)<\/style>|<link.*?type\s?=\s?"text\/x-fashion"[^>]*\/?>(<\/link>)?/g;
   },
-  loadStyleTags: function(scriptCallback) {
-    var i, styleTags, tagType, url, _i, _ref, _results;
-    styleTags = document.getElementsByTagName("style");
-    _results = [];
-    for (i = _i = 0, _ref = styleTags.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
-      tagType = styleTags[i].getAttribute("type");
-      if (tagType !== window.fashion.mimeType) {
-        continue;
+  extractStyles: function(head, htmlPath, fssCallback) {
+    var fssPath, regex, resolvePromise, srcAttr, styles, tag, unresolved, _results;
+    unresolved = 0;
+    styles = [];
+    resolvePromise = function(path, styleIndex, err, fileString) {
+      if (err) {
+        return console.log("Could not load style at path: " + path);
       }
-      if (styleTags[i].textContent !== "") {
-        _results.push(scriptCallback(styleTags[i].textContent));
-      } else if (styleTags[i].getAttribute("src") !== "") {
-        url = styleTags[i].getAttribute("src");
-        _results.push($wf.$loader.loadExternalScript(url, scriptCallback));
+      styles[styleIndex] = fileString.toString();
+      if (--unresolved === 0) {
+        return fssCallback(styles.join("\n"));
+      }
+    };
+    regex = $wf.$loader.styleRegex();
+    _results = [];
+    while (tag = regex.exec(head)) {
+      if (srcAttr = tag[0].match(/(src|href)\s?=\s?['"](.*?)['"]/)) {
+        unresolved++;
+        fssPath = path.resolve(htmlPath, "../", srcAttr[2]);
+        fs.readFile(fssPath, resolvePromise.bind(0, fssPath, styles.length));
+        _results.push(styles.push(0));
       } else {
-        _results.push(void 0);
+        _results.push(styles.push(tag[1]));
       }
     }
     return _results;
   },
-  countScripts: function() {
-    var fileCount, i, linkTags, styleTags, tagType, _i, _j, _ref, _ref1;
-    fileCount = 0;
-    styleTags = document.getElementsByTagName("style");
-    for (i = _i = 0, _ref = styleTags.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
-      tagType = styleTags[i].getAttribute("type");
-      if (tagType !== window.fashion.mimeType) {
-        continue;
-      }
-      fileCount++;
-    }
-    linkTags = document.getElementsByTagName("link");
-    for (i = _j = 0, _ref1 = linkTags.length; 0 <= _ref1 ? _j < _ref1 : _j > _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
-      tagType = linkTags[i].getAttribute("type");
-      if (tagType !== window.fashion.mimeType) {
-        continue;
-      }
-      fileCount++;
-    }
-    return fileCount;
+  scriptRegex: function() {
+    return /<script(.*?src\s?=\s?["']([^"']*)["'])?[^>]*\>([\s\S]*?)<\/script>|<script(.*?src\s?=\s?["']([^"']*)["'])?[^>]*\/>/g;
   },
-  loadExternalScript: function(url, callback) {
-    var req;
-    req = new XMLHttpRequest();
-    req.onreadystatechange = function() {
-      if (req.readyState === 4 && req.status === 200) {
-        return callback(req.responseText);
-      } else if (req.status > 400) {
-        return console.log("[FASHION] Could not load script: " + url + " (" + req.status + ")");
+  extractScripts: function(head, htmlPath, jsCallback) {
+    var fssPath, regex, resolvePromise, scripts, tag, unresolved, _results;
+    unresolved = 0;
+    scripts = [];
+    resolvePromise = function(path, scriptIndex, err, fileData) {
+      var fileString;
+      if (err) {
+        return console.log("Could not load script file at path: " + path);
+      }
+      fileString = fileData.toString();
+      if (fileString.indexOf($wf.$loader.fashionIdentifier) !== 0) {
+        scripts[scriptIndex] = fileString;
+      }
+      if (--unresolved === 0) {
+        return jsCallback(scripts.join("\n"));
       }
     };
-    req.open("GET", url, true);
-    return req.send();
+    regex = $wf.$loader.scriptRegex();
+    _results = [];
+    while (tag = regex.exec(head)) {
+      if (tag[2] != null) {
+        unresolved++;
+        fssPath = path.resolve(htmlPath, "../", tag[2]);
+        fs.readFile(fssPath, resolvePromise.bind(0, fssPath, scripts.length));
+        _results.push(scripts.push(''));
+      } else {
+        if (tag[3].indexOf($wf.$loader.fashionIdentifier) !== 0) {
+          _results.push(scripts.push(tag[3]));
+        } else {
+          _results.push(void 0);
+        }
+      }
+    }
+    return _results;
   }
 };
 window.fashion.$parser = {

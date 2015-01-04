@@ -70,24 +70,6 @@ window.fashion.removeCompiler = ()->
 	currentScript.parentNode.removeChild currentScript
 
 
-# Convert the code into something that can be copy/pasted for production
-window.fashion.makeProduction = ()->
-	for element in document.querySelectorAll "style[id*=FASHION]"
-
-		if element.id is "FASHION-stylesheet"
-			head = document.getElementsByTagName('head').item(0)
-			style = document.createElement("style")
-			style.type = "text/css"
-			style.id = "FASHION-stylesheet"
-			cssText = ""
-			cssText += rule.cssText + "\n" for rule in element.sheet.rules
-			style.appendChild document.createTextNode cssText
-			head.appendChild style
-
-		# All style tags get deleted
-		element.parentNode.removeChild(element)
-
-
 # Include helper files, used by everything
 # @prepros-append ./helpers/basic.coffee
 # @prepros-append ./helpers/dom.coffee
