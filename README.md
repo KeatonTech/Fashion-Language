@@ -274,6 +274,8 @@ This can be accomplished by a simple fashion extension that runs at compile time
 
 ```javascript
 window.fashion.addProperty("text-style", {
+	// Tell fashion to remove this property from the compiled CSS
+	// Only the properties it creates are valid, 'text-style' is not otherwise valid
 	replace: true,
 
 	// Runs at compile time, adds new properties based on the input
