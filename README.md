@@ -229,6 +229,14 @@ The second, arguably more important, reason is that fashion can be extended by y
 
 Say you wanted to invert a color used in your stylesheet. You could add a Fashion function to accomplish this task by including this script.
 
+```scss
+$color: #ff5c5c;
+div {
+	color: $color
+	background-color: invert($color);
+}
+```
+
 ```javascript
 window.fashion.addFunction("invert", {
 	
@@ -250,14 +258,6 @@ window.fashion.addFunction("invert", {
 		return this.rgbTOhex(color);
 	}
 });
-```
-
-```scss
-$color: #ff5c5c;
-div {
-	color: $color
-	background-color: invert($color);
-}
 ```
 
 Notice that the code uses foregroundColor.value instead of just foregroundColor. This is because Fashion has a whole type system built in, to make up for Javascript's complete lack of one. You could use foregroundColor.type to ensure that it is, in fact, a color. For numerical values, a .unit property is also given, allowing you to do conversion if necessary.
@@ -294,11 +294,12 @@ window.fashion.addProperty("text-style", {
 					this.setProperty("text-decoration", "underline");break;
 			};
 		}.bind(this);
-
+	
+		// Go through each value passed in by the user
+		// If only one is passed in, it will be a string instead of an array
 		if (values instanceof Array) {
-			for (_i = 0, _len = values.length; _i < _len; _i++) {
-				v = values[_i];
-				compileSingleValue(v);
+			for (i = 0, len = values.length; i < len; i++) {
+				compileSingleValue(values[_i]);
 			}
 		} else {
 			compileSingleValue(values);
