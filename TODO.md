@@ -1,6 +1,5 @@
 # Fashion 0.3
 
-* Node.js-based build system - not relying on makeProduction() in browser
 * Updated @transition block with support for keyframe ranges
 * A few new modules from the set listed below.
 * 100+ Unit Tests

@@ -19,12 +19,12 @@ body, html {
 This part may look a little new:
 
 ```Javascript
-setTimeout(function(){
+window.onload = function(){
 	style.background = "#27B9AB";
-}, 1000);
+}
 ```
 
-Obviously changing page styles from Javascript is nothing new, so this may not seem particularly exciting. Notice, though, that there are no CSS selectors involved here. So if you needed to move the page background to a div, or apply the background color to a new element, your Javascript wouldn't have to change at all! You also might be interested to know that Fashion doesn't use any 'style' attributes, so your normal CSS inheritance will stay in tact.
+Obviously changing page styles from Javascript is nothing new, so this may not seem particularly exciting. Notice, though, that there are no CSS selectors involved here. So if you needed to move the page background to a div, or apply the background color to a new element, your Javascript wouldn't have to change at all! You also might be interested to know that Fashion doesn't rely on HTML attributes so your normal CSS inheritance will stay in tact.
 
 Variables aren't just useful for changing things like colors and sizes, they can be used to select elements too. So, if you wanted to build a simple sidebar menu and control which item was selected, you could do it without any DOM hassle.
 
@@ -71,6 +71,32 @@ Here, the @height variable is the total height of the window. Fashion intelligen
 * *ScrollY:* The user's current scroll position, in pixels from the top of the page
 * *MouseX:* The user's current mouse position, in pixels from the left of the page
 * *MouseY:* The user's current mouse position, in pixels from the top of the page
+* *pixelRatio:* The device pixel ratio (usually 1 or 2 for retina)
+
+### Functions & Expressions
+
+As you can see from the previous example, it is possible to write math expressions directly inside of fashion properties. In fact, anything you can do in Javascript you can do in Fashion (we cheat a little and just convert whatever you write into Javascript, with some special logic to make sure your CSS gets the right units).
+
+Fashion also supports custom functions for more advanced data manipulation, and comes with a pretty big set of useful stuff. For example, if you wanted to make your text size responsive, within reason, you could write something like this.
+
+```scss
+$minTextSize: 12px;
+p {
+	font-size: max(@width/50, $minTextSize);
+}
+```
+
+Functions are also really useful for manipulating colors. They can even be used to add brand new color spaces to CSS, in this case HSB, which it seems the CSS committee has some sort of vendetta on.
+
+```scss
+$color: hsb(150, 50, 100); // A nice soft blue
+div {
+	color: brighten($color, 0.25);
+	background-color: darken($color, 0.25);
+}
+```
+
+Functions are bound to variables dynamically, not just evaluated once and thrown out. That means if you change the style.color variable at any time in your javascript, they'll all be re-evaluated for your new color. Fashion automatically includes any code needed to run these functions on your site, without including any unnecessary bloat. This means perfectly dynamic sites with super fast load times!
 
 ### Transitions & Animations
 
@@ -171,7 +197,7 @@ NOTE: This functionality will soon be improved by adding scoped variables, so yo
 
 ## Using Fashion
 
-Fashion is designed to run either in-browser or as a compiler. Currently only the in-browser implementation is in a working state, although it is architected to act essentially as a compiler, generating CSS and Javascript for the page and then handing off to that. Fashion code can be inserted into your page like this.
+Fashion is designed to run either in-browser or as a compiler. To start, we recommend running it in your browser. This will allow you to make changes more quickly, without having to set up a whole build system.
 
 ```HTML
 <head>
@@ -187,13 +213,104 @@ Fashion is designed to run either in-browser or as a compiler. Currently only th
 </head>
 ```
 
-Loading external Fashion scripts using link tags will be supported soon too. After the page has loaded, the window.style object will become available with all of the variables defined in the Fashion code.
+*NOTE: When using Fashion in the browser, it may not be suitable to assume that the style object exists as soon as the page loads, since some stylesheets may be loaded asynchronously and parsing takes time. To ensure your app logic waits for the sheets to load, listen for the "fashion-loaded" event.*
 
-When using Fashion in the browser, it may not be suitable to assume that the style object exists as soon as the page loads, since some stylesheets may be loaded asynchronously and parsing takes time. To ensure your app logic waits for the sheets to load, listen for the "fashion-loaded" event.
+Once your site is done, you can compile fashion using our node.js based compile system. This will ensure that your users don't have to download the whole fashion library every time they load your site. Right now, you can call it like this:
+
+	node ./lib/fashion.compiler.js index.html built.html
+
+This will take the site you have running at index.html and make a fully compiled copy at built.html. Currently the compiler inlines all of your Javascript and CSS into the HTML file, which is efficient for static pages but prevents caching from working well on dynamic pages. There will be an option in the future to have the compiler generate a number of different files.
+
+Now, you're probably wondering why the compiler inputs and outputs html files, instead of fashion (*.fss) files. It is, after all, the fashion compiler. There are 2 reasons for this. The first is for efficiency, if you were to embed 2 fashion files on the same page, a dumber compiler may include the common fashion runtime twice. Having the full html means this compiler can consider every fashion document on the page and generate one nice simple runtime from them.
+
+The second, arguably more important, reason is that fashion can be extended by you, the developer. Any javascript that you include on the page (inline or linked) can contain Fashion extensions. The compiler picks up on these and automatically installs them. No messy JSON dependencies, no command line arguments, just the kind of Javascript that you're already used to.
+
+## Extending Fashion
+
+Say you wanted to invert a color used in your stylesheet. You could add a Fashion function to accomplish this task by including this script.
+
+```javascript
+window.fashion.addFunction("invert", {
+	
+	// Tell fashion what type this function returns
+	output: window.fashion.$type.Color,
+
+	// Tell fashion that this relies on a runtime modules called 'colors'
+	// TODO: Document these modules better
+	// You only need this if you're calling any functions under 'this', here cssTOjs
+	capabilities: ["colors"],
+
+	// Evaluate the function
+	evaluate: function(foregroundColor) {
+		var color = this.cssTOjs(foregroundColor.value, this);
+		if (color.r === void 0) {return "black";}
+		color.r = 255 - color.r;
+		color.g = 255 - color.g;
+		color.b = 255 - color.b;
+		return this.rgbTOhex(color);
+	}
+});
+```
+
+```scss
+$color: #ff5c5c;
+div {
+	color: $color
+	background-color: invert($color);
+}
+```
+
+Notice that the code uses foregroundColor.value instead of just foregroundColor. This is because Fashion has a whole type system built in, to make up for Javascript's complete lack of one. You could use foregroundColor.type to ensure that it is, in fact, a color. For numerical values, a .unit property is also given, allowing you to do conversion if necessary.
+
+You can also create custom properties to use in your stylesheet (things like 'width' and 'text-align'). Say you wanted to create a property that lets you handle CSS's convoluted text styles more easily.
+
+```scss
+.bolditalic {
+	text-style: bold italic;
+}
+```
+
+This can be accomplished by a simple fashion extension that runs at compile time and expands this property out
+
+```javascript
+window.fashion.addProperty("text-style", {
+	replace: true,
+
+	// Runs at compile time, adds new properties based on the input
+    compile: function(values) {
+
+		// For each property the user passes in
+		compileSingleValue = function(value){
+			switch (value) {
+				case "italic":
+					this.setProperty("font-style", "italic"); break;
+				case "bold":
+					this.setProperty("font-weight", "bolder");break;
+				case "light":
+					this.setProperty("font-weight", "lighter");break;
+				case "underline":
+					this.setProperty("text-decoration", "underline");break;
+			};
+		}.bind(this);
+
+		if (values instanceof Array) {
+			for (_i = 0, _len = values.length; _i < _len; _i++) {
+				v = values[_i];
+				compileSingleValue(v);
+			}
+		} else {
+			compileSingleValue(values);
+		}
+	};
+});
+```
+
+You can also extend fashion to add your own globals and blocks (things like @transition). The APIs for these are still in flux, and they're not very well documented right now, but hey, it's possible! Once things stabilize I'll write more comprehensive docs, for now you might have to dig through the source code a little bit.
+
 
 ## Status
 
-Fashion is still in the early stages of development. It is not feature complete and has a very limited testing suite. However, all of the features described here do work fairly reliably. I wouldn't reccomend building a whole site with it, but it's certainly not too early to start playing around with it. If you are interested in contributing, email me at keaton.brandt@gmail.com.
+Fashion is still in the early stages of development. It is not feature complete and has a limited testing suite (Just over 100 unit tests). However, all of the features described here do work fairly reliably. I wouldn't reccomend building a whole site with it, but it's certainly not too early to start playing around with it. If you are interested in contributing, email me at keaton.brandt@gmail.com.
 
 #### Current Browser Compatibility
 
@@ -201,6 +318,4 @@ Safari 5.1+, IE 9+, Evergreen Browsers(Firefox 4+, Chrome 5+, Opera 11.6+)
 
 #### Current Size
 
-As more and more companies go "mobile first", file size is becoming a more important consideration for web developers. Javascript libraries certainly won't break the bank, but they do usually need to be loaded before the page can display at all, so every kilobyte counts.
-
-Currently, the Javascript generated by Fashion is around 10 - 20kb, depending on the complexity of the Fashion document. The core runtime code is about 7.5 kilobytes, and grows from there based on what functions are used and how many dynamic / individualized properties there are. This kind of optimization means that your complete Fashion-generated code will likely be significantly smaller than most standard Javascript libraries, even though it contains both the library and your app's style logic. With some better minification techniques, this could get even smaller.
+The Fashion compiler currently runs upwards of 100kb, which is very large for a Javascript library. Luckily, it was never meant to be included on production sites. The code it generates, which includes both library functions and all of the interactivity you've defined for the page, generally runs about 20 - 30kb, or more depending on the complexity of the site. The compiler goes to great lengths to ensure that no unnecessary code is added to the production page, so simple sites that don't use many of Fashion's more advanced features could be as small as a few kilobytes.
