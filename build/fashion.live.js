@@ -1882,8 +1882,8 @@ window.fashion.color = {
       _ref = [h.h, h.s, h.b], h = _ref[0], s = _ref[1], b = _ref[2];
     }
     m = Math;
-    s = s / 255;
-    b = b / 255;
+    s = s / 100;
+    b = b / 100;
     c = function(o) {
       return 255 * (s * b * m.max(m.min(m.abs(((h + o) / 60 % 6) - 3) - 1, 1), 0) + b * (1 - s));
     };
@@ -3304,8 +3304,9 @@ $wf.$extend(window.fashion.$functions, {
     capabilities: ["colors"],
     evaluate: function(h, s, b) {
       var g, r, _ref;
-      _ref = this.hsbTOrgb(h, s, b), r = _ref.r, g = _ref.g, b = _ref.b;
-      return "rgb(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + ")";
+      console.log(this);
+      _ref = this.hsbTOrgb(h.value, s.value, b.value), r = _ref.r, g = _ref.g, b = _ref.b;
+      return "rgb(" + (parseInt(r)) + "," + (parseInt(g)) + "," + (parseInt(b)) + ")";
     }
   }),
   "hsba": new FunctionModule({
@@ -3313,8 +3314,8 @@ $wf.$extend(window.fashion.$functions, {
     capabilities: ["colors"],
     evaluate: function(h, s, b, a) {
       var g, r, _ref;
-      _ref = this.hsbTOrgb(h, s, b), r = _ref.r, g = _ref.g, b = _ref.b;
-      return "rgba(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + "," + a.value + ")";
+      _ref = this.hsbTOrgb(h.value, s.value, b.value), r = _ref.r, g = _ref.g, b = _ref.b;
+      return "rgba(" + (parseInt(r)) + "," + (parseInt(g)) + "," + (parseInt(b)) + "," + a.value + ")";
     }
   }),
   "changeAlpha": new FunctionModule({

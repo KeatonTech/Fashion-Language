@@ -71,8 +71,57 @@
 
 }).call(this);
 (function() {
+  window.fashiontests.modules.colors = function() {
+    var $wf, actualize, parse, process;
+    $wf = window.fashion;
+    parse = window.fashion.$parser.parse;
+    process = window.fashion.$processor.process;
+    actualize = function(parseTree) {
+      return window.fashion.$actualizer.actualize(parseTree, 0);
+    };
+    it('should convert HSB into RGB', function() {
+      var css;
+      css = actualize(process(parse("div {\n	color: hsb(0,100,100);\n}"))).css;
+      return expect(css).toContain("rgb(255,0,0)");
+    });
+    it('should convert HSBA into RGBA', function() {
+      var css;
+      css = actualize(process(parse("div {\n	color: hsba(120,100,100,0.5);\n}"))).css;
+      return expect(css).toContain("rgba(0,255,0,0.5)");
+    });
+    return it('should generate RGB values from CSS colors', function() {
+      var cssToRgb;
+      cssToRgb = $wf.color.cssTOjs;
+      expect(cssToRgb("#fff")).toEqual({
+        r: 255,
+        g: 255,
+        b: 255
+      });
+      expect(cssToRgb("#ff5c5c")).toEqual({
+        r: 255,
+        g: 92,
+        b: 92
+      });
+      expect(cssToRgb("rgb(255,0,128)")).toEqual({
+        r: 255,
+        g: 0,
+        b: 128,
+        a: 1
+      });
+      return expect(cssToRgb("rgba(255,0,128,0.5)")).toEqual({
+        r: 255,
+        g: 0,
+        b: 128,
+        a: 0.5
+      });
+    });
+  };
+
+}).call(this);
+(function() {
   describe("Modules", function() {
-    return describe("@transition", window.fashiontests.modules.transition);
+    describe("@transition", window.fashiontests.modules.transition);
+    return describe("colors", window.fashiontests.modules.colors);
   });
 
 }).call(this);

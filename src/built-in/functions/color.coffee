@@ -35,15 +35,16 @@ $wf.$extend window.fashion.$functions,
 		output: $wf.$type.Color,
 		capabilities: ["colors"],
 		evaluate: (h,s,b) -> 
-			{r,g,b} = @hsbTOrgb h, s, b
-			"rgb(#{parseInt r.value},#{parseInt g.value},#{parseInt b.value})"
+			console.log this
+			{r,g,b} = @hsbTOrgb h.value, s.value, b.value
+			"rgb(#{parseInt r},#{parseInt g},#{parseInt b})"
 
 	"hsba": new FunctionModule
 		output: $wf.$type.Color,
 		capabilities: ["colors"],
 		evaluate: (h,s,b,a) -> 
-			{r,g,b} = @hsbTOrgb h, s, b
-			"rgba(#{parseInt r.value},#{parseInt g.value},#{parseInt b.value},#{a.value})"
+			{r,g,b} = @hsbTOrgb h.value, s.value, b.value
+			"rgba(#{parseInt r},#{parseInt g},#{parseInt b},#{a.value})"
 
 
 	# COLOR MANIPULATION FUNCTIONS

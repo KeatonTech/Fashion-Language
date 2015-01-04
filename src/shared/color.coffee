@@ -54,7 +54,7 @@ window.fashion.color =
 		# Tweet-sized HSB calculator
 		# I'm very proud of this, I've never seen a shorter one
 		# Most people use massive switch statements
-		m=Math;s=s/255;b=b/255;
+		m=Math;s=s/100;b=b/100;
 		c = (o) -> return 255*(s*b*m.max(m.min(m.abs(((h+o)/60%6)-3)-1,1),0)+b*(1-s))
 		return {r: c(0),g: c(240),b: c(120)}
 

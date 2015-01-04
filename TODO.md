@@ -1,11 +1,6 @@
-# Fashion 0.3
-
-* Updated @transition block with support for keyframe ranges
-* A few new modules from the set listed below.
-* 100+ Unit Tests
-
 # Fashion 0.4
 
+* Updated @transition block with support for keyframe ranges
 * Binding function, with DOM observers to update its value
 * Full support for scoped variables - treated as individualized properties.
 * Allow ternaries (CS and JS formats) in expressions
