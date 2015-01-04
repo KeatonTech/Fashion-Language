@@ -1,0 +1,28 @@
+{
+  "name": "fashion",
+  "version": "0.3.0",
+  "description": "A new CSS for the web of 2014 and beyond.",
+  "author": "Keaton Brandt <keaton.brandt@gmail.com>",
+  "main": "./fashion.compiler.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KeatonTech/Fashion-Language.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KeatonTech/Fashion-Language/issues"
+  },
+  "keywords": [
+    "fashion",
+    "css",
+    "stylesheet",
+    "compiler"
+  ],
+  "dependencies": {
+    "uglify-js": "2.4.16"
+  },
+  "preferGlobal": true,
+  "private": true,
+  "subdomain": "fashion",
+  "analyze": true,
+  "license": "MIT"
+}

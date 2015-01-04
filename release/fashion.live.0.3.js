@@ -30,11 +30,12 @@ THE SOFTWARE.
 var $wf, wait;
 
 $wf = window.fashion = {
-  version: "0.2.2",
+  version: "0.3",
   url: "http://writefashion.org",
   author: "Keaton Brandt",
   mimeType: "text/x-fashion",
   cssId: "FASHION-stylesheet",
+  minifiedObject: "FSMIN",
   runtimeObject: "FASHION",
   runtimeModules: []
 };
@@ -49,6 +50,7 @@ window.fashion.runtimeConfig = {
 wait = function(d, f) {
   return setTimeout(f, d);
 };
+
 window.fashion.addProperty = function(name, propertyModule, force) {
   if (force == null) {
     force = false;
@@ -177,9 +179,11 @@ document.addEventListener('readystatechange', function() {
       parseTree = window.fashion.$parser.parse(scriptText);
       parseTree = window.fashion.$processor.process(parseTree);
       _ref = window.fashion.$actualizer.actualize(parseTree), css = _ref.css, js = _ref.js;
+      console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
+      start = new Date().getTime();
       $wf.$dom.addStylesheet(css);
       $wf.$dom.addScript(js);
-      console.log("[FASHION] Compile finished in " + (new Date().getTime() - start) + "ms");
+      console.log("[FASHION] Page initialize finished in " + (new Date().getTime() - start) + "ms");
       event = new Event(window.fashion.live.loadedEvent);
       event.variableObject = window[window.fashion.variableObject];
       document.dispatchEvent(event);
@@ -201,31 +205,6 @@ window.fashion.removeCompiler = function() {
   };
   deleteAll(document.querySelectorAll("[type='text/x-fashion']"));
   return currentScript.parentNode.removeChild(currentScript);
-};
-
-window.fashion.makeProduction = function() {
-  var cssText, element, head, rule, style, _i, _j, _len, _len1, _ref, _ref1, _results;
-  _ref = document.querySelectorAll("style[id*=FASHION]");
-  _results = [];
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    element = _ref[_i];
-    if (element.id === "FASHION-stylesheet") {
-      head = document.getElementsByTagName('head').item(0);
-      style = document.createElement("style");
-      style.type = "text/css";
-      style.id = "FASHION-stylesheet";
-      cssText = "";
-      _ref1 = element.sheet.rules;
-      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-        rule = _ref1[_j];
-        cssText += rule.cssText + "\n";
-      }
-      style.appendChild(document.createTextNode(cssText));
-      head.appendChild(style);
-    }
-    _results.push(element.parentNode.removeChild(element));
-  }
-  return _results;
 };
 var __slice = [].slice;
 
@@ -340,7 +319,8 @@ var ParseTree;
 
 ParseTree = (function() {
   function ParseTree(extendsTree) {
-    this.variables = extendsTree ? extendsTree.variables : {};
+    var k, v, _ref;
+    this.variables = {};
     this.selectors = [];
     this.blocks = [];
     this.scripts = [];
@@ -355,6 +335,13 @@ ParseTree = (function() {
       globals: {},
       dom: []
     };
+    if (extendsTree) {
+      _ref = extendsTree.variables;
+      for (k in _ref) {
+        v = _ref[k];
+        this.variables[k] = v;
+      }
+    }
   }
 
   ParseTree.prototype.addVariable = function(variableObject) {
@@ -659,6 +646,9 @@ GlobalModule = (function(_super) {
 
   function GlobalModule(args) {
     this.watch = args.watch;
+    if (!args.mode) {
+      args.mode = $wf.$runtimeMode.globalDynamic;
+    }
     GlobalModule.__super__.constructor.call(this, args);
   }
 
@@ -737,6 +727,7 @@ window.fashion.$type = {
   Number: 1,
   String: 2,
   Color: 3,
+  Element: 4,
   KGeneric: 100,
   KDisplay: 101,
   KCenter: 102,
@@ -774,21 +765,23 @@ window.fashion.$typeConstants = {
 };
 
 /*
-4-bit Mode -----------------------------------------------------------------------
-	0001 (Bit 0): Can change, needs to be included in the JS
-	0010 (Bit 1): Can rely on non-top-level variables
-	0100 (Bit 2): Can rely on relative styles & attributes
-	1000 (Bit 3): Needs to be continuously recomputed
+5-bit Mode -----------------------------------------------------------------------
+	00001 (Bit 0): Can change, needs to be included in the JS
+	00010 (Bit 1): Can rely on non-top-level variables
+	00100 (Bit 2): Can rely on relative styles & attributes
+	01000 (Bit 3): Needs to be continuously recomputed
+	10000 (Bit 4): Can rely on globals, cannot be pre-computed
 ----------------------------------------------------------------------------------
  */
 window.fashion.$runtimeMode = {
   "static": 0,
   dynamic: 1,
   scoped: 3,
+  globalDynamic: 17,
   individual: 7,
   live: 9,
-  generate: function(dynamic, individualized, live, scoped) {
-    return (dynamic ? 1 : 0) | (individualized ? 7 : 0) | (live ? 9 : 0) | (scoped ? 3 : 0);
+  generate: function(dynamic, individualized, live, scoped, globals) {
+    return (dynamic ? 1 : 0) | (individualized ? 7 : 0) | (live ? 9 : 0) | (scoped ? 3 : 0) | (globals ? 17 : 0);
   }
 };
 window.fashion.$loader = {
@@ -1005,19 +998,34 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
     } else if (segment[3] && segment[4]) {
       topSel.addToBody(fashionText.substring(segment.index, lastIndex));
     } else if (segment[7]) {
-      if (segment[7][0] === "&") {
-        name = topSel.rawName + segment[7].substr(1);
-      } else if (segment[7][0] === "~") {
-        name = topSel.rawName + " " + segment[7].substr(1);
-      } else {
-        name = topSel.rawName + " > " + segment[7];
-      }
+      name = $wf.$parser.nestSelector(topSel.rawName, segment[7]);
       selectors.push($wf.$parser.createSelector(parseTree, name));
       selectorStack.push(selectors.length - 1);
       bracketDepth++;
     }
   }
   return selectors;
+};
+
+window.fashion.$parser.nestSelector = function(outer, inner) {
+  var acc, istring, ostring, _i, _j, _len, _len1, _ref, _ref1;
+  acc = [];
+  _ref = outer.split(",");
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    ostring = _ref[_i];
+    ostring = ostring.trim();
+    _ref1 = inner.split(",");
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      istring = _ref1[_j];
+      istring = istring.trim();
+      if (istring[0] === "&") {
+        acc.push(ostring + istring.substr(1));
+      } else {
+        acc.push(ostring + " " + istring);
+      }
+    }
+  }
+  return acc.join(",");
 };
 
 window.fashion.$parser.createSelector = function(parseTree, name) {
@@ -1208,7 +1216,7 @@ window.fashion.$parser.parseExpression = function(expString, bindingLink, parseT
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([^\s\)]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([\S]*))/g;
+  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([\S]*))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
     eObj = void 0;
@@ -1250,7 +1258,7 @@ window.fashion.$parser.parseExpression = function(expString, bindingLink, parseT
     types.push(eObj.type === void 0 ? $wf.$type.Unknown : eObj.type);
     units.push(eObj.unit || '');
   }
-  _ref1 = $wf.$parser.determineExpressionType(types, units), type = _ref1.type, unit = _ref1.unit;
+  _ref1 = $wf.$parser.determineExpressionType(types, units, expString), type = _ref1.type, unit = _ref1.unit;
   if (isSetter) {
     unit = void 0;
   }
@@ -1297,9 +1305,10 @@ window.fashion.$parser.matchParenthesis = function(regex, string, index) {
       lastIndex = section.index + section[0].length;
     }
   }
+  return console.log("[FASHION] Could not match parens: " + string);
 };
 
-window.fashion.$parser.determineExpressionType = function(types, units) {
+window.fashion.$parser.determineExpressionType = function(types, units, expression) {
   var i, topType, topUnit, type, unit;
   topType = topUnit = void 0;
   for (i in types) {
@@ -1313,7 +1322,7 @@ window.fashion.$parser.determineExpressionType = function(types, units) {
       if (type === $wf.$type.String) {
         topType = $wf.$type.String;
       } else {
-        console.log("[FASHION] Found mixed types in expression");
+        console.log("[FASHION] Found mixed types in expression: '" + expression + "'");
         return {};
       }
     }
@@ -1368,7 +1377,7 @@ window.fashion.$parser.expressionExpander = {
     return new Expression(script, type, unit, mode);
   },
   globalVariable: function(name, bindingLink, globals, parseTree) {
-    var dynamicMode, script, vObj;
+    var script, vObj;
     name = name.toLowerCase();
     vObj = globals[name];
     if (!vObj) {
@@ -1376,9 +1385,8 @@ window.fashion.$parser.expressionExpander = {
     }
     parseTree.addGlobalDependency(name, vObj);
     parseTree.addGlobalBinding(bindingLink, name);
-    dynamicMode = $wf.$runtimeMode.dynamic;
     script = "g." + name + ".get()";
-    return new Expression(script, vObj.type, vObj.unit, dynamicMode);
+    return new Expression(script, vObj.type, vObj.unit, vObj.mode);
   },
   numberWithUnit: function(value) {
     var numberType, staticMode, unitValue;
@@ -1391,24 +1399,29 @@ window.fashion.$parser.expressionExpander = {
     return new Expression(unitValue.value, numberType, unitValue.unit, staticMode);
   },
   relativeObject: function(keyword, property) {
-    var dotProperties, lastProperty, script, type, unit, varName;
-    varName = keyword === "parent" ? "e.parent" : "e";
+    var dotProperties, lastProperty, script, type, unit;
+    if (keyword === "parent") {
+      property = ".parent" + property;
+    }
     dotProperties = property.split(".");
     lastProperty = dotProperties[dotProperties.length - 1];
-    if (lastProperty === "top" || lastProperty === "bottom" || lastProperty === "left" || lastProperty === "right" || lastProperty === "number" || lastProperty === "width" || lastProperty === "height") {
+    if (property == null) {
+      type = $wf.$type.Element;
+    } else if (lastProperty === "top" || lastProperty === "bottom" || lastProperty === "left" || lastProperty === "right" || lastProperty === "number" || lastProperty === "width" || lastProperty === "height") {
       type = $wf.$type.Number;
       unit = "px";
     } else {
       type = $wf.$type.String;
     }
-    script = varName;
     if (property) {
-      script += "." + property;
+      script = "e('" + property + "','" + keyword + "')";
+    } else {
+      script = "e(void 0, " + (JSON.stringify(keyword)) + ")";
     }
     return new Expression(script, type, unit, $wf.$runtimeMode.individual);
   },
   "function": function(name, argumentsString, inputUnit, bindingLink, parseTree, funcs, globals) {
-    var arg, args, expr, expressions, fObj, mode, script, scripts, unit, vars, _i, _len;
+    var arg, argComponents, args, expr, expressions, fObj, mode, namedArgs, objectProp, script, scripts, unit, vars, _i, _j, _len, _len1;
     vars = parseTree.variables;
     fObj = funcs[name];
     if (!fObj) {
@@ -1416,23 +1429,31 @@ window.fashion.$parser.expressionExpander = {
     }
     if (argumentsString.length > 1) {
       args = window.fashion.$parser.splitByTopLevelCommas(argumentsString);
-      expressions = (function() {
-        var _i, _len, _results;
-        _results = [];
-        for (_i = 0, _len = args.length; _i < _len; _i++) {
-          arg = args[_i];
-          _results.push(window.fashion.$parser.parseExpression(arg, bindingLink, parseTree, funcs, globals, false));
+      expressions = [];
+      namedArgs = [];
+      for (_i = 0, _len = args.length; _i < _len; _i++) {
+        arg = args[_i];
+        if (argComponents = arg.match(/([a-zA-Z0-9\-\'\"]+)\s*\:\s*(.*)/)) {
+          objectProp = "'" + argComponents[1] + "': ";
+          objectProp += window.fashion.$parser.parseExpression(argComponents[2], bindingLink, parseTree, funcs, globals, 0).script;
+          namedArgs.push(objectProp);
+        } else {
+          expressions.push(window.fashion.$parser.parseExpression(arg, bindingLink, parseTree, funcs, globals, false));
         }
-        return _results;
-      })();
+      }
+      if (namedArgs.length > 0) {
+        expressions.push({
+          script: "{" + (namedArgs.join(',')) + "}"
+        });
+      }
     } else {
       expressions = [];
     }
     scripts = ["t"];
     mode = fObj.mode;
-    for (_i = 0, _len = expressions.length; _i < _len; _i++) {
-      expr = expressions[_i];
-      if (!(expr instanceof Expression)) {
+    for (_j = 0, _len1 = expressions.length; _j < _len1; _j++) {
+      expr = expressions[_j];
+      if (!(expr.script != null)) {
         continue;
       }
       mode |= expr.mode;
@@ -1516,11 +1537,11 @@ window.fashion.$processor.api = {
   }
 };
 window.fashion.$processor.blocks = function(parseTree, blocks) {
-  var API, block, blockObj, funcs, _i, _len, _ref;
+  var API, bID, block, blockObj, funcs, _ref;
   funcs = window.fashion.$processor.api;
   _ref = parseTree.blocks;
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    block = _ref[_i];
+  for (bID in _ref) {
+    block = _ref[bID];
     blockObj = blocks[block.type];
     if (!blockObj) {
       continue;
@@ -1531,7 +1552,8 @@ window.fashion.$processor.blocks = function(parseTree, blocks) {
       addScript: funcs.addScript.bind(0, parseTree),
       parseValue: funcs.parseValue,
       parse: funcs.parseBody.bind(0, parseTree),
-      runtimeObject: parseTree.dependencies.blocks[block.type].runtimeObject
+      runtimeObject: parseTree.dependencies.blocks[block.type].runtimeObject,
+      addVariable: funcs.addVariable.bind(0, parseTree)
     };
     blockObj.compile.call(API, block["arguments"], block.body);
   }
@@ -1540,6 +1562,10 @@ window.fashion.$processor.blocks = function(parseTree, blocks) {
 
 window.fashion.$processor.api.parseBody = function(parseTree, body) {
   return $wf.$parser.parse(body, parseTree);
+};
+
+window.fashion.$processor.api.addVariable = function(parseTree, name, value) {
+  return $wf.$parser.addVariable(parseTree, name, value);
 };
 window.fashion.$processor.properties = function(parseTree, propertyModules) {
   var API, funcs, index, property, propertyModule, selector, _i, _j, _len, _len1, _ref, _ref1;
@@ -1586,13 +1612,18 @@ window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime
       value: void 0
     };
   }
+  if (typeof vObj === 'string' || typeof vObj === 'number') {
+    return {
+      value: vObj
+    };
+  }
   if (vObj[0]) {
     return vObj[0];
   }
   if (vObj.scope && vObj.scope.length > 0) {
     return this.throwError("Scoped variables are not yet supported");
   } else if (vObj["default"] !== void 0) {
-    if (vObj["default"].script) {
+    if (vObj["default"].evaluate) {
       return {
         value: this.evaluate(vObj["default"], variables, globals, funcs, runtime, elem)
       };
@@ -1607,14 +1638,14 @@ window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime
 };
 
 window.fashion.$shared.evaluate = function(valueObject, variables, globals, funcs, runtime, element, cssMode) {
-  var evaluateSingleValue, getSuffix, isImportant, string, value, vi, vo;
+  var addSuffix, evaluateSingleValue, isImportant, string, value, vi, vo;
   if (cssMode == null) {
     cssMode = true;
   }
   isImportant = false;
   evaluateSingleValue = (function(_this) {
     return function(valueObject) {
-      var v, val, varLookup, varObjects, _i, _len;
+      var elmLookup, v, val, varLookup, varObjects, _i, _len;
       if (typeof valueObject === "string") {
         return valueObject;
       }
@@ -1632,8 +1663,11 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         });
         return vObj;
       };
+      if (element != null) {
+        elmLookup = _this.elementFunction(element);
+      }
       if (valueObject.evaluate) {
-        val = valueObject.evaluate(varLookup, globals, funcs, runtime, element);
+        val = valueObject.evaluate(varLookup, globals, funcs, runtime, elmLookup);
         if (valueObject.important === true) {
           isImportant = true;
         }
@@ -1651,11 +1685,11 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
       }
     };
   })(this);
-  getSuffix = function(isImportant) {
+  addSuffix = function(property, isImportant) {
     if (isImportant && cssMode) {
-      return " !important";
+      return property + " !important";
     } else {
-      return "";
+      return property;
     }
   };
   if (valueObject instanceof Array) {
@@ -1663,7 +1697,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
       return '';
     }
     if (valueObject[0] instanceof Array) {
-      return ((function() {
+      return addSuffix(((function() {
         var _i, _len, _results;
         _results = [];
         for (_i = 0, _len = valueObject.length; _i < _len; _i++) {
@@ -1679,7 +1713,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
           })()).join(' '));
         }
         return _results;
-      })()).join(', ') + getSuffix(isImportant);
+      })()).join(', '), isImportant);
     } else {
       string = ((function() {
         var _i, _len, _results;
@@ -1690,10 +1724,10 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         }
         return _results;
       })()).join(' ');
-      return string + getSuffix(isImportant);
+      return addSuffix(string, isImportant);
     }
   } else {
-    return evaluateSingleValue(valueObject) + getSuffix(isImportant);
+    return addSuffix(evaluateSingleValue(valueObject), isImportant);
   }
 };
 var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
@@ -1775,7 +1809,7 @@ window.fashion.$shared.timeInMs = function(valueObject) {
   } else if (valueObject.unit === "s") {
     return valueObject.value * 1000;
   } else {
-    return 0;
+    return parseInt(valueObject.value);
   }
 };
 window.fashion.color = {
@@ -1848,8 +1882,8 @@ window.fashion.color = {
       _ref = [h.h, h.s, h.b], h = _ref[0], s = _ref[1], b = _ref[2];
     }
     m = Math;
-    s = s / 255;
-    b = b / 255;
+    s = s / 100;
+    b = b / 100;
     c = function(o) {
       return 255 * (s * b * m.max(m.min(m.abs(((h + o) / 60 % 6) - 3) - 1, 1), 0) + b * (1 - s));
     };
@@ -1899,20 +1933,22 @@ window.fashion.color = {
 };
 window.fashion.$actualizer = {
   actualize: function(parseTree) {
-    var capabilities, css, cssMap, cssSelectors, cullOffsets, hMap, indSels, js, jsSels, rMode, runtimeData, selectors, _ref, _ref1;
+    var capabilities, css, cssMap, cssSelectors, cullOffsets, hMap, indSels, js, jsSels, miniRuntimeData, rMode, runtimeData, selectors, _ref, _ref1;
     rMode = $wf.$runtimeMode;
     $wf.$actualizer.separateTransitions(parseTree);
     _ref = $wf.$actualizer.regroupProperties(parseTree), selectors = _ref.selectors, hMap = _ref.map;
     _ref1 = $wf.$actualizer.cullIndividuality(selectors, hMap), cssSelectors = _ref1.sel, cssMap = _ref1.map, cullOffsets = _ref1.offsets;
-    jsSels = $wf.$actualizer.filterSelectors(cssSelectors, rMode["static"]);
+    jsSels = $wf.$actualizer.filterStatic(cssSelectors);
     indSels = $wf.$actualizer.addIndividualProperties(selectors, cullOffsets);
     runtimeData = $wf.$actualizer.generateRuntimeData(parseTree, jsSels, indSels, cssMap);
     $wf.$actualizer.addBindings(runtimeData, parseTree, jsSels, cssMap);
     capabilities = $wf.$actualizer.determineRuntimeCapabilities(runtimeData, selectors);
     $wf.$actualizer.addRuntimeFunctions(runtimeData, parseTree, capabilities);
     $wf.$actualizer.removeUnnecessaryModuleData(runtimeData);
+    $wf.$actualizer.hideIndividualizedSelectors(cssSelectors, parseTree.scripts, indSels);
     css = $wf.$actualizer.createCSS(runtimeData, cssSelectors);
-    js = $wf.$actualizer.createJS(runtimeData, parseTree.scripts);
+    miniRuntimeData = $wf.$actualizer.minifier.runtimeData(runtimeData);
+    js = $wf.$actualizer.createJS(runtimeData, miniRuntimeData, parseTree.scripts);
     return {
       css: css,
       js: js
@@ -1920,8 +1956,15 @@ window.fashion.$actualizer = {
   }
 };
 
-window.fashion.$actualizer.createJS = function(runtimeData, scripts) {
-  return "/*\\\n|*| GENERATED BY FASHION " + $wf.version + "\n|*| " + $wf.url + " - " + $wf.author + "\n\\*/\nwindow." + $wf.runtimeObject + " = " + ($wf.$stringify(runtimeData)) + ";\nFSREADY = function(r){d=document;c=\"complete\";\n	if(d.readyState==c)r()\n	else d.addEventListener('readystatechange',function(){if(d.readyState==c)r()})\n}\n" + (scripts.join('\n'));
+window.fashion.$actualizer.createJS = function(runtimeData, minifiedData, scripts) {
+  return "/*\\\n|*| GENERATED BY FASHION " + $wf.version + "\n|*| " + $wf.url + " - " + $wf.author + "\n\\*/\nwindow." + $wf.minifiedObject + " = " + ($wf.$stringify(minifiedData)) + ";\nwindow." + $wf.runtimeObject + " = " + ($wf.$stringify({
+    config: runtimeData.config,
+    modules: runtimeData.modules,
+    runtime: runtimeData.runtime,
+    selectors: {},
+    individual: {},
+    variables: {}
+  })) + ";\nFSEXPAND = " + ($wf.$stringify($wf.$actualizer.minifier.expandRuntimeData)) + ";\nFSEXPAND(window." + $wf.minifiedObject + ",window." + $wf.runtimeObject + ");\nFSREADY = function(r){d=document;c=\"complete\";\n	if(d.readyState==c)r()\n	else d.addEventListener('readystatechange',function(){if(d.readyState==c)r()})\n}\n" + (scripts.join('\n'));
 };
 window.fashion.$actualizer.regroupProperties = function(parseTree) {
   var expansionMap, homogenousSelectors, properties, selector, selectorIds, splitSelector, splitSelectors, _i, _j, _len, _len1, _ref;
@@ -1935,12 +1978,14 @@ window.fashion.$actualizer.regroupProperties = function(parseTree) {
       continue;
     }
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.dynamic);
+    $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.globalDynamic);
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.live);
     $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.individual);
     splitSelectors = $wf.$actualizer.splitSelectorByModes(selector);
     selectorIds = [];
     for (_j = 0, _len1 = splitSelectors.length; _j < _len1; _j++) {
       splitSelector = splitSelectors[_j];
+      splitSelector.index = homogenousSelectors.length;
       homogenousSelectors.push(splitSelector);
       selectorIds.push(homogenousSelectors.length - 1);
     }
@@ -2008,18 +2053,18 @@ window.fashion.$actualizer.splitSelectorByModes = function(selector) {
 };
 window.fashion.$actualizer.cullIndividuality = function(allSelectors, map) {
   var currentOffset, exclude, id, inner, inners, mapIndividualCount, newId, newMap, offsets, outer, passingSelectors, selector, _i, _len;
-  passingSelectors = {};
+  passingSelectors = [];
   offsets = {};
   exclude = {};
   currentOffset = 0;
   for (id in allSelectors) {
     selector = allSelectors[id];
-    if (selector.mode === $wf.$runtimeMode.individual) {
+    if ((selector.mode & $wf.$runtimeMode.individual) === $wf.$runtimeMode.individual) {
       currentOffset++;
       exclude[id] = true;
     } else {
       newId = id - currentOffset;
-      passingSelectors[newId] = selector;
+      passingSelectors.push(selector);
     }
     offsets[id] = currentOffset;
   }
@@ -2044,12 +2089,12 @@ window.fashion.$actualizer.cullIndividuality = function(allSelectors, map) {
   };
 };
 
-window.fashion.$actualizer.filterSelectors = function(allSelectors, filterMode) {
+window.fashion.$actualizer.filterStatic = function(allSelectors, filterMode) {
   var id, passingSelectors, selector;
   passingSelectors = {};
   for (id in allSelectors) {
     selector = allSelectors[id];
-    if (selector.mode !== filterMode) {
+    if (selector.mode > 0) {
       passingSelectors[id] = selector;
     }
   }
@@ -2057,11 +2102,12 @@ window.fashion.$actualizer.filterSelectors = function(allSelectors, filterMode) 
 };
 
 window.fashion.$actualizer.addIndividualProperties = function(selectors, offsets) {
-  var id, individualProperties, selector;
+  var id, indMode, individualProperties, selector;
   individualProperties = [];
+  indMode = $wf.$runtimeMode.individual;
   for (id in selectors) {
     selector = selectors[id];
-    if (!(selector.mode === $wf.$runtimeMode.individual)) {
+    if (!((selector.mode & indMode) === indMode)) {
       continue;
     }
     selector.index = id - offsets[id];
@@ -2184,6 +2230,9 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
     _ref = selector.properties;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       property = _ref[_i];
+      if ((selector.mode & $wf.$runtimeMode.globalDynamic) > 2) {
+        continue;
+      }
       value = property.value;
       if (selector.mode === $wf.$runtimeMode["static"]) {
         if (typeof value === 'object' && value.value) {
@@ -2479,6 +2528,10 @@ window.fashion.$actualizer.mapBindings = function(bindings, selectors, individua
           }
         } else {
           selector = individual[parseInt(selectorId.substr(1))];
+          if (!selector) {
+            console.log("[FASHION] Selector at " + selectorId + " does not exist");
+            continue;
+          }
           if (values === true) {
             hDependents.push(selectorId);
           } else {
@@ -2533,6 +2586,217 @@ window.fashion.$actualizer.bindGlobals = function(runtimeData, globalBindings, s
   }
   return _results;
 };
+window.fashion.$actualizer.hideIndividualizedSelectors = function(cssSelectors, scripts, indSels) {
+  var hideSel, id, onLoadScript, removeSelectors, selector, _i, _j, _len, _len1, _ref;
+  removeSelectors = [];
+  for (_i = 0, _len = indSels.length; _i < _len; _i++) {
+    selector = indSels[_i];
+    hideSel = new Selector(selector.name, $wf.$runtimeMode["static"]);
+    hideSel.addProperty(new Property("visibility", "hidden"));
+    removeSelectors.push(cssSelectors.length);
+    cssSelectors.push(hideSel);
+  }
+  onLoadScript = "FSREADY(function(){\nss = document.getElementById(FASHION.config.cssId);\nrm = function(id){if(ss&&ss.sheet)ss.sheet.deleteRule(id);};";
+  _ref = removeSelectors.reverse();
+  for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+    id = _ref[_j];
+    onLoadScript += "rm(" + id + ");";
+  }
+  return scripts.push(onLoadScript + "})");
+};
+window.fashion.$actualizer.minifier = {
+  runtimeData: function(runtimeData) {
+    var id, s, v;
+    return [
+      (function() {
+        var _ref, _results;
+        _ref = runtimeData.selectors;
+        _results = [];
+        for (id in _ref) {
+          s = _ref[id];
+          _results.push($wf.$actualizer.minifier.selector(id, s));
+        }
+        return _results;
+      })(), (function() {
+        var _ref, _results;
+        _ref = runtimeData.variables;
+        _results = [];
+        for (id in _ref) {
+          v = _ref[id];
+          _results.push($wf.$actualizer.minifier.variable(v));
+        }
+        return _results;
+      })(), (function() {
+        var _ref, _results;
+        _ref = runtimeData.individual;
+        _results = [];
+        for (id in _ref) {
+          s = _ref[id];
+          _results.push($wf.$actualizer.minifier.selector(id, s));
+        }
+        return _results;
+      })()
+    ];
+  },
+  selector: function(id, selObj) {
+    var name, properties, rawProperty, _i, _len, _ref;
+    if (!selObj || !(selObj instanceof Selector)) {
+      return;
+    }
+    if (selObj.name instanceof Expression) {
+      name = $wf.$actualizer.minifier.expression(selObj.name);
+    } else {
+      name = selObj.name;
+    }
+    properties = [];
+    _ref = selObj.properties;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      rawProperty = _ref[_i];
+      properties.push($wf.$actualizer.minifier.property(rawProperty));
+    }
+    return ["s", parseInt(id), name, selObj.mode, properties];
+  },
+  property: function(propObj) {
+    var subVal, value, _i, _len, _ref;
+    if (!propObj || !(propObj instanceof Property)) {
+      return;
+    }
+    if (propObj.value instanceof Array) {
+      value = [];
+      _ref = propObj.value;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        subVal = _ref[_i];
+        if (subVal instanceof Expression) {
+          value.push($wf.$actualizer.minifier.expression(subVal));
+        } else {
+          value.push(subVal);
+        }
+      }
+    } else if (propObj.value instanceof Expression) {
+      value = $wf.$actualizer.minifier.expression(propObj.value);
+    } else {
+      value = propObj.value;
+    }
+    return ["p", propObj.name, propObj.mode, value];
+  },
+  expression: function(exprObj) {
+    if (!exprObj || !(exprObj instanceof Expression)) {
+      return;
+    }
+    return ["e", exprObj.mode, exprObj.type, exprObj.unit, exprObj.setter, exprObj.script];
+  },
+  variable: function(varObj) {
+    var defaultVal, r, v, values, _i, _len, _ref;
+    if (!varObj || !(varObj instanceof RuntimeVariable)) {
+      return;
+    }
+    if (varObj["default"] instanceof Expression) {
+      defaultVal = $wf.$actualizer.minifier.expression(varObj["default"]);
+    } else {
+      defaultVal = varObj["default"];
+    }
+    values = [];
+    _ref = varObj.values;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      v = _ref[_i];
+      if (v instanceof Expression) {
+        values.push($wf.$actualizer.minifier.expression(v));
+      } else {
+        values.push(v);
+      }
+    }
+    r = ["v", varObj.name, varObj.type, varObj.unit, defaultVal, varObj.dependents];
+    if (varObj.scopes) {
+      r.push.apply(r, [varObj.scopes, values]);
+    }
+    return r;
+  }
+};
+window.fashion.$actualizer.minifier.expandRuntimeData = function(minData, expandTo) {
+  var expand, expanderFunctions, selector, selobj, variable, vobj, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results;
+  expanderFunctions = {
+    s: function(s) {
+      return {
+        id: s[1],
+        name: expand(s[2]),
+        mode: s[3],
+        properties: expand(s[4])
+      };
+    },
+    p: function(p) {
+      return {
+        name: p[1],
+        mode: p[2],
+        value: expand(p[3])
+      };
+    },
+    e: function(e) {
+      return {
+        mode: e[1],
+        type: e[2],
+        unit: e[3],
+        setter: e[4],
+        evaluate: Function("v", "g", "f", "t", "e", e[5])
+      };
+    },
+    v: function(v) {
+      return {
+        name: v[1],
+        type: v[2],
+        unit: v[3],
+        "default": expand(v[4]),
+        dependents: v[5],
+        scopes: v[6],
+        values: expand(v[7])
+      };
+    }
+  };
+  expand = function(vals) {
+    var a, r, _i, _len;
+    if (!(vals instanceof Array)) {
+      return vals;
+    }
+    if (vals.length === 0) {
+      return 0;
+    }
+    if (typeof vals[0] === 'string' && expanderFunctions[vals[0]]) {
+      return expanderFunctions[vals[0]](vals);
+    } else {
+      r = [];
+      for (_i = 0, _len = vals.length; _i < _len; _i++) {
+        a = vals[_i];
+        if (expanderFunctions[a[0]]) {
+          r.push(expanderFunctions[a[0]](a));
+        } else {
+          r.push(a);
+        }
+      }
+      return r;
+    }
+  };
+  _ref = minData[0];
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    selector = _ref[_i];
+    selobj = expand(selector);
+    expandTo.selectors[selobj.id] = selobj;
+  }
+  _ref1 = minData[1];
+  for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+    variable = _ref1[_j];
+    vobj = expand(variable);
+    expandTo.variables[vobj.name] = vobj;
+  }
+  if (minData[2]) {
+    _ref2 = minData[2];
+    _results = [];
+    for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+      selector = _ref2[_k];
+      selobj = expand(selector);
+      _results.push(expandTo.individual[selobj.id] = selobj);
+    }
+    return _results;
+  }
+};
 var RuntimeModule;
 
 RuntimeModule = (function() {
@@ -2567,8 +2831,21 @@ $wf.addRuntimeModule("types", [], {
 
 $wf.addRuntimeModule("evaluation", [], {
   evaluate_Shared: window.fashion.$shared.evaluate,
-  evaluate: function(value, element) {
-    return this.evaluate_Shared(value, FASHION.variables, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, element);
+  evaluate: function(value, element, extraVariables) {
+    var n, v, vars, _ref;
+    if (extraVariables != null) {
+      vars = extraVariables;
+      _ref = FASHION.variables;
+      for (n in _ref) {
+        v = _ref[n];
+        if (vars[n] == null) {
+          vars[n] = v;
+        }
+      }
+    } else {
+      vars = FASHION.variables;
+    }
+    return this.evaluate_Shared(value, vars, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, element);
   }
 });
 
@@ -2578,6 +2855,12 @@ $wf.addRuntimeModule("errors", [], {
   throwError: function(message) {
     console.log("[FASHION] Runtime error: " + message);
     return console.log(new Error().stack);
+  }
+});
+
+$wf.addRuntimeModule("wait", [], {
+  wait: function(d, f) {
+    return setTimeout(f, d);
   }
 });
 $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"], {
@@ -2709,37 +2992,21 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
       return _results;
     }).call(this);
     return this.CSSSelectorTemplate(selectorName, cssProperties);
-  },
-  addSelector: function(name, properties) {
-    var CSS, stylesheet;
-    CSS = this.CSSRuleForSelector({
-      name: name,
-      properties: properties
-    });
-    stylesheet = document.getElementById("" + FASHION.config.cssId).sheet;
-    return stylesheet.insertRule(CSS, stylesheet.rules.length);
   }
 });
-$wf.addRuntimeModule("individualized", ["selectors", "elements"], {
+$wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom"], {
   $initializeIndividualProperties: function() {
-    var selector, sheet, _i, _j, _len, _len1, _ref, _ref1, _results;
-    sheet = document.createElement("style");
-    sheet.setAttribute("type", "text/css");
-    sheet.setAttribute("id", "" + FASHION.config.individualCSSID);
-    document.head.appendChild(sheet);
-    FASHION.individualSheet = sheet.sheet;
-    if (!FASHION.individualSheet.rules) {
-      FASHION.individualSheet.rules = FASHION.individualSheet.cssRules;
-    }
+    var id, selector, _ref, _ref1, _results;
+    FASHION.individualSheet = this.addStylesheet("" + FASHION.config.individualCSSID).sheet;
     _ref = FASHION.individual;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      selector = _ref[_i];
+    for (id in _ref) {
+      selector = _ref[id];
       this.updateSelectorElements(selector);
     }
     _ref1 = FASHION.individual;
     _results = [];
-    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-      selector = _ref1[_j];
+    for (id in _ref1) {
+      selector = _ref1[id];
       _results.push(this.regenerateIndividualSelector(selector));
     }
     return _results;
@@ -2789,7 +3056,7 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements"], {
     return Array.prototype.slice.call(document.querySelectorAll(selectorName));
   },
   regenerateIndividualSelector: function(selector) {
-    var css, element, id, individual, _ref, _results;
+    var css, id, individual, _ref, _results;
     _ref = selector.elements;
     _results = [];
     for (id in _ref) {
@@ -2799,61 +3066,10 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements"], {
       } else {
         individual.cssid = FASHION.individualSheet.rules.length;
       }
-      element = this.createElementObject(individual.element);
-      css = this.CSSRuleForSelector(selector, element, "#" + id);
+      css = this.CSSRuleForSelector(selector, individual.element, "#" + id);
       _results.push(FASHION.individualSheet.insertRule(css, individual.cssid));
     }
     return _results;
-  }
-});
-$wf.addRuntimeModule("elements", [], {
-  createElementObject: function(DOMElement) {
-    var attribute, cs, eObj, _i, _len, _ref;
-    if (!DOMElement) {
-      return {};
-    }
-    eObj = {
-      element: DOMElement
-    };
-    if (DOMElement.attributes) {
-      _ref = DOMElement.attributes;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        attribute = _ref[_i];
-        eObj[attribute.name] = attribute.value;
-      }
-    }
-    Object.defineProperty(eObj, "parent", {
-      get: (function(_this) {
-        return function() {
-          return _this.createElementObject(DOMElement.parentNode);
-        };
-      })(this)
-    });
-    eObj.width = DOMElement.clientWidth;
-    eObj.height = DOMElement.clientHeight;
-    cs = window.getComputedStyle(DOMElement);
-    if (cs) {
-      Object.defineProperty(eObj, "outerWidth", {
-        get: function() {
-          return parseFloat(cs.marginLeft) + parseFloat(cs.marginRight) + eObj.width;
-        }
-      });
-      Object.defineProperty(eObj, "outerHeight", {
-        get: function() {
-          return parseFloat(cs.marginTop) + parseFloat(cs.marginBottom) + eObj.height;
-        }
-      });
-    }
-    eObj.addEventListener = function(evt, func, bubble) {
-      return DOMElement.addEventListener(evt, func, bubble);
-    };
-    eObj.getAttribute = function(attr) {
-      return DOMElement.getAttribute(attr);
-    };
-    eObj.setAttribute = function(attr, val) {
-      return DOMElement.setAttribute(attr, val);
-    };
-    return eObj;
   }
 });
 $wf.addRuntimeModule("globals", ["selectors"], {
@@ -2868,6 +3084,9 @@ $wf.addRuntimeModule("globals", ["selectors"], {
     _results = [];
     for (name in _ref) {
       global = _ref[name];
+      if (!(global.watch != null)) {
+        continue;
+      }
       global.watch(onChangeFunction(global));
       _results.push(this.updateGlobal(global));
     }
@@ -2886,6 +3105,101 @@ $wf.addRuntimeModule("globals", ["selectors"], {
       }
     }
     return _results;
+  }
+});
+$wf.addRuntimeModule("elements", [], {
+  elementFunction: function(element) {
+    return (function(_this) {
+      return function(property, keyword) {
+        var parentProperty;
+        if ((property == null) && (keyword != null)) {
+          return element;
+        }
+        if (property.indexOf("parent") === 0) {
+          if (property === "parent") {
+            return element.parentNode;
+          }
+          parentProperty = property.replace("parent.", "");
+          return _this.elementFunction(element.parentNode)(parentProperty);
+        }
+        if (property === "width") {
+          return element.clientWidth;
+        }
+        if (property === "height") {
+          return element.clientHeight;
+        }
+        return element.getAttribute(property);
+      };
+    })(this);
+  }
+});
+$wf.addRuntimeModule("stylesheet-dom", [], {
+  addStylesheet: function(id, className) {
+    var head, sheetElement;
+    sheetElement = document.createElement("style");
+    sheetElement.setAttribute("type", "text/css");
+    if (id) {
+      sheetElement.setAttribute("id", id);
+    }
+    if (className) {
+      sheetElement.setAttribute("class", className);
+    }
+    head = document.head || document.getElementsByTagName('head')[0];
+    head.appendChild(sheetElement);
+    return sheetElement;
+  },
+  removeStylesheet: function(element) {
+    if (!element || !element.parentNode) {
+      return;
+    }
+    return element.parentNode.removeChild(element);
+  },
+  getStylesheet: function(id) {
+    var ss;
+    if (ss = document.getElementById(id)) {
+      return ss;
+    } else {
+      return this.addStylesheet(id);
+    }
+  }
+});
+
+$wf.addRuntimeModule("sheets", ["stylesheet-dom"], {
+  moveSheetToTop: function(sheet) {
+    var head;
+    head = document.head || document.getElementsByTagName('head')[0];
+    if (head.lastChild === sheet) {
+      return;
+    }
+    this.removeStylesheet(sheet);
+    return head.appendChild(sheet);
+  },
+  setRuleOnSheet: function(sheet, selector, property, value, prioritize) {
+    var id, rule, ruleText, _ref;
+    if (prioritize == null) {
+      prioritize = true;
+    }
+    if (sheet instanceof HTMLStyleElement) {
+      sheet = sheet.sheet;
+    }
+    if (!sheet.rules) {
+      sheet.rules = sheet.cssRules;
+    }
+    _ref = sheet.rules;
+    for (id in _ref) {
+      rule = _ref[id];
+      if (!(rule.selectorText === selector)) {
+        continue;
+      }
+      rule.style.setProperty(property, value);
+      if (prioritize) {
+        ruleText = rule.cssText;
+        sheet.removeRule(id);
+        sheet.insertRule(ruleText, sheet.rules.length);
+      }
+      return;
+    }
+    return sheet.insertRule("" + selector + " {" + property + ": " + value + ";}", sheet.rules.length);
   }
 });
 window.fashion.$functions = {
@@ -2973,6 +3287,37 @@ $wf.$extend(window.fashion.$functions, {
       return "rgba(" + (parseInt(r.value)) + "," + (parseInt(g.value)) + "," + (parseInt(b.value)) + "," + a.value + ")";
     }
   }),
+  "hsl": new FunctionModule({
+    output: $wf.$type.Color,
+    evaluate: function(h, s, l) {
+      return "hsl(" + (parseInt(h.value)) + "," + (parseInt(s.value)) + "%," + (parseInt(l.value)) + "%)";
+    }
+  }),
+  "hsla": new FunctionModule({
+    output: $wf.$type.Color,
+    evaluate: function(h, s, l, a) {
+      return "hsla(" + (parseInt(h.value)) + "," + (parseInt(s.value)) + "%," + (parseInt(l.value)) + "%," + a.value + ")";
+    }
+  }),
+  "hsb": new FunctionModule({
+    output: $wf.$type.Color,
+    capabilities: ["colors"],
+    evaluate: function(h, s, b) {
+      var g, r, _ref;
+      console.log(this);
+      _ref = this.hsbTOrgb(h.value, s.value, b.value), r = _ref.r, g = _ref.g, b = _ref.b;
+      return "rgb(" + (parseInt(r)) + "," + (parseInt(g)) + "," + (parseInt(b)) + ")";
+    }
+  }),
+  "hsba": new FunctionModule({
+    output: $wf.$type.Color,
+    capabilities: ["colors"],
+    evaluate: function(h, s, b, a) {
+      var g, r, _ref;
+      _ref = this.hsbTOrgb(h.value, s.value, b.value), r = _ref.r, g = _ref.g, b = _ref.b;
+      return "rgba(" + (parseInt(r)) + "," + (parseInt(g)) + "," + (parseInt(b)) + "," + a.value + ")";
+    }
+  }),
   "changeAlpha": new FunctionModule({
     output: window.fashion.$type.Color,
     capabilities: ["colors"],
@@ -3027,27 +3372,40 @@ window.fashion.$properties = {
           }
           switch (value) {
             case "serif":
-              return families.push("serif");
+              families.push("serif");
+              break;
             case "sans-serif":
-              return families.push("sans-serif");
+              families.push("sans-serif");
+              break;
             case "monospace":
-              return families.push("monospace");
+              families.push("monospace");
+              break;
             case "italic":
-              return _this.setProperty("font-style", "italic");
+              _this.setProperty("font-style", "italic");
+              break;
             case "oblique":
-              return _this.setProperty("font-style", "oblique");
+              _this.setProperty("font-style", "oblique");
+              break;
             case "bold":
-              return _this.setProperty("font-weight", "bolder");
+              _this.setProperty("font-weight", "bolder");
+              break;
             case "light":
-              return _this.setProperty("font-weight", "lighter");
+              _this.setProperty("font-weight", "lighter");
+              break;
             case "underline":
-              return _this.setProperty("text-decoration", "underline");
+              _this.setProperty("text-decoration", "underline");
+              break;
             case "overline":
-              return _this.setProperty("text-decoration", "overline");
+              _this.setProperty("text-decoration", "overline");
+              break;
             case "line-through":
-              return _this.setProperty("text-decoration", "line-through");
+              _this.setProperty("text-decoration", "line-through");
+              break;
             case "strikethrough":
-              return _this.setProperty("text-decoration", "line-through");
+              _this.setProperty("text-decoration", "line-through");
+          }
+          if (value.indexOf("pt") !== -1 || value.indexOf("px") !== -1) {
+            return _this.setProperty("font-size", value);
           }
         };
       })(this);
@@ -3086,8 +3444,8 @@ $wf.$extend(window.fashion.$properties, {
           case "bottom":
             return bottomExpr = "0px";
           case "center":
-            leftExpr = "@parent.width / 2 - @self.outerWidth / 2";
-            return topExpr = "@parent.height / 2 - @self.outerHeight / 2";
+            leftExpr = "@self.parent.width / 2 - @self.width / 2";
+            return topExpr = "@self.parent.height / 2 - @self.height / 2";
           default:
             return this.throwError("Invalid position: " + val);
         }
@@ -3137,12 +3495,13 @@ $wf.$extend(window.fashion.$properties, new ((function() {
 })()));
 window.fashion.$blocks = {};
 window.fashion.$blocks["transition"] = new BlockModule({
-  capabilities: ["selectors", "evaluation", "types"],
+  capabilities: ["transitionBlock"],
   compile: function(args, body) {
     var acc, count, currentKeyframe, depth, keyframe, keyframes, lastAcc, name, regex, segment, transition;
     name = args[0];
-    regex = /(\s*([0-9\-\.\s\%]+?\%|start)\s?\{|\}|\{)/g;
+    regex = /(\s*([0-9\-\.\s\%]+?\%|start|begin|finish)\s?\{|\$([\w\-]+)\:[\s]*(.*?)[;\n]|\}|\{)/g;
     keyframes = {};
+    transition = {};
     depth = lastAcc = 0;
     currentKeyframe = acc = "";
     count = 1000;
@@ -3151,9 +3510,16 @@ window.fashion.$blocks["transition"] = new BlockModule({
       lastAcc = segment.index;
       if (segment[2] && depth === 0) {
         currentKeyframe = segment[2];
+        depth++;
         acc = "";
         lastAcc = segment[0].length + segment.index;
-        depth++;
+      }
+      if (segment[3] && segment[4] && depth === 0) {
+        if (!transition['$vars']) {
+          transition['$vars'] = [];
+        }
+        transition['$vars'].push(segment[3]);
+        this.addVariable(segment[3], segment[4]);
       }
       if (segment[0] === "{") {
         depth++;
@@ -3166,7 +3532,6 @@ window.fashion.$blocks["transition"] = new BlockModule({
         }
       }
     }
-    transition = {};
     for (keyframe in keyframes) {
       body = keyframes[keyframe];
       transition[keyframe] = this.parse(body).selectors;
@@ -3174,96 +3539,113 @@ window.fashion.$blocks["transition"] = new BlockModule({
     return this.runtimeObject.transitions[name] = transition;
   },
   runtimeObject: {
-    transitions: {},
-    startDelay: 10,
-    endDelay: 2,
-    settleDelay: 1,
-    wait: function(d, f) {
-      return setTimeout(f, d);
-    },
-    trigger: function(name, duration, element) {
-      var addSelectors, d, head, intStartTime, keyframe, runtime, selectors, sheet, sheetElement, startTime, transition;
-      duration = this.timeInMs(duration);
-      runtime = FASHION.modules.blocks.transition;
-      transition = runtime.transitions[name];
-      sheetElement = document.createElement("style");
-      sheetElement.setAttribute("type", "text/css");
-      head = document.head || document.getElementsByTagName('head')[0];
-      head.appendChild(sheetElement);
-      sheet = sheetElement.sheet;
-      for (keyframe in transition) {
-        selectors = transition[keyframe];
-        if (keyframe === "start") {
-          startTime = 0;
-        } else {
-          intStartTime = parseFloat(keyframe.split('-')[0]) / 100 * duration;
-          startTime = intStartTime + runtime.startDelay;
-        }
-        addSelectors = runtime.addSelectorsFunc(selectors, duration, sheet, runtime);
-        if (startTime > 0) {
-          runtime.wait(startTime, addSelectors.bind(this));
-        } else {
-          addSelectors.bind(this)();
-        }
-      }
-      d = duration + runtime.startDelay + runtime.endDelay;
-      return runtime.wait(d, function() {
-        return sheetElement.parentElement.removeChild(sheetElement);
-      });
-    },
-    addSelectorsFunc: function(selectors, duration, sheet, runtime) {
-      return function() {
-        var id, jumpProperties, properties, property, selName, selector, settleDelay, smoothCount, smoothProperties, tCSS, _i, _len;
-        settleDelay = FASHION.modules.blocks.transition.settleDelay;
-        for (id in selectors) {
-          selector = selectors[id];
-          properties = selector.properties;
-          jumpProperties = [];
-          smoothProperties = [];
-          smoothCount = 0;
-          for (_i = 0, _len = properties.length; _i < _len; _i++) {
-            property = properties[_i];
-            if (typeof property.value !== 'object' || !property.value.transition) {
-              jumpProperties.push(property);
-            } else {
-              smoothProperties.push(property);
-              smoothCount++;
-            }
-          }
-          this.addSelector(selector.name, jumpProperties);
-          if (smoothCount === 0) {
-            continue;
-          }
-          tCSS = runtime.generateTransitions.call(this, smoothProperties, duration);
-          selName = this.evaluate(selector.name);
-          sheet.insertRule("" + selName + " {" + tCSS + "}", sheet.rules.length);
-          runtime.wait(settleDelay, ((function(_this) {
-            return function(selector, smoothProperties) {
-              return function() {
-                return _this.addSelector(selector.name, smoothProperties);
-              };
-            };
-          })(this))(selector, smoothProperties));
-        }
-      };
-    },
-    generateTransitions: function(properties, duration) {
-      var csstext, l, msLength, property, t, _i, _len;
-      csstext = "transition: ";
-      for (_i = 0, _len = properties.length; _i < _len; _i++) {
-        property = properties[_i];
-        if (!property.value.transition) {
-          continue;
-        }
-        t = property.value.transition;
-        l = parseFloat(this.evaluate(t.duration)) / 100 * duration;
-        msLength = l ? "" + l + "ms" : t.duration;
-        csstext += "" + property.name + " " + msLength + " " + (t.easing || '') + " " + (t.delay || '') + ",";
-      }
-      csstext = csstext.substr(0, csstext.length - 1) + ";";
-      csstext = [csstext, "-webkit-" + csstext, "-moz-" + csstext, "-ms-" + csstext].join('');
-      return csstext;
+    transitions: {}
+  }
+});
+
+$wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"], {
+  transitionTiming: {
+    start: 10,
+    end: 5,
+    settle: 1
+  },
+  triggerTransition: function(name, duration, variables) {
+    var addSelectors, d, intStartTime, keyframe, propertySheet, selectors, startTime, transition, transitionSheet;
+    duration = this.timeInMs(duration);
+    transition = FASHION.modules.blocks.transition.transitions[name];
+    if (transition == null) {
+      return this.throwError("Transition '" + name + "' does not exist");
     }
+    transitionSheet = this.addStylesheet(void 0, "FASHION-transition::temporary-" + name);
+    propertySheet = this.getStylesheet("FASHION-transition::properties-" + name);
+    this.moveSheetToTop(propertySheet);
+    for (keyframe in transition) {
+      selectors = transition[keyframe];
+      if (!(keyframe[0] !== '$')) {
+        continue;
+      }
+      if (keyframe === "start" || keyframe === "begin") {
+        startTime = 0;
+      } else if (keyframe === "finish") {
+        startTime = duration + this.transitionTiming.start;
+      } else {
+        intStartTime = parseFloat(keyframe.split('-')[0]) / 100 * duration;
+        startTime = intStartTime + this.transitionTiming.start;
+      }
+      if (keyframe.indexOf("-") !== -1) {
+        addSelectors = this.transitionKeyframeRange(selectors, duration, transitionSheet.sheet, variables);
+      } else {
+        addSelectors = this.transitionKeyframeSingle(selectors, duration, transitionSheet.sheet, variables);
+      }
+      if (startTime > 0) {
+        this.wait(startTime, addSelectors.bind(this));
+      } else {
+        addSelectors.bind(this)();
+      }
+    }
+    d = duration + this.transitionTiming.start + this.transitionTiming.end;
+    return this.wait(d, (function(_this) {
+      return function() {
+        return _this.removeStylesheet(transitionSheet);
+      };
+    })(this));
+  },
+  transitionKeyframeSingle: function(selectors, duration, tSheet, variables) {
+    return function() {
+      var id, pSheet, properties, property, selName, selector, settleDelay, smoothProperties, tCSS, _i, _len;
+      settleDelay = this.transitionTiming.settle;
+      pSheet = this.getStylesheet("FASHION-transition::properties-" + name);
+      for (id in selectors) {
+        selector = selectors[id];
+        properties = selector.properties;
+        smoothProperties = [];
+        for (_i = 0, _len = properties.length; _i < _len; _i++) {
+          property = properties[_i];
+          if (typeof property.value === 'object' && property.value.transition) {
+            smoothProperties.push(property);
+          }
+        }
+        tCSS = this.generateCSSTransitions.call(this, smoothProperties, duration, variables);
+        selName = this.evaluate(selector.name, 0, variables);
+        tSheet.insertRule("" + selName + " {" + tCSS + "}", tSheet.rules.length);
+        this.wait(settleDelay, ((function(_this) {
+          return function(selName, properties) {
+            return function() {
+              var pval, _j, _len1, _results;
+              _results = [];
+              for (_j = 0, _len1 = properties.length; _j < _len1; _j++) {
+                property = properties[_j];
+                pval = _this.evaluate(property.value, 0, variables);
+                _results.push(_this.setRuleOnSheet(pSheet, selName, property.name, pval));
+              }
+              return _results;
+            };
+          };
+        })(this))(selName, properties));
+      }
+    };
+  },
+  transitionKeyframeStatic: function(selectors, duration, tSheet, variables) {
+    return function() {
+      return console.log("[FASHION] The transition block does not support ranged keyframes yet");
+    };
+  },
+  generateCSSTransitions: function(properties, duration, variables) {
+    var csstext, l, msLength, property, t, _i, _len;
+    csstext = "transition: ";
+    for (_i = 0, _len = properties.length; _i < _len; _i++) {
+      property = properties[_i];
+      if (!property.value.transition) {
+        continue;
+      }
+      t = property.value.transition;
+      l = parseFloat(this.evaluate(t.duration, 0, variables)) / 100 * duration;
+      msLength = l != null ? "" + l + "ms" : t.duration;
+      csstext += "" + property.name + " " + msLength + " " + (t.easing || '') + " " + (t.delay || '') + ",";
+    }
+    csstext = csstext.substr(0, csstext.length - 1) + ";";
+    csstext = [csstext, "-webkit-" + csstext, "-moz-" + csstext, "-ms-" + csstext].join('');
+    return csstext;
   }
 });
 
@@ -3271,10 +3653,14 @@ window.fashion.$functions["trigger"] = new FunctionModule({
   output: $wf.$type.None,
   unit: '',
   mode: $wf.$runtimeMode.individual,
-  evaluate: function(name, duration, element) {
-    var triggerFunction;
-    triggerFunction = FASHION.modules.blocks.transition.trigger;
-    return triggerFunction.call(this, name.value, duration, element);
+  evaluate: function(name, duration, variables) {
+    var k, triggerFunction, v;
+    for (k in variables) {
+      v = variables[k];
+      variables[k] = v.value;
+    }
+    triggerFunction = FASHION.runtime.triggerTransition;
+    return triggerFunction.call(this, name.value, duration, variables);
   }
 });
 window.fashion.$globals = {

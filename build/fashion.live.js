@@ -30,7 +30,7 @@ THE SOFTWARE.
 var $wf, wait;
 
 $wf = window.fashion = {
-  version: "0.2.2",
+  version: "0.3",
   url: "http://writefashion.org",
   author: "Keaton Brandt",
   mimeType: "text/x-fashion",
@@ -3444,8 +3444,8 @@ $wf.$extend(window.fashion.$properties, {
           case "bottom":
             return bottomExpr = "0px";
           case "center":
-            leftExpr = "@parent.width / 2 - @self.outerWidth / 2";
-            return topExpr = "@parent.height / 2 - @self.outerHeight / 2";
+            leftExpr = "@self.parent.width / 2 - @self.width / 2";
+            return topExpr = "@self.parent.height / 2 - @self.height / 2";
           default:
             return this.throwError("Invalid position: " + val);
         }

@@ -24,8 +24,8 @@ $wf.$extend window.fashion.$properties,
 					when "top" then topExpr = "0px"
 					when "bottom" then bottomExpr = "0px"
 					when "center"
-						leftExpr = "@parent.width / 2 - @self.outerWidth / 2"
-						topExpr = "@parent.height / 2 - @self.outerHeight / 2"
+						leftExpr = "@self.parent.width / 2 - @self.width / 2"
+						topExpr = "@self.parent.height / 2 - @self.height / 2"
 					else @throwError "Invalid position: #{val}"
 
 			# Process each position argument
