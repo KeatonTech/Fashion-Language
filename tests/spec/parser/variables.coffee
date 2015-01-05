@@ -32,7 +32,7 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["negativeMsUnit"][0]["type"]).toEqual(type.Number);
 
 		# Check units
-		expect(result.variables["noUnit"][0]["unit"]).toEqual(false);
+		expect(result.variables["noUnit"][0]["unit"]).toEqual('');
 		expect(result.variables["pxUnit"][0]["unit"]).toEqual(unit.Number.px);
 		expect(result.variables["decimalEmUnit"][0]["unit"]).toEqual(unit.Number.em);
 		expect(result.variables["negativeMsUnit"][0]["unit"]).toEqual(unit.Number.ms);

@@ -28,7 +28,7 @@
       expect(result.variables["pxUnit"][0]["type"]).toEqual(type.Number);
       expect(result.variables["decimalEmUnit"][0]["type"]).toEqual(type.Number);
       expect(result.variables["negativeMsUnit"][0]["type"]).toEqual(type.Number);
-      expect(result.variables["noUnit"][0]["unit"]).toEqual(false);
+      expect(result.variables["noUnit"][0]["unit"]).toEqual('');
       expect(result.variables["pxUnit"][0]["unit"]).toEqual(unit.Number.px);
       expect(result.variables["decimalEmUnit"][0]["unit"]).toEqual(unit.Number.em);
       expect(result.variables["negativeMsUnit"][0]["unit"]).toEqual(unit.Number.ms);

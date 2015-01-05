@@ -37,3 +37,4 @@ window.fashion.$functions =
 
 #@prepros-append ./binding.coffee
 #@prepros-append ./color.coffee
+#@prepros-append ./transform.coffee

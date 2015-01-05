@@ -40,7 +40,7 @@ window.fashion.color =
 		ntoHex = (c) ->
 			if typeof c is 'string' then c = parseInt(c)
 			hex = c.toString(16);
-			if hex.length == 1 then "0" + hex else hex;
+			if hex.length == 1 then "0" + hex.toUpperCase() else hex.toUpperCase();
 		return "#"+ntoHex(parseInt(r))+ntoHex(parseInt(g))+ntoHex(parseInt(b));
 
 
@@ -75,7 +75,7 @@ window.fashion.color =
 		min = Math.min(r, g, b)
 
 		# Color has no hue (all channels are the same)
-		if max is min then return {h: 0, s: 0, b: val}
+		if max is min then return {h: 0, s: 0, b: val / 2.55}
 
 		# Calculate a primary channel differential
 		pcd = max - min
@@ -91,6 +91,6 @@ window.fashion.color =
 		h = ((hof - scd/pcd)*60) % 360
 
 		# Calculate saturation
-		s = pcd/max * 255
+		s = pcd/max * 100
 
-		return {h: h, s: s, b: val}
+		return {h: h, s: s, b: val / 2.55}

@@ -1039,7 +1039,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   sq = dq = bt = false;
   acc = "";
   ret = [];
-  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\"\'\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\"\'\`\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
+  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\`\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
   while (token = regex.exec(value)) {
     if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
       ret.push(acc);
@@ -1878,7 +1878,7 @@ window.fashion.$shared.getUnit = function(rawValue, varType, type, unit) {
   if (typeof rawValue === 'number') {
     return {
       value: parseFloat(rawValue),
-      unit: false
+      unit: ''
     };
   }
   getNumberUnit = function() {
@@ -1888,7 +1888,7 @@ window.fashion.$shared.getUnit = function(rawValue, varType, type, unit) {
     if (components.length < 2) {
       return {
         value: parseFloat(rawValue),
-        unit: false
+        unit: ''
       };
     }
     unitString = rawValue.replace(components[1], "");
@@ -1896,7 +1896,7 @@ window.fashion.$shared.getUnit = function(rawValue, varType, type, unit) {
     if (!unit) {
       return {
         value: parseFloat(components[1]),
-        unit: false
+        unit: ''
       };
     }
     return {
@@ -1913,7 +1913,7 @@ window.fashion.$shared.getUnit = function(rawValue, varType, type, unit) {
   }
   return {
     value: rawValue,
-    unit: void 0
+    unit: ''
   };
 };
 
@@ -1983,9 +1983,9 @@ window.fashion.color = {
       }
       hex = c.toString(16);
       if (hex.length === 1) {
-        return "0" + hex;
+        return "0" + hex.toUpperCase();
       } else {
-        return hex;
+        return hex.toUpperCase();
       }
     };
     return "#" + ntoHex(parseInt(r)) + ntoHex(parseInt(g)) + ntoHex(parseInt(b));
@@ -2022,7 +2022,7 @@ window.fashion.color = {
       return {
         h: 0,
         s: 0,
-        b: val
+        b: val / 2.55
       };
     }
     pcd = max - min;
@@ -2037,11 +2037,11 @@ window.fashion.color = {
         _ref3 = [r - g, 1], scd = _ref3[0], hof = _ref3[1];
     }
     h = ((hof - scd / pcd) * 60) % 360;
-    s = pcd / max * 255;
+    s = pcd / max * 100;
     return {
       h: h,
       s: s,
-      b: val
+      b: val / 2.55
     };
   }
 };
@@ -3470,6 +3470,28 @@ $wf.$extend(window.fashion.$functions, {
     }
   })
 });
+$wf.$extend(window.fashion.$functions, new ((function() {
+  function _Class() {
+    var genericPassthrough, name, transformFunction, _i, _len;
+    transformFunction = ["matrix", "matrix3d", "translate", "translate3d", "translateX", "translateY", "translateZ", "scale", "scale3d", "scaleX", "scaleY", "scaleZ", "rotate", "rotate3d", "rotateX", "rotateY", "rotateZ", "skew", "skewX", "skewY", "perspective"];
+    genericPassthrough = function(name) {
+      var body;
+      body = "var a = arguments;\nvar s = \"" + name + "(\";\nfor(var i = 0; i < a.length; i++){\n	s += a[i].value;\n	if(i<a.length-1)s += \",\";\n}\nreturn s + \")\";";
+      return new Function(body);
+    };
+    for (_i = 0, _len = transformFunction.length; _i < _len; _i++) {
+      name = transformFunction[_i];
+      this[name] = new FunctionModule({
+        mode: $wf.$runtimeMode["static"],
+        output: $wf.$type.String,
+        "evaluate": genericPassthrough(name)
+      });
+    }
+  }
+
+  return _Class;
+
+})()));
 window.fashion.$properties = {
   "text-style": new PropertyModule({
     replace: true,

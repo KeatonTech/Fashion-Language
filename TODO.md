@@ -38,6 +38,7 @@
 
 ## Fixes
 
+* Empty selectors cause the indexes of individual properties to get offset
 * Make variables declared in @transition blocks take an isolated scope
 * Pin property should make its parent at least position relative
 * Pin property should respect relative-to

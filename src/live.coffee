@@ -56,19 +56,6 @@ document.addEventListener 'readystatechange', ()->
 			event.variableObject = window[window.fashion.variableObject]
 			document.dispatchEvent event
 
-			# Remove all the compiler code, including this
-			$wf.removeCompiler()
-
-
-# Remove the uncompiled stuff from the DOM, just to simplify things
-window.fashion.removeCompiler = ()->
-
-	deleteAll = (elements) ->
-		element.parentNode.removeChild(element) for element in elements
-
-	deleteAll document.querySelectorAll "[type='text/x-fashion']"
-	currentScript.parentNode.removeChild currentScript
-
 
 # Include helper files, used by everything
 # @prepros-append ./helpers/basic.coffee

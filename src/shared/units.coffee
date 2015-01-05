@@ -2,7 +2,7 @@
 window.fashion.$shared.getUnit = (rawValue, varType, type, unit) ->
 
 	# Try the easy stuff first
-	if typeof rawValue is 'number' then return {value: parseFloat(rawValue), unit: false}
+	if typeof rawValue is 'number' then return {value: parseFloat(rawValue), unit: ''}
 
 
 	# Parse a number into a number plus a unit
@@ -11,12 +11,12 @@ window.fashion.$shared.getUnit = (rawValue, varType, type, unit) ->
 		# Split into components
 		splitRegex = /([0-9\-\.]*)(.*?)/
 		components = splitRegex.exec rawValue
-		if components.length < 2 then return {value: parseFloat(rawValue), unit: false}
+		if components.length < 2 then return {value: parseFloat(rawValue), unit: ''}
 
 		# Figure out what unit this is
 		unitString = rawValue.replace(components[1],"")
 		unit = unit.Number[unitString]
-		if !unit then return {value: parseFloat(components[1]), unit: false}
+		if !unit then return {value: parseFloat(components[1]), unit: ''}
 
 		# Return the a unit-variable construct, return a number and a unit
 		return {value: parseFloat(components[1]), unit: unit}
@@ -29,7 +29,7 @@ window.fashion.$shared.getUnit = (rawValue, varType, type, unit) ->
 		if rawValue[0] is "'" or rawValue[0] is "\""
 			rawValue = rawValue.substring(1, rawValue.length - 1)
 
-	return {value: rawValue, unit: undefined}
+	return {value: rawValue, unit: ''}
 
 # CONVERSION METHODS
 
