@@ -90,7 +90,7 @@ window.fashion.$loader =
 		resolvePromise = (path, scriptIndex, err, fileData) ->
 			if err then return console.log "Could not load script file at path: #{path}"
 			fileString = fileData.toString()
-			if fileString.indexOf($wf.$loader.fashionIdentifier) isnt 0 
+			if fileString.indexOf($wf.$loader.fashionIdentifier) is -1
 				scripts[scriptIndex] = fileString
 			if --unresolved is 0
 				jsCallback scripts.join "\n"
@@ -111,5 +111,6 @@ window.fashion.$loader =
 
 			# Otherwise the style is already included
 			else 
-				if tag[3].indexOf($wf.$loader.fashionIdentifier) isnt 0
+				console.log tag[3].indexOf($wf.$loader.fashionIdentifier)
+				if tag[3].indexOf($wf.$loader.fashionIdentifier) is -1
 					scripts.push tag[3]

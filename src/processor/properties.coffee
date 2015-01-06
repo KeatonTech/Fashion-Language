@@ -1,6 +1,7 @@
 # Go through the parse tree and pull out properties defined by FASHION modules
 window.fashion.$processor.properties = (parseTree, propertyModules) ->
 	funcs = window.fashion.$processor.api
+	rmode = $wf.$runtimeMode
 
 	# Go through each selector (yes, this is tedious)
 	for selector in parseTree.selectors
@@ -25,9 +26,9 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 					determineUnit: funcs.determineUnit
 
 				# Remove the property if necessary
-				if propertyModule.mode is $wf.$runtimeMode.individual
+				if (propertyModule.mode & rmode.individual) is rmode.individual
 					parseTree.addPropertyDependency property.name, propertyModule
-					property.mode |= $wf.$runtimeMode.individual
+					property.mode |= propertyModule.mode
 
 				else
 					# Process it!

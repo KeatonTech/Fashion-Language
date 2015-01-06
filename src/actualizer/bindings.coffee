@@ -1,5 +1,6 @@
 # Add dependencies to each variable/module object, based on homogenous selectors
 window.fashion.$actualizer.mapBindings = (bindings, selectors, individual, map) ->
+	rmode = $wf.$runtimeMode
 
 	if !bindings then return
 	hDependents = []
@@ -19,7 +20,8 @@ window.fashion.$actualizer.mapBindings = (bindings, selectors, individual, map) 
 				# We should get rid of static properties; the JS doesn't know about those
 				if typeof selectorId is "number"
 					selector = selectors[selectorId]
-					if selector and selector.mode isnt $wf.$runtimeMode.static
+					if selector and selector.mode isnt rmode.static and
+					(selector.mode & rmode.triggered) isnt rmode.triggered
 						hDependents.push selectorId
 
 				# If it's a string, it's probably an individual property

@@ -112,7 +112,7 @@ class PropertyModule extends Module
 			# It is pre-bound so it takes no arguments
 			# Adding this property implies that the property needs to run in individual mode
 			@apply = args.applyFunction || args.apply # (element, value, evaluateExpr) ->
-			if @apply then args.mode = $wf.$runtimeMode.individual
+			if @apply then args.mode |= $wf.$runtimeMode.individual
 
 			# True if the property should be entirely removed from the original CSS
 			@replace = args.replace || false
@@ -122,7 +122,7 @@ class PropertyModule extends Module
 			@runtimeObject = args.runtimeObject || args.runtime
 
 			# Property mode
-			@mode = args.mode
+			@mode = args.mode || 0
 
 			# For adding things to the runtime
 			@runtimeCapabilities = args.runtimeCapabilities || args.capabilities

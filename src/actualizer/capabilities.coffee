@@ -66,17 +66,17 @@ window.fashion.$actualizer.addRuntimeFunctions = (runtimeData, parseTree, capabi
 				parseTree.addScript "FSREADY(#{functionName});"
 
 
-# Adds in capabilities from runtime modules
+# Adds in capabilities from runtime module
 window.fashion.$actualizer.addModuleCapabilities = (capabilities, runtimeData) ->
 
-	for n, module of runtimeData.modules.blocks when module.runtimeCapabilities
+	for n, module of runtimeData.modules.blocks when module?.runtimeCapabilities
 		capabilities.addDependencies module.runtimeCapabilities
 
-	for n, module of runtimeData.modules.properties when module.runtimeCapabilities
+	for n, module of runtimeData.modules.properties when module?.runtimeCapabilities
 		capabilities.addDependencies module.runtimeCapabilities
 
-	for n, module of runtimeData.modules.functions when module.runtimeCapabilities
+	for n, module of runtimeData.modules.functions when module?.runtimeCapabilities
 		capabilities.addDependencies module.runtimeCapabilities
 
-	for n, module of runtimeData.modules.globals when module.runtimeCapabilities
+	for n, module of runtimeData.modules.globals when module?.runtimeCapabilities
 		capabilities.addDependencies module.runtimeCapabilities

@@ -683,11 +683,11 @@ PropertyModule = (function(_super) {
       this.compile = args.compileFunction || args.compile;
       this.apply = args.applyFunction || args.apply;
       if (this.apply) {
-        args.mode = $wf.$runtimeMode.individual;
+        args.mode |= $wf.$runtimeMode.individual;
       }
       this.replace = args.replace || false;
       this.runtimeObject = args.runtimeObject || args.runtime;
-      this.mode = args.mode;
+      this.mode = args.mode || 0;
       this.runtimeCapabilities = args.runtimeCapabilities || args.capabilities;
     }
   }
@@ -750,12 +750,13 @@ window.fashion.$typeConstants = {
 };
 
 /*
-5-bit Mode -----------------------------------------------------------------------
-	00001 (Bit 0): Can change, needs to be included in the JS
-	00010 (Bit 1): Can rely on non-top-level variables
-	00100 (Bit 2): Can rely on relative styles & attributes
-	01000 (Bit 3): Needs to be continuously recomputed
-	10000 (Bit 4): Can rely on globals, cannot be pre-computed
+6-bit Mode -----------------------------------------------------------------------
+	000001 (Bit 0): Can change, needs to be included in the JS
+	000010 (Bit 1): Can rely on non-top-level variables
+	000100 (Bit 2): Can rely on relative styles & attributes
+	001000 (Bit 3): Needs to be continuously recomputed
+	010000 (Bit 4): Can rely on globals, cannot be pre-computed
+	100000 (Bit 5): Triggered property, does not need recomputing
 ----------------------------------------------------------------------------------
  */
 window.fashion.$runtimeMode = {
@@ -765,6 +766,7 @@ window.fashion.$runtimeMode = {
   globalDynamic: 17,
   individual: 7,
   live: 9,
+  triggered: 32,
   generate: function(dynamic, individualized, live, scoped, globals) {
     return (dynamic ? 1 : 0) | (individualized ? 7 : 0) | (live ? 9 : 0) | (scoped ? 3 : 0) | (globals ? 17 : 0);
   }
@@ -1562,8 +1564,9 @@ window.fashion.$processor.api.addVariable = function(parseTree, name, value) {
   return $wf.$parser.addVariable(parseTree, name, value);
 };
 window.fashion.$processor.properties = function(parseTree, propertyModules) {
-  var API, funcs, index, property, propertyModule, selector, _i, _j, _len, _len1, _ref, _ref1;
+  var API, funcs, index, property, propertyModule, rmode, selector, _i, _j, _len, _len1, _ref, _ref1;
   funcs = window.fashion.$processor.api;
+  rmode = $wf.$runtimeMode;
   _ref = parseTree.selectors;
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     selector = _ref[_i];
@@ -1582,9 +1585,9 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
           determineType: funcs.determineType,
           determineUnit: funcs.determineUnit
         };
-        if (propertyModule.mode === $wf.$runtimeMode.individual) {
+        if ((propertyModule.mode & rmode.individual) === rmode.individual) {
           parseTree.addPropertyDependency(property.name, propertyModule);
-          property.mode |= $wf.$runtimeMode.individual;
+          property.mode |= propertyModule.mode;
         } else {
           propertyModules[property.name].compile.call(API, property.value);
           if (propertyModule.replace) {
@@ -2465,21 +2468,21 @@ window.fashion.$actualizer.addModuleCapabilities = function(capabilities, runtim
   _ref = runtimeData.modules.blocks;
   for (n in _ref) {
     module = _ref[n];
-    if (module.runtimeCapabilities) {
+    if (module != null ? module.runtimeCapabilities : void 0) {
       capabilities.addDependencies(module.runtimeCapabilities);
     }
   }
   _ref1 = runtimeData.modules.properties;
   for (n in _ref1) {
     module = _ref1[n];
-    if (module.runtimeCapabilities) {
+    if (module != null ? module.runtimeCapabilities : void 0) {
       capabilities.addDependencies(module.runtimeCapabilities);
     }
   }
   _ref2 = runtimeData.modules.functions;
   for (n in _ref2) {
     module = _ref2[n];
-    if (module.runtimeCapabilities) {
+    if (module != null ? module.runtimeCapabilities : void 0) {
       capabilities.addDependencies(module.runtimeCapabilities);
     }
   }
@@ -2487,7 +2490,7 @@ window.fashion.$actualizer.addModuleCapabilities = function(capabilities, runtim
   _results = [];
   for (n in _ref3) {
     module = _ref3[n];
-    if (module.runtimeCapabilities) {
+    if (module != null ? module.runtimeCapabilities : void 0) {
       _results.push(capabilities.addDependencies(module.runtimeCapabilities));
     }
   }
@@ -2496,7 +2499,8 @@ window.fashion.$actualizer.addModuleCapabilities = function(capabilities, runtim
 var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 window.fashion.$actualizer.mapBindings = function(bindings, selectors, individual, map) {
-  var bindingTree, depends, hDependents, property, selector, selectorId, selectorOrName, values, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+  var bindingTree, depends, hDependents, property, rmode, selector, selectorId, selectorOrName, values, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+  rmode = $wf.$runtimeMode;
   if (!bindings) {
     return;
   }
@@ -2516,7 +2520,7 @@ window.fashion.$actualizer.mapBindings = function(bindings, selectors, individua
         selectorId = _ref[_i];
         if (typeof selectorId === "number") {
           selector = selectors[selectorId];
-          if (selector && selector.mode !== $wf.$runtimeMode["static"]) {
+          if (selector && selector.mode !== rmode["static"] && (selector.mode & rmode.triggered) !== rmode.triggered) {
             hDependents.push(selectorId);
           }
         } else {
@@ -3502,19 +3506,33 @@ $wf.$extend(window.fashion.$properties, {
 });
 $wf.$extend(window.fashion.$properties, new ((function() {
   function _Class() {
-    var applyForEvent, events, evt, _i, _len;
-    events = ["click", "dblclick", "mousedown", "mouseup", "mouseenter", "mouseleave", "mousemove", "mouseout", "mouseover", "drag", "dragdrop", "dragend", "drop", "dragenter", "dragexit", "draggesture", "dragleave", "dragover", "dragstart", "blur", "change", "focus", "focusin", "focusout", "submit", "reset"];
-    applyForEvent = function(evt) {
+    var applyForCaughtEvent, applyForPropogatedEvent, caughtEvents, evt, propogatedEvents, _i, _j, _len, _len1;
+    caughtEvents = ["click", "dblclick", "mousedown", "mouseup", "drag", "dragdrop", "dragend", "drop", "blur", "change", "focus", "focusin", "focusout", "submit", "reset"];
+    applyForCaughtEvent = function(evt) {
       var body;
       body = "if(element.getAttribute('data-hastrigger-" + evt + "'))return;\nelement.addEventListener('" + evt + "', function(eo){\n	eo.stopPropagation();\n	evaluate();\n}, false);\nelement.setAttribute('data-hastrigger-" + evt + "', 'true');";
       return new Function("element", "value", "evaluate", body);
     };
-    for (_i = 0, _len = events.length; _i < _len; _i++) {
-      evt = events[_i];
+    for (_i = 0, _len = caughtEvents.length; _i < _len; _i++) {
+      evt = caughtEvents[_i];
       this["on-" + evt] = new PropertyModule({
         replace: true,
-        mode: $wf.$runtimeMode.individual,
-        "apply": applyForEvent(evt)
+        mode: $wf.$runtimeMode.triggered | $wf.$runtimeMode.individual,
+        "apply": applyForCaughtEvent(evt)
+      });
+    }
+    propogatedEvents = ["mouseenter", "mouseleave", "mousemove", "mouseout", "mouseover", "dragenter", "dragexit", "draggesture", "dragleave", "dragover", "dragstart"];
+    applyForPropogatedEvent = function(evt) {
+      var body;
+      body = "if(element.getAttribute('data-hastrigger-" + evt + "'))return;\nelement.addEventListener('" + evt + "', evaluate, false);\nelement.setAttribute('data-hastrigger-" + evt + "', 'true');";
+      return new Function("element", "value", "evaluate", body);
+    };
+    for (_j = 0, _len1 = propogatedEvents.length; _j < _len1; _j++) {
+      evt = propogatedEvents[_j];
+      this["on-" + evt] = new PropertyModule({
+        replace: true,
+        mode: $wf.$runtimeMode.triggered | $wf.$runtimeMode.individual,
+        "apply": applyForPropogatedEvent(evt)
       });
     }
   }
