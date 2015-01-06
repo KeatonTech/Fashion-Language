@@ -22,41 +22,7 @@ window.fashion.$parser =
 
 # Remove comments
 window.fashion.$parser.removeComments = (fashionText) ->
-	return fashionText.replace /\/\*.*?\*\/|\/\/.*?\n/g, ""
-
-
-# Adds a variable object
-window.fashion.$parser.addVariable = (parseTree, name, value, scope) ->
-
-	# Parse the value into an expression if necessary
-	value = $wf.$parser.parseSingleValue(value, "$"+name, parseTree, true)
-
-	# Make a variable object
-	variableObject = new Variable name, value, scope
-	parseTree.addVariable variableObject
-
-	# If the variable is an expression, just pull the types out of that
-	if value instanceof Expression
-		type = value.type
-		unit = value.unit
-
-	# Otherwise, generate the unit and type from the constant value
-	else
-		
-		# Make sure the variable has a constant value
-		val = variableObject.raw || variableObject.value
-		if !val then return
-
-		# Add a type
-		type = window.fashion.$shared.determineType(val, $wf.$type, $wf.$typeConstants)
-
-		# Add units, if necessary
-		unittedValue = window.fashion.$shared.getUnit(val, type, $wf.$type, $wf.$unit)
-		typedValue = unittedValue['value']
-		unit = unittedValue['unit']
-
-	# Update the variable object
-	variableObject.annotateWithType type, unit, typedValue
+	return fashionText.replace /\/\*[\s\S]*?\*\/|\/\/.*?\n/g, ""
 
 
 # Splits a string by commas, but only those not inside parenthesis
@@ -127,3 +93,4 @@ window.fashion.$parser.splitByTopLevelSpaces = (value) ->
 # @prepros-append ./sections.coffee
 # @prepros-append ./properties.coffee
 # @prepros-append ./expressions.coffee
+# @prepros-append ./variables.coffee

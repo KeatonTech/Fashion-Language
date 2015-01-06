@@ -2,10 +2,11 @@
 # This is much easier to deal with throughout the parsing stages, but annoying for runtime
 # The runtime gets variables that implement this class
 class RuntimeVariable
-	constructor: (name, type, unit) ->
+	constructor: (name, type, unit, mode) ->
 		@name = name
 		@type = type
 		@unit = unit
+		@mode = mode || $wf.$runtimeMode.static
 
 		@scopes = []
 		@values = {}

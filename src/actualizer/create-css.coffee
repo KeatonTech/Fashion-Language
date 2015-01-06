@@ -42,6 +42,7 @@ window.fashion.$actualizer.cssPrefixes = ["", "-webkit-", "-moz-", "-ms-"]
 window.fashion.$actualizer.separateTransitions = (parseTree) ->
 	evalFunction = $wf.$actualizer.evaluationFunction null, parseTree
 	prefixes = window.fashion.$actualizer.cssPrefixes
+	transitionMode = 0
 
 	# Collect each transition
 	for id, selector of parseTree.selectors
@@ -55,28 +56,24 @@ window.fashion.$actualizer.separateTransitions = (parseTree) ->
 				transitions.push(pt)
 
 				# Determine the mode of the transition
-				pt.mode = pt.easing.mode | pt.duration.mode | pt.delay.mode
+				transitionMode |= pt.easing.mode | pt.duration.mode | pt.delay.mode
 
-		# Go through each mode and add it as a property if necessary
-		modes = $wf.$runtimeMode
-		for mode in [modes.static, modes.dynamic, modes.individual, modes.live]
+		# Generate the CSS strings for properties of this mode
+		strings = $wf.$actualizer.transitionStrings evalFunction, transitions
+		if strings.length is 0 then continue
+		string = strings.join(",")
 
-			# Generate the CSS strings for properties of this mode
-			strings = $wf.$actualizer.transitionStrings evalFunction, transitions, mode
-			if strings.length is 0 then continue
-			string = strings.join(",")
+		# Make a new property
+		property = new Property "transition", string, transitionMode
 
-			# Make a new property
-			property = new Property "transition", string, mode
-
-			# Add it once for each prefix
-			for prefix in prefixes
-				selector.addProperty property.copyWithName prefix + "transition"
+		# Add it once for each prefix
+		for prefix in prefixes
+			selector.addProperty property.copyWithName prefix + "transition"
 
 
 # Generate a list of property strings for transitions of a given mode
-window.fashion.$actualizer.transitionStrings = (evalFunction, transitions, runtimeMode) ->
-	(for t in transitions when t.mode is runtimeMode
+window.fashion.$actualizer.transitionStrings = (evalFunction, transitions) ->
+	for t in transitions
 
 		# Evaluate the properties if necessary
 		duration = if t.duration.script then evalFunction t.duration else t.duration
@@ -85,7 +82,6 @@ window.fashion.$actualizer.transitionStrings = (evalFunction, transitions, runti
 
 		# Put everything into the template
 		$wf.$actualizer.cssTransitionTemplate t.property, duration, easing, delay
-	)
 
 
 # Helpful function that returns a function that easily evaluates expressions

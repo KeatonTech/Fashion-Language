@@ -14,8 +14,8 @@ window.fashion.$actualizer.minifier.expandRuntimeData = (minData, expandTo) ->
 			mode: e[1], type: e[2], unit: e[3], setter: e[4], 
 			evaluate: Function("v","g","f","t","e",e[5])}
 		v: (v) -> {
-			name: v[1], type: v[2], unit: v[3], default: expand(v[4]),
-			dependents: v[5], scopes: v[6], values:expand(v[7])}
+			name: v[1], type: v[2], unit: v[3], mode: v[4], default: expand(v[5]),
+			dependents: v[6], scopes: v[7], values:expand(v[8])}
 
 
 	# Function that'll convert an array of arrays into an array of objects

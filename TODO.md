@@ -5,6 +5,8 @@
 * Full support for scoped variables - treated as individualized properties.
 * Allow ternaries (CS and JS formats) in expressions
 * Revamped 'pin' and a new fit property, based on binding.
+* Update event properties to remove variable dependencies and HTML attribute
+* New Syntax: Tabbed mode and multi-property assignment (width: height: 100%;)
 
 # Future Releases
 
@@ -32,12 +34,12 @@
 
 #### Functions
 * Color-handling functions (darken, brighten, mix, hueshift, etc)
-* HSB(A) & HSL(A) functions (polyfills on some browsers)
 * @ (bind), min, max & avg DOM binding functions
 
 
 ## Fixes
 
+* CSS3 Transition durations and delays are not properly made dynamic
 * Empty selectors cause the indexes of individual properties to get offset
 * Make variables declared in @transition blocks take an isolated scope
 * Pin property should make its parent at least position relative

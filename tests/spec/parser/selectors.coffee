@@ -34,7 +34,15 @@ window.fashiontests.parser.selectors = ()->
 							\*/
 							background: black;
 						}
+
+						/*
+						selector {
+							inside: comment;
+						}
+						*/
 						""")
+
+		expect(result.selectors.length).toBe(2)
 
 		expect(result.selectors[0].name).toBe("*")
 		expect(result.selectors[0].properties[0].value).toBe("30px")

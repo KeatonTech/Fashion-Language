@@ -23,21 +23,24 @@ window.fashion.$actualizer.actualizeVariables =
 
 		# Determine the type and unit of the variable (must be identical in all scopes)
 		type = unit = -1
+		mode = 0
 		for name, varObj of scopes
-			if varObj.type then type = varObj.type
-			if varObj.unit then unit = varObj.unit
+			if varObj.type? then type = varObj.type
+			if varObj.unit? then unit = varObj.unit
+			if varObj.mode? then mode |= varObj.mode
 
 		# Create a runtime variable object
-		rvar = new RuntimeVariable varName, type, unit
+		rvar = new RuntimeVariable varName, type, unit, mode
 
 		# Add each scope
 		for name, varObj of scopes
 			rvar.addScope name, varObj.value 
 
 		# Add the dependencies, mapped to the split up selector blocks
-		bindings = parseTree.bindings.variables[varName]
-		rvar.dependents = $wf.$actualizer.mapBindings(
-			bindings, jsSelectors, individual, cssMap)
+		if mode > 0
+			bindings = parseTree.bindings.variables[varName]
+			rvar.dependents = $wf.$actualizer.mapBindings(
+				bindings, jsSelectors, individual, cssMap)
 
 		# Store this variable
 		variables[varName] = rvar

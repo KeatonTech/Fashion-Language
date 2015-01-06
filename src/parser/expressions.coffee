@@ -181,13 +181,13 @@ window.fashion.$parser.expressionExpander =
 
 		# Anything with a non-top-level variable needs to be individualized
 		isIndividual = false
-		type = unit = -1
+		type = unit = mode = -1
 		for selector, vObj of selectors
 			if selector isnt 0 then isIndividualized = false
 			type = vObj.type
 			unit = vObj.unit
+			mode = vObj.mode
 
-		
 		if isSetter 
 			# Setters do not need to be linked. This setter just uses a straight up equals
 			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value ="
@@ -198,7 +198,7 @@ window.fashion.$parser.expressionExpander =
 			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value"
 
 		# Has to account for the fact that variables can also be expressions
-		mode = $wf.$runtimeMode.generate(true, isIndividual)
+		mode = if isIndividual then mode | $wf.$runtimeMode.individual else mode
 		return new Expression script, type, unit, mode
 
 

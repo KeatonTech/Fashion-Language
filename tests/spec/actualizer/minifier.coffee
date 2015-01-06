@@ -49,7 +49,7 @@ window.fashiontests.actualizer.minifier = ()->
 				["p","padding",1,["e",1,1,"px","return (v('size').value) + 'px'"]],
 				["p","width",1,["e",1,1,"px","return (v('size').value) + 'px'"]]
 			]]],[
-			["v","size",1,"px",10,[],{"0":10}]]
+			["v","size",1,"px",1,10,[],{"0":10}]]
 		]
 
 		# Expand this data into a blank runtime data object
@@ -72,6 +72,7 @@ window.fashiontests.actualizer.minifier = ()->
 		expect(rd.variables["size"].name).toBe("size")
 		expect(rd.variables["size"].default).toBe(10)
 		expect(rd.variables["size"].unit).toBe("px")
+		expect(rd.variables["size"].mode).toBe(1)
 		expect(rd.variables["size"].type).toBe($wf.$type.Number)
 
 

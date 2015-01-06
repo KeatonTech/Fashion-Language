@@ -8,6 +8,7 @@ class Variable
 	constructor: (name, defaultValue, scope = 0) ->
 		if name[0] == "$" then name = name.substr(1)
 		@name = name
+		@mode = $wf.$runtimeMode.dynamic
 
 		@raw = @value = defaultValue
 		@scope = scope

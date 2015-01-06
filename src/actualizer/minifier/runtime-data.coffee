@@ -77,7 +77,11 @@ window.fashion.$actualizer.minifier =
 			else values.push v
 
 		# Return the selector object
-		r = ["v", varObj.name, varObj.type, varObj.unit, defaultVal, varObj.dependents]
+		r = [
+				"v",
+				varObj.name, varObj.type, varObj.unit, varObj.mode,
+				defaultVal, varObj.dependents
+			]
 		if varObj.scopes then r.push.apply r, [varObj.scopes, values]
 		return r
 

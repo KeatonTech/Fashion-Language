@@ -21,6 +21,7 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 	setTopLevelVariable: (varName, value) ->
 		vObj = FASHION.variables[varName]
 		if !vObj then return @throwError "Variable '$#{varName}' does not exist"
+		if vObj.mode is 0 then return @throwError "Cannot change static variables"
 
 		### For now, it's your problem if you screw this up
 		# Make sure the variable did not change type

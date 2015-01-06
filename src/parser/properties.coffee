@@ -9,7 +9,7 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 			[\s]*([\w\-\$\@\%]*)[\s]*	# Transition Duration (optional)
 			([\w\-\$\@\%]*)\]){0,1}		# Transition Delay (optional)
 			[\s]*([^;}\n]*?)			# Property/Variable Value or Expression
-			[\s]*(!important)?			# Important flag
+			[\s]*(\![A-z0-9\-]+?)?		# Flags (like !important or !static)
 			[;}\n]						# Ending
 			///g
 
@@ -57,7 +57,7 @@ window.fashion.$parser.parseScopedVariable = (name, value, property, scope, pars
 	if property[7]
 		throw new Error "Variable declaration '#{name}' cannot be !important"
 
-	$wf.$parser.addVariable parseTree, name, value, scope
+	$wf.$parser.addVariable parseTree, name, value, property[7], scope
 
 
 # Splits a value up by commas if necessary and then evaluates it

@@ -141,6 +141,7 @@ window.fashiontests.parser.variables = () ->
 						}
 						""")
 
+		console.log result.variables["isSelected"]
 		expect(result.variables["isSelected"][".menu .main"]["value"]).toEqual("true");
 		expect(result.variables["isSelected"][".menu .main"]["type"]).toEqual type.Unknown
 

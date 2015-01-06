@@ -35,6 +35,8 @@ window.fashion.$shared.getUnit = (rawValue, varType, type, unit) ->
 
 # Convert time to milliseconds
 window.fashion.$shared.timeInMs = (valueObject) ->
-	if valueObject.unit is "ms" then return valueObject.value
+	if !valueObject then return 0
+	else if typeof valueObject is 'number' then return valueObject
+	else if valueObject.unit is "ms" then return valueObject.value
 	else if valueObject.unit is "s" then return valueObject.value * 1000
 	else return parseInt valueObject.value

@@ -35,7 +35,6 @@ $wf.$extend window.fashion.$functions,
 		output: $wf.$type.Color,
 		capabilities: ["colors"],
 		evaluate: (h,s,b) -> 
-			console.log this
 			{r,g,b} = @hsbTOrgb h.value, s.value, b.value
 			"rgb(#{parseInt r},#{parseInt g},#{parseInt b})"
 

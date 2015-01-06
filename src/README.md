@@ -9,7 +9,7 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 
 * ***fashion.coffee:*** Shared code between the Precompiler and In-browser (live) implementations
 * ***live.coffee:*** Compiles Fashion code in the browser, allowing for easier development and some more flexibility.
-* ***api.coffee:*** Defines functions that allow third party code to extend the Fashion compiler.
+* ***compiler.coffee:*** Node.js based program that loads HTML files and compiles all of the FSS contained in them.
 
 ***
 
@@ -17,6 +17,7 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 ##### Code to load in Fashion files
 
 * ***live.coffee:*** Loads Fashion files from style and link tags
+* ***compiled.coffee:*** Loads Fashion files and scripts from the raw text of an HTML file
 
 ### ./parser
 ##### Code to turn a text/x-fashion document into a useful parse tree
@@ -25,6 +26,7 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***sections.coffee:*** Splits the full Fashion document into individual selectors, blocks and variable definitions.
 * ***properties.coffee:*** Parses the inside of a selector into individual properties and values.
 * ***expressions.coffee:*** Validates inline fashion expressions and converts them to Javascript functions.
+* ***variables.coffee:*** Can add variables to the parse tree.
 
 ### ./processor
 ##### Code to expand Fashion properties, blocks and selectors into a format closer to raw CSS and Javascript.

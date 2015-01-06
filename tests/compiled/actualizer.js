@@ -114,7 +114,7 @@
       }
       return _results;
     });
-    it("should turn dynamic transitions into dynamic properties", function() {
+    return it("should turn dynamic transitions into dynamic properties", function() {
       var id, parseTree, prefix, properties, _results;
       parseTree = process(parse("$duration: 100ms;\nbody {\n	background-color: [linear $duration] blue;\n}"));
       separateTransitions(parseTree);
@@ -125,33 +125,6 @@
         expect(properties[parseInt(id) + 1].name).toBe("" + prefix + "transition");
         expect(properties[parseInt(id) + 1].value).toBe("background-color 100ms linear");
         _results.push(expect(properties[parseInt(id) + 1].mode).toBe($wf.$runtimeMode.dynamic));
-      }
-      return _results;
-    });
-    return it("should combine differently typed transitions into different properties", function() {
-      var id, l, parseTree, prefix, properties, str, _results;
-      parseTree = process(parse("$duration: 100ms;\nbody {\n	background-color: [linear 100ms] blue;\n	color: [ease-out 200ms] red;\n	width: [linear $duration] 100px;\n}"));
-      separateTransitions(parseTree);
-      properties = parseTree.selectors[0].properties;
-      expect(properties[0].name).toBe("background-color");
-      expect(properties[1].name).toBe("color");
-      expect(properties[2].name).toBe("width");
-      l = 3;
-      str = "background-color 100ms linear,color 200ms ease-out";
-      for (id in prefixes) {
-        prefix = prefixes[id];
-        expect(properties[parseInt(id) + l].name).toBe("" + prefix + "transition");
-        expect(properties[parseInt(id) + l].value).toBe(str);
-        expect(properties[parseInt(id) + l].mode).toBe($wf.$runtimeMode["static"]);
-      }
-      l += prefixes.length;
-      str = "width 100ms linear";
-      _results = [];
-      for (id in prefixes) {
-        prefix = prefixes[id];
-        expect(properties[parseInt(id) + l].name).toBe("" + prefix + "transition");
-        expect(properties[parseInt(id) + l].value).toBe(str);
-        _results.push(expect(properties[parseInt(id) + l].mode).toBe($wf.$runtimeMode.dynamic));
       }
       return _results;
     });
@@ -281,7 +254,7 @@
       minData = [
         [["s", 0, "body", 1, [["p", "padding", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]], ["p", "width", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]]]]], [
           [
-            "v", "size", 1, "px", 10, [], {
+            "v", "size", 1, "px", 1, 10, [], {
               "0": 10
             }
           ]
@@ -303,6 +276,7 @@
       expect(rd.variables["size"].name).toBe("size");
       expect(rd.variables["size"]["default"]).toBe(10);
       expect(rd.variables["size"].unit).toBe("px");
+      expect(rd.variables["size"].mode).toBe(1);
       return expect(rd.variables["size"].type).toBe($wf.$type.Number);
     });
     it('should minify individual properties', function() {
@@ -435,6 +409,13 @@
       window.FASHION = {};
       eval(js);
       return expect(FASHION.variables["padding"].dependents).toEqual([1, 3]);
+    });
+    it('should leave out static variables', function() {
+      var js;
+      js = actualize(process(parse("$padding: 10px !static;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding: $padding;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      return expect(JSON.stringify(FASHION.selectors)).toBe("{}");
     });
     it('should properly map variable bindings to the individual CSS selectors', function() {
       var js;

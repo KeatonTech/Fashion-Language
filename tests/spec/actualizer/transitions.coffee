@@ -57,34 +57,3 @@ window.fashiontests.actualizer.transitions = ()->
 			expect(properties[parseInt(id) + 1].name).toBe("#{prefix}transition")
 			expect(properties[parseInt(id) + 1].value).toBe("background-color 100ms linear")
 			expect(properties[parseInt(id) + 1].mode).toBe($wf.$runtimeMode.dynamic)
-
-
-	it "should combine differently typed transitions into different properties", ()->
-		parseTree = process parse """
-			$duration: 100ms;
-			body {
-				background-color: [linear 100ms] blue;
-				color: [ease-out 200ms] red;
-				width: [linear $duration] 100px;
-			}
-			"""
-		separateTransitions parseTree
-
-		properties = parseTree.selectors[0].properties
-		expect(properties[0].name).toBe("background-color")
-		expect(properties[1].name).toBe("color")
-		expect(properties[2].name).toBe("width")
-
-		l = 3
-		str = "background-color 100ms linear,color 200ms ease-out"
-		for id, prefix of prefixes
-			expect(properties[parseInt(id) + l].name).toBe("#{prefix}transition")
-			expect(properties[parseInt(id) + l].value).toBe(str)
-			expect(properties[parseInt(id) + l].mode).toBe($wf.$runtimeMode.static)
-
-		l += prefixes.length
-		str = "width 100ms linear"
-		for id, prefix of prefixes
-			expect(properties[parseInt(id) + l].name).toBe("#{prefix}transition")
-			expect(properties[parseInt(id) + l].value).toBe(str)
-			expect(properties[parseInt(id) + l].mode).toBe($wf.$runtimeMode.dynamic)

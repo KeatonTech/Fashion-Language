@@ -5,7 +5,8 @@ window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 	# Regex parses out the important bits, but doesn't count brackets
 	regex = ///(
 			[\s]*(							# Padded with whitespace
-			\$([\w\-]+)\:[\s]*(.*?)[;\n]|	# Variable definitions
+			\$([\w\-]+)\:[\s]*(.*?)			# Variable definitions
+			\s*(![A-z0-9\-]+?)?[;\n]| 		# Flags on variables, like !static
 			\@([\w\-]+)[\s]*(.*?)[\s]*\{| 	# Beginning of blocks
 			(.*?)[\s]*?\{)|					# Beginning of selector
 			\{|\}							# Opening and closing brackets
@@ -17,33 +18,34 @@ window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 
 		# Parse out top-level variables
 		if segment[3] and segment[4]
-			$wf.$parser.addVariable parseTree, segment[3], segment[4]
+			$wf.$parser.addVariable parseTree, segment[3], segment[4], segment[5]
 
 		# Parse blocks
-		else if segment[5]
+		else if segment[6]
 			startIndex = segment.index + segment[0].length
 
 			# Parse out the arguments
-			if segment[6] then blockArgs = $wf.$parser.splitByTopLevelSpaces segment[6]
+			if segment[7] then blockArgs = $wf.$parser.splitByTopLevelSpaces segment[7]
 			else blockArgs = []
 
 			# Add the block object
 			parseTree.addBlock
-				type: segment[5],
+				type: segment[6],
 				arguments: blockArgs,
 				body: window.fashion.$parser.parseBlock fashionText, regex, startIndex
 
 			# Add the block dependency
-			parseTree.addBlockDependency segment[5], $wf.$blocks[segment[5]]
+			parseTree.addBlockDependency segment[6], $wf.$blocks[segment[6]]
 
 		# Parse selectors and add them to the parse tree
-		else if segment[7]
-			window.fashion.$parser.parseSelector(parseTree, fashionText, segment[7],
+		else if segment[8]
+			window.fashion.$parser.parseSelector(parseTree, fashionText, segment[8],
 				regex, segment.index + segment[0].length)
 
 		# Otherwise we might have a problem
 		# TODO(keatontech): Better error handling here. Heh.
-		else console.log "There's a problem somewhere in your file. Sorry."
+		else 
+			console.log "[FASHION] Problem around '#{segment[0]}';"
 
 	# Return something nice
 	return parseTree
@@ -77,10 +79,10 @@ window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, las
 			topSel.addToBody fashionText.substring(segment.index, lastIndex)
 
 		# We need to go deeper.
-		else if segment[7]
+		else if segment[8]
 
 			# Generate the name of this new selector
-			name = $wf.$parser.nestSelector topSel.rawName, segment[7]
+			name = $wf.$parser.nestSelector topSel.rawName, segment[8]
 
 			# Add this selector
 			selectors.push($wf.$parser.createSelector(parseTree, name))
@@ -96,6 +98,9 @@ window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, las
 # Generates a nested selector from an inner one and an outer one
 window.fashion.$parser.nestSelector = (outer, inner) ->
 	acc = []
+	if !outer then return inner
+	if !inner then return outer
+
 	for ostring in outer.split ","
 		ostring = ostring.trim()
 		for istring in inner.split ","
@@ -166,8 +171,8 @@ window.fashion.$parser.parseBlock = (fashionText, regex, startIndex) ->
 		# Simple enough.
 		if segment[0] is "}" then bracketDepth--
 		else if segment[0] is "{" then bracketDepth++
-		else if segment[5] then bracketDepth++ # Nested Block
-		else if segment[7] then bracketDepth++ # Nested Selector
+		else if segment[6] then bracketDepth++ # Nested Block
+		else if segment[8] then bracketDepth++ # Nested Selector
 
 	# Return the selectors
 	return fashionText.substring(startIndex, endIndex - 1).trim()

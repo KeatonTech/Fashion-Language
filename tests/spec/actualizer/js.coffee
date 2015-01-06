@@ -155,6 +155,25 @@ window.fashiontests.actualizer.js = ()->
 		expect(FASHION.variables["padding"].dependents).toEqual([1,3])
 
 
+	it 'should leave out static variables', () ->
+		{js} = actualize process parse """
+			$padding: 10px !static;
+			div {
+				padding: $padding;
+				color: white;
+			}
+			p {
+				pin: center;
+				padding: $padding;
+			}
+			"""
+
+		window.FASHION = {}
+		eval(js)
+
+		expect(JSON.stringify FASHION.selectors).toBe("{}");
+
+
 	it 'should properly map variable bindings to the individual CSS selectors', () ->
 		{js} = actualize process parse """
 			$padding: 10px;

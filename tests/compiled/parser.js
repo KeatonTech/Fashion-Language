@@ -119,6 +119,7 @@
     it("should allow variables within nested selectors", function() {
       var result;
       result = parse(".menu {\n	.main {\n		$isSelected: true;\n	}\n}");
+      console.log(result.variables["isSelected"]);
       expect(result.variables["isSelected"][".menu .main"]["value"]).toEqual("true");
       return expect(result.variables["isSelected"][".menu .main"]["type"]).toEqual(type.Unknown);
     });
@@ -148,7 +149,8 @@
     });
     it("should filter out comments", function() {
       var result;
-      result = parse("// This is a one-line comment\n* {height: 30px;}\n\n/*  \nThis is a multiline-style comment\nof the sort you might find in JS\n*/\nul.test td:last-child {\n\n	/*|*| Mozilla-style comment\n	\*/\n	background: black;\n}");
+      result = parse("// This is a one-line comment\n* {height: 30px;}\n\n/*  \nThis is a multiline-style comment\nof the sort you might find in JS\n*/\nul.test td:last-child {\n\n	/*|*| Mozilla-style comment\n	\*/\n	background: black;\n}\n\n/*\nselector {\n	inside: comment;\n}\n*/");
+      expect(result.selectors.length).toBe(2);
       expect(result.selectors[0].name).toBe("*");
       expect(result.selectors[0].properties[0].value).toBe("30px");
       expect(result.selectors[1].name).toBe("ul.test td:last-child");

@@ -541,6 +541,7 @@ Variable = (function() {
       name = name.substr(1);
     }
     this.name = name;
+    this.mode = $wf.$runtimeMode.dynamic;
     this.raw = this.value = defaultValue;
     this.scope = scope;
     this.topLevel = scope === 0;
@@ -985,28 +986,7 @@ window.fashion.$parser = {
 };
 
 window.fashion.$parser.removeComments = function(fashionText) {
-  return fashionText.replace(/\/\*.*?\*\/|\/\/.*?\n/g, "");
-};
-
-window.fashion.$parser.addVariable = function(parseTree, name, value, scope) {
-  var type, typedValue, unit, unittedValue, val, variableObject;
-  value = $wf.$parser.parseSingleValue(value, "$" + name, parseTree, true);
-  variableObject = new Variable(name, value, scope);
-  parseTree.addVariable(variableObject);
-  if (value instanceof Expression) {
-    type = value.type;
-    unit = value.unit;
-  } else {
-    val = variableObject.raw || variableObject.value;
-    if (!val) {
-      return;
-    }
-    type = window.fashion.$shared.determineType(val, $wf.$type, $wf.$typeConstants);
-    unittedValue = window.fashion.$shared.getUnit(val, type, $wf.$type, $wf.$unit);
-    typedValue = unittedValue['value'];
-    unit = unittedValue['unit'];
-  }
-  return variableObject.annotateWithType(type, unit, typedValue);
+  return fashionText.replace(/\/\*[\s\S]*?\*\/|\/\/.*?\n/g, "");
 };
 
 window.fashion.$parser.splitByTopLevelCommas = function(value) {
@@ -1068,30 +1048,30 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
 };
 window.fashion.$parser.parseSections = function(fashionText, parseTree) {
   var blockArgs, regex, segment, startIndex;
-  regex = /([\s]*(\$([\w\-]+)\:[\s]*(.*?)[;\n]|\@([\w\-]+)[\s]*(.*?)[\s]*\{|(.*?)[\s]*?\{)|\{|\})/g;
+  regex = /([\s]*(\$([\w\-]+)\:[\s]*(.*?)\s*(![A-z0-9\-]+?)?[;\n]|\@([\w\-]+)[\s]*(.*?)[\s]*\{|(.*?)[\s]*?\{)|\{|\})/g;
   while (segment = regex.exec(fashionText)) {
     if (segment.length < 8 || !segment[0]) {
       break;
     }
     if (segment[3] && segment[4]) {
-      $wf.$parser.addVariable(parseTree, segment[3], segment[4]);
-    } else if (segment[5]) {
+      $wf.$parser.addVariable(parseTree, segment[3], segment[4], segment[5]);
+    } else if (segment[6]) {
       startIndex = segment.index + segment[0].length;
-      if (segment[6]) {
-        blockArgs = $wf.$parser.splitByTopLevelSpaces(segment[6]);
+      if (segment[7]) {
+        blockArgs = $wf.$parser.splitByTopLevelSpaces(segment[7]);
       } else {
         blockArgs = [];
       }
       parseTree.addBlock({
-        type: segment[5],
+        type: segment[6],
         "arguments": blockArgs,
         body: window.fashion.$parser.parseBlock(fashionText, regex, startIndex)
       });
-      parseTree.addBlockDependency(segment[5], $wf.$blocks[segment[5]]);
-    } else if (segment[7]) {
-      window.fashion.$parser.parseSelector(parseTree, fashionText, segment[7], regex, segment.index + segment[0].length);
+      parseTree.addBlockDependency(segment[6], $wf.$blocks[segment[6]]);
+    } else if (segment[8]) {
+      window.fashion.$parser.parseSelector(parseTree, fashionText, segment[8], regex, segment.index + segment[0].length);
     } else {
-      console.log("There's a problem somewhere in your file. Sorry.");
+      console.log("[FASHION] Problem around '" + segment[0] + "';");
     }
   }
   return parseTree;
@@ -1111,8 +1091,8 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
       bracketDepth--;
     } else if (segment[3] && segment[4]) {
       topSel.addToBody(fashionText.substring(segment.index, lastIndex));
-    } else if (segment[7]) {
-      name = $wf.$parser.nestSelector(topSel.rawName, segment[7]);
+    } else if (segment[8]) {
+      name = $wf.$parser.nestSelector(topSel.rawName, segment[8]);
       selectors.push($wf.$parser.createSelector(parseTree, name));
       selectorStack.push(selectors.length - 1);
       bracketDepth++;
@@ -1124,6 +1104,12 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
 window.fashion.$parser.nestSelector = function(outer, inner) {
   var acc, istring, ostring, _i, _j, _len, _len1, _ref, _ref1;
   acc = [];
+  if (!outer) {
+    return inner;
+  }
+  if (!inner) {
+    return outer;
+  }
   _ref = outer.split(",");
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     ostring = _ref[_i];
@@ -1183,9 +1169,9 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
       bracketDepth--;
     } else if (segment[0] === "{") {
       bracketDepth++;
-    } else if (segment[5]) {
+    } else if (segment[6]) {
       bracketDepth++;
-    } else if (segment[7]) {
+    } else if (segment[8]) {
       bracketDepth++;
     }
   }
@@ -1194,7 +1180,7 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
 window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseTree) {
   var bindingLink, mode, name, property, propertyNumber, regex, transition, value, _results;
   propertyNumber = 0;
-  regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*([^;}\n]*?)[\s]*(!important)?[;}\n]/g;
+  regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*([^;}\n]*?)[\s]*(\![A-z0-9\-]+?)?[;}\n]/g;
   _results = [];
   while (property = regex.exec(bodyString)) {
     transition = void 0;
@@ -1236,7 +1222,7 @@ window.fashion.$parser.parseScopedVariable = function(name, value, property, sco
   if (property[7]) {
     throw new Error("Variable declaration '" + name + "' cannot be !important");
   }
-  return $wf.$parser.addVariable(parseTree, name, value, scope);
+  return $wf.$parser.addVariable(parseTree, name, value, property[7], scope);
 };
 
 window.fashion.$parser.parsePropertyValues = function(value, bindingLink, parseTree) {
@@ -1472,7 +1458,7 @@ window.fashion.$parser.expressionExpander = {
       return console.log("[FASHION] Variable $" + name + " does not exist.");
     }
     isIndividual = false;
-    type = unit = -1;
+    type = unit = mode = -1;
     for (selector in selectors) {
       vObj = selectors[selector];
       if (selector !== 0) {
@@ -1480,6 +1466,7 @@ window.fashion.$parser.expressionExpander = {
       }
       type = vObj.type;
       unit = vObj.unit;
+      mode = vObj.mode;
     }
     if (isSetter) {
       script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value =";
@@ -1487,7 +1474,7 @@ window.fashion.$parser.expressionExpander = {
       parseTree.addVariableBinding(bindingLink, name);
       script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value";
     }
-    mode = $wf.$runtimeMode.generate(true, isIndividual);
+    mode = isIndividual ? mode | $wf.$runtimeMode.individual : mode;
     return new Expression(script, type, unit, mode);
   },
   globalVariable: function(name, bindingLink, globals, parseTree) {
@@ -1584,6 +1571,29 @@ window.fashion.$parser.expressionExpander = {
     script = "f['" + name + "'].get.call(" + (scripts.join(',')) + ")";
     return new Expression(script, fObj.type, inputUnit || unit, mode);
   }
+};
+window.fashion.$parser.addVariable = function(parseTree, name, value, flag, scope) {
+  var type, typedValue, unit, unittedValue, val, variableObject;
+  value = $wf.$parser.parseSingleValue(value, "$" + name, parseTree, true);
+  variableObject = new Variable(name, value, scope);
+  if (flag === "!static") {
+    variableObject.mode = $wf.$runtimeMode["static"];
+  }
+  parseTree.addVariable(variableObject);
+  if (value instanceof Expression) {
+    type = value.type;
+    unit = value.unit;
+  } else {
+    val = variableObject.raw || variableObject.value;
+    if (!val) {
+      return;
+    }
+    type = window.fashion.$shared.determineType(val, $wf.$type, $wf.$typeConstants);
+    unittedValue = window.fashion.$shared.getUnit(val, type, $wf.$type, $wf.$unit);
+    typedValue = unittedValue['value'];
+    unit = unittedValue['unit'];
+  }
+  return variableObject.annotateWithType(type, unit, typedValue);
 };
 window.fashion.$processor = {
   process: function(parseTree) {
@@ -1918,7 +1928,11 @@ window.fashion.$shared.getUnit = function(rawValue, varType, type, unit) {
 };
 
 window.fashion.$shared.timeInMs = function(valueObject) {
-  if (valueObject.unit === "ms") {
+  if (!valueObject) {
+    return 0;
+  } else if (typeof valueObject === 'number') {
+    return valueObject;
+  } else if (valueObject.unit === "ms") {
     return valueObject.value;
   } else if (valueObject.unit === "s") {
     return valueObject.value * 1000;
@@ -2258,10 +2272,11 @@ RuntimeData = (function() {
 var RuntimeVariable;
 
 RuntimeVariable = (function() {
-  function RuntimeVariable(name, type, unit) {
+  function RuntimeVariable(name, type, unit, mode) {
     this.name = name;
     this.type = type;
     this.unit = unit;
+    this.mode = mode || $wf.$runtimeMode["static"];
     this.scopes = [];
     this.values = {};
     this.dependents = [];
@@ -2291,28 +2306,34 @@ window.fashion.$actualizer.generateRuntimeData = function(parseTree, jsSelectors
 };
 
 window.fashion.$actualizer.actualizeVariables = function(parseTree, jsSelectors, individual, cssMap) {
-  var bindings, name, rvar, scopes, type, unit, varName, varObj, variables, _ref;
+  var bindings, mode, name, rvar, scopes, type, unit, varName, varObj, variables, _ref;
   variables = {};
   _ref = parseTree.variables;
   for (varName in _ref) {
     scopes = _ref[varName];
     type = unit = -1;
+    mode = 0;
     for (name in scopes) {
       varObj = scopes[name];
-      if (varObj.type) {
+      if (varObj.type != null) {
         type = varObj.type;
       }
-      if (varObj.unit) {
+      if (varObj.unit != null) {
         unit = varObj.unit;
       }
+      if (varObj.mode != null) {
+        mode |= varObj.mode;
+      }
     }
-    rvar = new RuntimeVariable(varName, type, unit);
+    rvar = new RuntimeVariable(varName, type, unit, mode);
     for (name in scopes) {
       varObj = scopes[name];
       rvar.addScope(name, varObj.value);
     }
-    bindings = parseTree.bindings.variables[varName];
-    rvar.dependents = $wf.$actualizer.mapBindings(bindings, jsSelectors, individual, cssMap);
+    if (mode > 0) {
+      bindings = parseTree.bindings.variables[varName];
+      rvar.dependents = $wf.$actualizer.mapBindings(bindings, jsSelectors, individual, cssMap);
+    }
     variables[varName] = rvar;
   }
   return variables;
@@ -2368,9 +2389,10 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
 window.fashion.$actualizer.cssPrefixes = ["", "-webkit-", "-moz-", "-ms-"];
 
 window.fashion.$actualizer.separateTransitions = function(parseTree) {
-  var evalFunction, id, mode, modes, prefix, prefixes, property, pt, selector, string, strings, transitions, _i, _len, _ref, _ref1, _results;
+  var evalFunction, id, prefix, prefixes, property, pt, selector, string, strings, transitionMode, transitions, _i, _len, _ref, _ref1, _results;
   evalFunction = $wf.$actualizer.evaluationFunction(null, parseTree);
   prefixes = window.fashion.$actualizer.cssPrefixes;
+  transitionMode = 0;
   _ref = parseTree.selectors;
   _results = [];
   for (id in _ref) {
@@ -2383,31 +2405,21 @@ window.fashion.$actualizer.separateTransitions = function(parseTree) {
         pt = property.value.transition;
         pt.property = property.name;
         transitions.push(pt);
-        pt.mode = pt.easing.mode | pt.duration.mode | pt.delay.mode;
+        transitionMode |= pt.easing.mode | pt.duration.mode | pt.delay.mode;
       }
     }
-    modes = $wf.$runtimeMode;
+    strings = $wf.$actualizer.transitionStrings(evalFunction, transitions);
+    if (strings.length === 0) {
+      continue;
+    }
+    string = strings.join(",");
+    property = new Property("transition", string, transitionMode);
     _results.push((function() {
-      var _j, _len1, _ref2, _results1;
-      _ref2 = [modes["static"], modes.dynamic, modes.individual, modes.live];
+      var _j, _len1, _results1;
       _results1 = [];
-      for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
-        mode = _ref2[_j];
-        strings = $wf.$actualizer.transitionStrings(evalFunction, transitions, mode);
-        if (strings.length === 0) {
-          continue;
-        }
-        string = strings.join(",");
-        property = new Property("transition", string, mode);
-        _results1.push((function() {
-          var _k, _len2, _results2;
-          _results2 = [];
-          for (_k = 0, _len2 = prefixes.length; _k < _len2; _k++) {
-            prefix = prefixes[_k];
-            _results2.push(selector.addProperty(property.copyWithName(prefix + "transition")));
-          }
-          return _results2;
-        })());
+      for (_j = 0, _len1 = prefixes.length; _j < _len1; _j++) {
+        prefix = prefixes[_j];
+        _results1.push(selector.addProperty(property.copyWithName(prefix + "transition")));
       }
       return _results1;
     })());
@@ -2415,14 +2427,11 @@ window.fashion.$actualizer.separateTransitions = function(parseTree) {
   return _results;
 };
 
-window.fashion.$actualizer.transitionStrings = function(evalFunction, transitions, runtimeMode) {
+window.fashion.$actualizer.transitionStrings = function(evalFunction, transitions) {
   var delay, duration, easing, t, _i, _len, _results;
   _results = [];
   for (_i = 0, _len = transitions.length; _i < _len; _i++) {
     t = transitions[_i];
-    if (!(t.mode === runtimeMode)) {
-      continue;
-    }
     duration = t.duration.script ? evalFunction(t.duration) : t.duration;
     easing = t.easing.script ? evalFunction(t.easing) : t.easing;
     delay = t.delay.script ? evalFunction(t.delay) : t.delay;
@@ -2819,7 +2828,7 @@ window.fashion.$actualizer.minifier = {
         values.push(v);
       }
     }
-    r = ["v", varObj.name, varObj.type, varObj.unit, defaultVal, varObj.dependents];
+    r = ["v", varObj.name, varObj.type, varObj.unit, varObj.mode, defaultVal, varObj.dependents];
     if (varObj.scopes) {
       r.push.apply(r, [varObj.scopes, values]);
     }
@@ -2858,10 +2867,11 @@ window.fashion.$actualizer.minifier.expandRuntimeData = function(minData, expand
         name: v[1],
         type: v[2],
         unit: v[3],
-        "default": expand(v[4]),
-        dependents: v[5],
-        scopes: v[6],
-        values: expand(v[7])
+        mode: v[4],
+        "default": expand(v[5]),
+        dependents: v[6],
+        scopes: v[7],
+        values: expand(v[8])
       };
     }
   };
@@ -2993,6 +3003,9 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
     vObj = FASHION.variables[varName];
     if (!vObj) {
       return this.throwError("Variable '$" + varName + "' does not exist");
+    }
+    if (vObj.mode === 0) {
+      return this.throwError("Cannot change static variables");
     }
 
     /* For now, it's your problem if you screw this up
@@ -3370,6 +3383,17 @@ window.fashion.$functions = {
         return offValue.value;
       }
     }
+  }),
+  set: new FunctionModule({
+    output: $wf.$type.None,
+    capabilities: ["variables", "types"],
+    evaluate: function(varName, value, delay) {
+      return setTimeout((function(_this) {
+        return function() {
+          return _this.setVariable(varName.value, value.value);
+        };
+      })(this), this.timeInMs(delay));
+    }
   })
 };
 $wf.$extend(window.fashion.$functions, {
@@ -3418,7 +3442,6 @@ $wf.$extend(window.fashion.$functions, {
     capabilities: ["colors"],
     evaluate: function(h, s, b) {
       var g, r, _ref;
-      console.log(this);
       _ref = this.hsbTOrgb(h.value, s.value, b.value), r = _ref.r, g = _ref.g, b = _ref.b;
       return "rgb(" + (parseInt(r)) + "," + (parseInt(g)) + "," + (parseInt(b)) + ")";
     }
@@ -3613,7 +3636,7 @@ $wf.$extend(window.fashion.$properties, new ((function() {
     events = ["click", "dblclick", "mousedown", "mouseup", "mouseenter", "mouseleave", "mousemove", "mouseout", "mouseover", "drag", "dragdrop", "dragend", "drop", "dragenter", "dragexit", "draggesture", "dragleave", "dragover", "dragstart", "blur", "change", "focus", "focusin", "focusout", "submit", "reset"];
     applyForEvent = function(evt) {
       var body;
-      body = "if(element.getAttribute('data-hastrigger-" + evt + "'))return;\nelement.addEventListener('" + evt + "', evaluate, true);\nelement.setAttribute('data-hastrigger-" + evt + "', 'true');";
+      body = "if(element.getAttribute('data-hastrigger-" + evt + "'))return;\nelement.addEventListener('" + evt + "', function(eo){\n	eo.stopPropagation();\n	evaluate();\n}, false);\nelement.setAttribute('data-hastrigger-" + evt + "', 'true');";
       return new Function("element", "value", "evaluate", body);
     };
     for (_i = 0, _len = events.length; _i < _len; _i++) {

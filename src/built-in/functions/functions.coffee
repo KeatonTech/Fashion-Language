@@ -35,6 +35,15 @@ window.fashion.$functions =
 				return onValue.value
 			else return offValue.value
 
+	# Sets a variable to a value after a delay
+	set: new FunctionModule
+		output: $wf.$type.None
+		capabilities: ["variables", "types"]
+		evaluate: (varName, value, delay) ->
+			setTimeout(()=>
+				@setVariable varName.value, value.value
+			,@timeInMs delay)
+
 #@prepros-append ./binding.coffee
 #@prepros-append ./color.coffee
 #@prepros-append ./transform.coffee
