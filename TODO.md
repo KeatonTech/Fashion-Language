@@ -4,6 +4,7 @@
 * Binding function, with DOM observers to update its value
 * Full support for scoped variables - treated as individualized properties.
 * Allow ternaries (CS and JS formats) in expressions
+* Updated regrouper to generate fewer CSS properties - possibly only 1 per selector
 * Revamped 'pin' and a new fit property, based on binding.
 * Update event properties to remove variable dependencies and HTML attribute
 * New Syntax: Tabbed mode and multi-property assignment (width: height: 100%;)

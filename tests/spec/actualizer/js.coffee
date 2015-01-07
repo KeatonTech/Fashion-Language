@@ -127,11 +127,14 @@ window.fashiontests.actualizer.js = ()->
 		window.FASHION = {}
 		eval(js)
 
+		# Temporary layout given by current regrouper
 		divIndividual = window.FASHION.individual[0]
-		expect(divIndividual.properties[0].name).toBe("background-color")
-		expect(divIndividual.properties[1].name).toBe("on-click")
+		expect(divIndividual.properties[0].name).toBe("on-click")
 
-		pIndividual = window.FASHION.individual[1]
+		divIndividual = window.FASHION.individual[1]
+		expect(divIndividual.properties[0].name).toBe("background-color")
+
+		pIndividual = window.FASHION.individual[2]
 		expect(pIndividual.properties[0].name).toBe("top")
 		expect(pIndividual.properties[1].name).toBe("left")
 
@@ -172,6 +175,21 @@ window.fashiontests.actualizer.js = ()->
 		eval(js)
 
 		expect(JSON.stringify FASHION.selectors).toBe("{}");
+
+
+	it 'should not bind variables to trigger properties', () ->
+		{js} = actualize process parse """
+			$clickProperty: 10px;
+			$clickSet: 10px;
+			div {
+				on-click: set("clickProperty", $clickSet, 0);
+			}
+			"""
+
+		window.FASHION = {}
+		eval(js)
+
+		expect(FASHION.variables["clickSet"].dependents.length).toBe(0);
 
 
 	it 'should properly map variable bindings to the individual CSS selectors', () ->

@@ -45,7 +45,7 @@ window.fashion.$actualizer.groupPropertiesWithMode = (properties, mode) ->
 	# Don't need to consider the last item because it can't move down
 	for o in [properties.length - 2 - bottomCount .. 0] by -1
 		property = properties[o]
-		if property.mode isnt mode then continue
+		if (property.mode & mode) isnt mode then continue
 
 		# If the two properties share the same 'category', they conflict
 		if property.name[0] is "-" then id = 2 else id = 0 # Deal with prefixing

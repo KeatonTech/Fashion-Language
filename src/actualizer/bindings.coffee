@@ -20,17 +20,23 @@ window.fashion.$actualizer.mapBindings = (bindings, selectors, individual, map) 
 				# We should get rid of static properties; the JS doesn't know about those
 				if typeof selectorId is "number"
 					selector = selectors[selectorId]
-					if selector and selector.mode isnt rmode.static and
-					(selector.mode & rmode.triggered) isnt rmode.triggered
-						hDependents.push selectorId
+
+					# Triggered properties don't need to be bound
+					if !selector or (selector.mode & rmode.triggered) is rmode.triggered
+						continue
+
+					if selector.mode isnt rmode.static then hDependents.push selectorId
 
 				# If it's a string, it's probably an individual property
 				# We have to test these to see if they actually depend on the variable
 				else
 					selector = individual[parseInt(selectorId.substr(1))]
+
 					if !selector
 						console.log "[FASHION] Selector at #{selectorId} does not exist"
 						continue
+
+					if (selector.mode & rmode.triggered) is rmode.triggered then continue
 
 					if values is true
 						hDependents.push selectorId

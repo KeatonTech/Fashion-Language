@@ -2135,7 +2135,7 @@ window.fashion.$actualizer.groupPropertiesWithMode = function(properties, mode) 
   _results = [];
   for (o = _i = _ref = properties.length - 2 - bottomCount; _i >= 0; o = _i += -1) {
     property = properties[o];
-    if (property.mode !== mode) {
+    if ((property.mode & mode) !== mode) {
       continue;
     }
     if (property.name[0] === "-") {
@@ -2651,13 +2651,19 @@ window.fashion.$actualizer.mapBindings = function(bindings, selectors, individua
         selectorId = _ref[_i];
         if (typeof selectorId === "number") {
           selector = selectors[selectorId];
-          if (selector && selector.mode !== rmode["static"] && (selector.mode & rmode.triggered) !== rmode.triggered) {
+          if (!selector || (selector.mode & rmode.triggered) === rmode.triggered) {
+            continue;
+          }
+          if (selector.mode !== rmode["static"]) {
             hDependents.push(selectorId);
           }
         } else {
           selector = individual[parseInt(selectorId.substr(1))];
           if (!selector) {
             console.log("[FASHION] Selector at " + selectorId + " does not exist");
+            continue;
+          }
+          if ((selector.mode & rmode.triggered) === rmode.triggered) {
             continue;
           }
           if (values === true) {

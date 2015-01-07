@@ -397,9 +397,10 @@
       window.FASHION = {};
       eval(js);
       divIndividual = window.FASHION.individual[0];
+      expect(divIndividual.properties[0].name).toBe("on-click");
+      divIndividual = window.FASHION.individual[1];
       expect(divIndividual.properties[0].name).toBe("background-color");
-      expect(divIndividual.properties[1].name).toBe("on-click");
-      pIndividual = window.FASHION.individual[1];
+      pIndividual = window.FASHION.individual[2];
       expect(pIndividual.properties[0].name).toBe("top");
       return expect(pIndividual.properties[1].name).toBe("left");
     });
@@ -416,6 +417,13 @@
       window.FASHION = {};
       eval(js);
       return expect(JSON.stringify(FASHION.selectors)).toBe("{}");
+    });
+    it('should not bind variables to trigger properties', function() {
+      var js;
+      js = actualize(process(parse("$clickProperty: 10px;\n$clickSet: 10px;\ndiv {\n	on-click: set(\"clickProperty\", $clickSet, 0);\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      return expect(FASHION.variables["clickSet"].dependents.length).toBe(0);
     });
     it('should properly map variable bindings to the individual CSS selectors', function() {
       var js;
