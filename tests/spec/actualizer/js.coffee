@@ -156,6 +156,24 @@ window.fashiontests.actualizer.js = ()->
 		expect(FASHION.variables["padding"].dependents[1]).toEqual(['s',1,'padding'])
 
 
+	it 'should properly map selector variable bindings to the separated CSS selectors', () ->
+		{js} = actualize process parse """
+			$id: test;
+			body {
+				color: blue;
+			}
+			#$id {
+				color: white;
+			}
+			"""
+
+		window.FASHION = {}
+		eval(js)
+
+		# Make sure it's linked up right
+		expect(FASHION.variables["id"].dependents[0]).toEqual(['s',1])
+
+
 	it 'should leave out static variables', () ->
 		{js} = actualize process parse """
 			$padding: 10px !static;
@@ -205,7 +223,6 @@ window.fashiontests.actualizer.js = ()->
 
 		window.FASHION = {}
 		eval(js)
-		console.log window.FASHION
 
 		expect(FASHION.variables["padding"].dependents[0]).toEqual(['s',0,'padding'])
 		expect(FASHION.variables["padding"].dependents[1]).toEqual(['i',1,'paddingLeft'])

@@ -121,7 +121,7 @@
       expect(individual[0].properties[0].name).toBe("t1p2");
       return expect(individual[2].properties[0].name).toBe("t3p1");
     });
-    it("should convert CSS property names to JS", function() {
+    return it("should convert CSS property names to JS", function() {
       var convert;
       convert = actualizer.makeCamelCase;
       expect(convert()).toBe("");
@@ -132,100 +132,74 @@
       expect(convert("-webkit-transform")).toBe("WebkitTransform");
       return expect(convert("-webkit-border-radius")).toBe("WebkitBorderRadius");
     });
-    it("should map bindings based on whether they are dynamic or individual", function() {
-      var bindings, deps, indSels, jsSels;
-      jsSels = {
-        0: {
-          properties: {
-            0: {
-              name: "width"
-            },
-            3: {
-              name: "border-radius"
-            }
-          }
-        },
-        1: {
-          properties: {
-            0: {
-              name: "border-color-top"
-            }
-          }
-        }
-      };
-      indSels = {
-        0: {
-          properties: {
-            1: {
-              name: "height"
-            },
-            2: {
-              name: "background-color"
-            }
-          }
-        },
-        2: {
-          properties: {
-            0: {
-              name: "-webkit-transform"
-            }
-          }
-        }
-      };
-      bindings = [[0, 0], [0, 2], "$var", [0, 3], [1, 0], [2, 0]];
-      deps = window.fashion.$actualizer.mapBindings(bindings, jsSels, indSels);
-      expect(deps.length).toBe(6);
-      expect(deps[0]).toEqual(["s", 0, "width"]);
-      expect(deps[1]).toEqual(["i", 0, "backgroundColor"]);
-      expect(deps[2]).toEqual(["v", "var"]);
-      expect(deps[3]).toEqual(["s", 0, "borderRadius"]);
-      expect(deps[4]).toEqual(["s", 1, "borderColorTop"]);
-      return expect(deps[5]).toEqual(["i", 2, "WebkitTransform"]);
-    });
-    return it("should remove bindings to triggered properties", function() {
-      var bindings, culled, indSels, jsSels;
-      jsSels = {
-        0: {
-          properties: {
-            0: {
-              name: "width",
-              mode: 0
-            }
-          }
-        },
-        1: {
-          properties: {
-            0: {
-              name: "height",
-              mode: $wf.$runtimeMode.triggered
-            }
-          }
-        }
-      };
-      indSels = {
-        0: {
-          properties: {
-            1: {
-              name: "top",
-              mode: $wf.$runtimeMode.triggered
-            }
-          }
-        },
-        2: {
-          properties: {
-            0: {
-              name: "bottom",
-              mode: 0
-            }
-          }
-        }
-      };
-      bindings = [[0, 0], [0, 1], [1, 0], [2, 0]];
-      culled = window.fashion.$actualizer.removeTriggerBindings(bindings, jsSels, indSels);
-      expect(culled.length).toBe(2);
-      expect(culled[0]).toEqual([0, 0]);
-      return expect(culled[1]).toEqual([2, 0]);
-    });
+
+    /*
+    	These two functions no longer exist but I'm leaving their tests because they might be
+    	helpful for writing tests for the new system
+    
+    	it "should map bindings based on whether they are dynamic or individual", ()->
+    
+    		jsSels = {
+    			0: {properties: {
+    				0: {name: "width"}
+    				3: {name: "border-radius"}
+    			}},
+    			1: {properties: {
+    				0: {name: "border-color-top"}
+    			}},
+    		}
+    
+    		indSels = {
+    			0: {properties: {
+    				1: {name: "height"}
+    				2: {name: "background-color"}
+    			}},
+    			2: {properties: {
+    				0: {name: "-webkit-transform"}
+    			}},
+    		}
+    
+    		bindings = [[0,0],[0,2],"$var",[0,3],[1,0],[2,0]]
+    
+    		 * Run the dependency mapper
+    		deps = window.fashion.$actualizer.addBindings bindings, jsSels, indSels
+    		
+    		expect(deps.length).toBe(6)
+    		expect(deps[0]).toEqual(["s",0,"width"])
+    		expect(deps[1]).toEqual(["i",0,"backgroundColor"])
+    		expect(deps[2]).toEqual(["v","var"])
+    		expect(deps[3]).toEqual(["s",0,"borderRadius"])
+    		expect(deps[4]).toEqual(["s",1,"borderColorTop"])
+    		expect(deps[5]).toEqual(["i",2,"WebkitTransform"])
+    
+    
+    	it "should remove bindings to triggered properties", ()->
+    		jsSels = {
+    			0: {properties: {
+    				0: {name: "width", mode: 0}
+    			}},
+    			1: {properties: {
+    				0: {name: "height", mode: $wf.$runtimeMode.triggered}
+    			}},
+    		}
+    
+    		indSels = {
+    			0: {properties: {
+    				1: {name: "top", mode: $wf.$runtimeMode.triggered}
+    			}},
+    			2: {properties: {
+    				0: {name: "bottom", mode: 0}
+    			}},
+    		}
+    
+    		bindings = [[0,0],[0,1],[1,0],[2,0]]
+    		
+    		culled = window.fashion.$actualizer.removeTriggerBindings bindings, jsSels, indSels
+    
+    		expect(culled.length).toBe(2);
+    		expect(culled[0]).toEqual([0,0])
+    		expect(culled[1]).toEqual([2,0])
+     */
   };
 
 }).call(this);
@@ -517,6 +491,13 @@
       expect(FASHION.variables["padding"].dependents[0]).toEqual(['s', 0, 'padding']);
       return expect(FASHION.variables["padding"].dependents[1]).toEqual(['s', 1, 'padding']);
     });
+    it('should properly map selector variable bindings to the separated CSS selectors', function() {
+      var js;
+      js = actualize(process(parse("$id: test;\nbody {\n	color: blue;\n}\n#$id {\n	color: white;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      return expect(FASHION.variables["id"].dependents[0]).toEqual(['s', 1]);
+    });
     it('should leave out static variables', function() {
       var js;
       js = actualize(process(parse("$padding: 10px !static;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding: $padding;\n}"))).js;
@@ -536,7 +517,6 @@
       js = actualize(process(parse("$padding: 10px;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding-left: @self.left + $padding;\n}"))).js;
       window.FASHION = {};
       eval(js);
-      console.log(window.FASHION);
       expect(FASHION.variables["padding"].dependents[0]).toEqual(['s', 0, 'padding']);
       return expect(FASHION.variables["padding"].dependents[1]).toEqual(['i', 1, 'paddingLeft']);
     });

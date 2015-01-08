@@ -35,7 +35,7 @@ window.fashion.$actualizer =
 		runtimeData = $wfa.generateRuntimeData parseTree, jsSels, individualSels
 
 		# Add bindings (selector dependents) for globals and functions to the runtime data
-		$wfa.addBindings runtimeData, parseTree, jsSels, individualSels
+		$wfa.addBindings runtimeData, jsSels, individualSels
 
 		# Figure out what runtime capabilities will be needed in the Javascript
 		capabilities = $wfa.determineRuntimeCapabilities runtimeData, parseTree.selectors

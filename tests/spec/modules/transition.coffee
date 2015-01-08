@@ -101,14 +101,16 @@ window.fashiontests.modules.transition = ()->
 			""")
 
 		transitions = parseTree.dependencies.blocks.transition.runtimeObject.transitions
+		startProperty = transitions['highlight']['0%'][0].properties[0]
+		endProperty = transitions['highlight']['100%'][0].properties[0]
 
 		# Make sure they're both scripts
-		expect(transitions['highlight']['0%'][0].properties[0].value.script).toBeDefined()
-		expect(transitions['highlight']['100%'][0].properties[0].value.script).toBeDefined()
+		expect(startProperty.value.script).toBeDefined()
+		expect(endProperty.value.script).toBeDefined()
 
 		# Make sure bindings didn't get into the original parse tree
-		expect(parseTree.bindings.variables["offColor"]).toEqual([])
-		expect(parseTree.bindings.variables["onColor"]).toEqual([])
+		expect(startProperty.value.bindings.variables[0]).toBe("offColor")
+		expect(endProperty.value.bindings.variables[0]).toBe("onColor")
 
 
 	it "should be able to read variables defined inside", ()->

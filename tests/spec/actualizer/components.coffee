@@ -60,6 +60,10 @@ window.fashiontests.actualizer.components = ()->
 		expect(convert "-webkit-border-radius").toBe("WebkitBorderRadius")
 
 
+	###
+	These two functions no longer exist but I'm leaving their tests because they might be
+	helpful for writing tests for the new system
+
 	it "should map bindings based on whether they are dynamic or individual", ()->
 
 		jsSels = {
@@ -85,7 +89,7 @@ window.fashiontests.actualizer.components = ()->
 		bindings = [[0,0],[0,2],"$var",[0,3],[1,0],[2,0]]
 
 		# Run the dependency mapper
-		deps = window.fashion.$actualizer.mapBindings bindings, jsSels, indSels
+		deps = window.fashion.$actualizer.addBindings bindings, jsSels, indSels
 		
 		expect(deps.length).toBe(6)
 		expect(deps[0]).toEqual(["s",0,"width"])
@@ -123,3 +127,4 @@ window.fashiontests.actualizer.components = ()->
 		expect(culled[0]).toEqual([0,0])
 		expect(culled[1]).toEqual([2,0])
 
+	###

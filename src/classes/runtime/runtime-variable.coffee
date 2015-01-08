@@ -22,3 +22,7 @@ class RuntimeVariable
 
 		# Adding a selector scope
 		else @scopes.push name
+
+	addDependent: (bindLink) ->
+		if bindLink in @dependents then return
+		@dependents.push bindLink

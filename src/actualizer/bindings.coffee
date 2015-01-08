@@ -1,66 +1,67 @@
 # Add mapped bindings to globals and variables
-window.fashion.$actualizer.addBindings = (runtimeData, parseTree, jsSels, indSels) ->
-
-	# Bind variables
-	for name, vObj of runtimeData.variables when vObj.mode isnt 0
-		bindings = parseTree.bindings.variables[name]
-		bindings = $wf.$actualizer.removeTriggerBindings bindings, jsSels, indSels
-		vObj.dependents = $wf.$actualizer.mapBindings bindings, jsSels, indSels
-
-	# Bind globals
-	for name, global of runtimeData.modules.globals
-		bindings = parseTree.bindings.globals[name]
-		bindings = $wf.$actualizer.removeTriggerBindings bindings, jsSels, indSels
-		global.dependents = $wf.$actualizer.mapBindings bindings, jsSels, indSels
+window.fashion.$actualizer.addBindings = (runtimeData, jsSels, indSels) ->
+	$wf.$actualizer.bindSelectors runtimeData, jsSels, "s"
+	$wf.$actualizer.bindSelectors runtimeData, indSels, "i"
 
 
-# Filter out any dependencies pointing to trigger-mode properties
-window.fashion.$actualizer.removeTriggerBindings = (bindings, jsSels, indSels)->
-	triggerMode = $wf.$runtimeMode.triggered
-	filteredBindings = []
-	for binding in bindings when binding instanceof Array
-		[selectorId, propertyId] = binding
+# Go through each selector and bind any expressions
+window.fashion.$actualizer.bindSelectors = (runtimeData, selectors, sheet) ->
+	tmode = $wf.$runtimeMode.triggered
 
-		# Get the property, wherever it is
-		property = jsSels[selectorId]?.properties[propertyId]
-		property ||= indSels[selectorId]?.properties[propertyId]
+	# Loopdie loopdie loop
+	for sid, selector of selectors
 
-		# Remove triggered properties
-		if property and (property.mode & triggerMode) isnt triggerMode
-			filteredBindings.push binding
+		# Check to see if the selector is dynamic
+		if selector.name instanceof Expression
+			bindLink = [sheet, parseInt(sid)]
+			$wf.$actualizer.bindExpression runtimeData, selector.name, bindLink
 
-	return filteredBindings
+		# Go through each property
+		for pid, property of selector.properties
+
+			# Ignore triggered properties
+			if (property.mode & tmode) is tmode then continue
+
+			# Generate the bind link, an array with the necessary data for runtime
+			bindLink = [sheet, parseInt(sid), $wf.$actualizer.makeCamelCase property.name]
+
+			# Go through pulling all the expressions out of the property value
+			if property.value instanceof Array
+				for csval in property.value
+
+					if csval instanceof Array
+						for ccmp in csval
+
+							if ccmp instanceof Expression
+								$wf.$actualizer.bindExpression runtimeData, ccmp, bindLink
+
+					else if csval instanceof Expression
+						$wf.$actualizer.bindExpression runtimeData, csval, bindLink
+
+			else if property.value instanceof Expression
+				$wf.$actualizer.bindExpression runtimeData, property.value, bindLink
 
 
-# Convert [selectorId, propertyId] bindings into [sheet, selectorId, propertyName] bindings
-window.fashion.$actualizer.mapBindings = (bindings, jsSels, indSels) ->
-	makeCamelCase = window.fashion.$actualizer.makeCamelCase
-	for binding in bindings
+# Add bindings from an expression
+window.fashion.$actualizer.bindExpression = (runtimeData, expression, bindLink) ->
 
-		# Single binding, probably to a variable
-		if not (binding instanceof Array)
-			if binding[0] is "$" then ["v", binding.substr(1)]
-			else 
-				console.log "[FASHION] Could not bind to '#{binding}'"
-				undefined
-
-		# Array binding of form [selectorId, propertyId]
+	# Add variable bindings
+	for varName in expression.bindings.variables
+		vObj = runtimeData.variables[varName]
+		if !vObj
+			console.log "[FASHION] Could not bind to nonexistent variable: '#{varName}'"
 		else
-			[selectorId, propertyId] = binding
+			vObj.addDependent bindLink
 
-			# Check to see if the property is in the non-individual selector list
-			if property = jsSels[selectorId]?.properties[propertyId]
-				["s", selectorId, makeCamelCase property.name]
-
-			# Otherwise it must be an individual property
-			else if property = indSels[selectorId]?.properties[propertyId]
-				["i", selectorId, makeCamelCase property.name]
-
-			# If it's neither one of those, we have a problem
-			else
-				console.log "[FASHION] Could not bind to #{JSON.stringify binding}"
-				console.log new Error().stack
-				undefined
+	# Add global bindings
+	for globalName in expression.bindings.globals
+		gObj = runtimeData.modules.globals[globalName]
+		if !gObj
+			console.log "[FASHION] Could not bind to nonexistent global: '#{varName}'"
+		else
+			if !gObj.dependents? then gObj.dependents = []
+			if bindLink in gObj.dependents then continue
+			gObj.dependents.push bindLink
 
 
 # Convert CSS names into JS names

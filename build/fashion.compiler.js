@@ -2159,7 +2159,7 @@ window.fashion.$actualizer = {
     $wfa.hideIndividualizedSelectors(cssSels, parseTree.scripts, individualSels);
     jsSels = $wfa.filterStatic(cssSels);
     runtimeData = $wfa.generateRuntimeData(parseTree, jsSels, individualSels);
-    $wfa.addBindings(runtimeData, parseTree, jsSels, individualSels);
+    $wfa.addBindings(runtimeData, jsSels, individualSels);
     capabilities = $wfa.determineRuntimeCapabilities(runtimeData, parseTree.selectors);
     $wfa.addRuntimeFunctions(runtimeData, parseTree, capabilities);
     $wfa.removeUnnecessaryModuleData(runtimeData);
@@ -2238,72 +2238,101 @@ window.fashion.$actualizer.filterStatic = function(allSelectors, filterMode) {
   }
   return passingSelectors;
 };
-window.fashion.$actualizer.addBindings = function(runtimeData, parseTree, jsSels, indSels) {
-  var bindings, global, name, vObj, _ref, _ref1, _results;
-  _ref = runtimeData.variables;
-  for (name in _ref) {
-    vObj = _ref[name];
-    if (!(vObj.mode !== 0)) {
-      continue;
-    }
-    bindings = parseTree.bindings.variables[name];
-    bindings = $wf.$actualizer.removeTriggerBindings(bindings, jsSels, indSels);
-    vObj.dependents = $wf.$actualizer.mapBindings(bindings, jsSels, indSels);
-  }
-  _ref1 = runtimeData.modules.globals;
+var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+window.fashion.$actualizer.addBindings = function(runtimeData, jsSels, indSels) {
+  $wf.$actualizer.bindSelectors(runtimeData, jsSels, "s");
+  return $wf.$actualizer.bindSelectors(runtimeData, indSels, "i");
+};
+
+window.fashion.$actualizer.bindSelectors = function(runtimeData, selectors, sheet) {
+  var bindLink, ccmp, csval, pid, property, selector, sid, tmode, _results;
+  tmode = $wf.$runtimeMode.triggered;
   _results = [];
-  for (name in _ref1) {
-    global = _ref1[name];
-    bindings = parseTree.bindings.globals[name];
-    bindings = $wf.$actualizer.removeTriggerBindings(bindings, jsSels, indSels);
-    _results.push(global.dependents = $wf.$actualizer.mapBindings(bindings, jsSels, indSels));
+  for (sid in selectors) {
+    selector = selectors[sid];
+    if (selector.name instanceof Expression) {
+      bindLink = [sheet, parseInt(sid)];
+      $wf.$actualizer.bindExpression(runtimeData, selector.name, bindLink);
+    }
+    _results.push((function() {
+      var _ref, _results1;
+      _ref = selector.properties;
+      _results1 = [];
+      for (pid in _ref) {
+        property = _ref[pid];
+        if ((property.mode & tmode) === tmode) {
+          continue;
+        }
+        bindLink = [sheet, parseInt(sid), $wf.$actualizer.makeCamelCase(property.name)];
+        if (property.value instanceof Array) {
+          _results1.push((function() {
+            var _i, _len, _ref1, _results2;
+            _ref1 = property.value;
+            _results2 = [];
+            for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+              csval = _ref1[_i];
+              if (csval instanceof Array) {
+                _results2.push((function() {
+                  var _j, _len1, _results3;
+                  _results3 = [];
+                  for (_j = 0, _len1 = csval.length; _j < _len1; _j++) {
+                    ccmp = csval[_j];
+                    if (ccmp instanceof Expression) {
+                      _results3.push($wf.$actualizer.bindExpression(runtimeData, ccmp, bindLink));
+                    } else {
+                      _results3.push(void 0);
+                    }
+                  }
+                  return _results3;
+                })());
+              } else if (csval instanceof Expression) {
+                _results2.push($wf.$actualizer.bindExpression(runtimeData, csval, bindLink));
+              } else {
+                _results2.push(void 0);
+              }
+            }
+            return _results2;
+          })());
+        } else if (property.value instanceof Expression) {
+          _results1.push($wf.$actualizer.bindExpression(runtimeData, property.value, bindLink));
+        } else {
+          _results1.push(void 0);
+        }
+      }
+      return _results1;
+    })());
   }
   return _results;
 };
 
-window.fashion.$actualizer.removeTriggerBindings = function(bindings, jsSels, indSels) {
-  var binding, filteredBindings, property, propertyId, selectorId, triggerMode, _i, _len, _ref, _ref1;
-  triggerMode = $wf.$runtimeMode.triggered;
-  filteredBindings = [];
-  for (_i = 0, _len = bindings.length; _i < _len; _i++) {
-    binding = bindings[_i];
-    if (!(binding instanceof Array)) {
-      continue;
-    }
-    selectorId = binding[0], propertyId = binding[1];
-    property = (_ref = jsSels[selectorId]) != null ? _ref.properties[propertyId] : void 0;
-    property || (property = (_ref1 = indSels[selectorId]) != null ? _ref1.properties[propertyId] : void 0);
-    if (property && (property.mode & triggerMode) !== triggerMode) {
-      filteredBindings.push(binding);
+window.fashion.$actualizer.bindExpression = function(runtimeData, expression, bindLink) {
+  var gObj, globalName, vObj, varName, _i, _j, _len, _len1, _ref, _ref1, _results;
+  _ref = expression.bindings.variables;
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    varName = _ref[_i];
+    vObj = runtimeData.variables[varName];
+    if (!vObj) {
+      console.log("[FASHION] Could not bind to nonexistent variable: '" + varName + "'");
+    } else {
+      vObj.addDependent(bindLink);
     }
   }
-  return filteredBindings;
-};
-
-window.fashion.$actualizer.mapBindings = function(bindings, jsSels, indSels) {
-  var binding, makeCamelCase, property, propertyId, selectorId, _i, _len, _ref, _ref1, _results;
-  makeCamelCase = window.fashion.$actualizer.makeCamelCase;
+  _ref1 = expression.bindings.globals;
   _results = [];
-  for (_i = 0, _len = bindings.length; _i < _len; _i++) {
-    binding = bindings[_i];
-    if (!(binding instanceof Array)) {
-      if (binding[0] === "$") {
-        _results.push(["v", binding.substr(1)]);
-      } else {
-        console.log("[FASHION] Could not bind to '" + binding + "'");
-        _results.push(void 0);
-      }
+  for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+    globalName = _ref1[_j];
+    gObj = runtimeData.modules.globals[globalName];
+    if (!gObj) {
+      _results.push(console.log("[FASHION] Could not bind to nonexistent global: '" + varName + "'"));
     } else {
-      selectorId = binding[0], propertyId = binding[1];
-      if (property = (_ref = jsSels[selectorId]) != null ? _ref.properties[propertyId] : void 0) {
-        _results.push(["s", selectorId, makeCamelCase(property.name)]);
-      } else if (property = (_ref1 = indSels[selectorId]) != null ? _ref1.properties[propertyId] : void 0) {
-        _results.push(["i", selectorId, makeCamelCase(property.name)]);
-      } else {
-        console.log("[FASHION] Could not bind to " + (JSON.stringify(binding)));
-        console.log(new Error().stack);
-        _results.push(void 0);
+      if (gObj.dependents == null) {
+        gObj.dependents = [];
       }
+      if (__indexOf.call(gObj.dependents, bindLink) >= 0) {
+        continue;
+      }
+      _results.push(gObj.dependents.push(bindLink));
     }
   }
   return _results;
@@ -2343,7 +2372,8 @@ RuntimeData = (function() {
   return RuntimeData;
 
 })();
-var RuntimeVariable;
+var RuntimeVariable,
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 RuntimeVariable = (function() {
   function RuntimeVariable(name, type, unit, mode) {
@@ -2364,6 +2394,13 @@ RuntimeVariable = (function() {
     } else {
       return this.scopes.push(name);
     }
+  };
+
+  RuntimeVariable.prototype.addDependent = function(bindLink) {
+    if (__indexOf.call(this.dependents, bindLink) >= 0) {
+      return;
+    }
+    return this.dependents.push(bindLink);
   };
 
   return RuntimeVariable;
