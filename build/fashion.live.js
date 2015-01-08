@@ -466,7 +466,10 @@ var Selector;
 Selector = (function() {
   function Selector(name, mode) {
     this.rawName = this.name = name;
-    this.properties = [];
+    this.properties = {
+      length: 0
+    };
+    this._propertyIntIndex = 0;
     this.index = -1;
     if (mode) {
       this.mode = mode;
@@ -487,17 +490,33 @@ Selector = (function() {
   Selector.prototype.addProperty = function(property) {
     this.body = void 0;
     if (!property.id) {
-      property.id = this.properties.length;
+      property.id = this._propertyIntIndex;
+      this.properties[this._propertyIntIndex++] = property;
+    } else {
+      this.properties[property.id] = property;
     }
-    return this.properties.push(property);
+    return this.properties.length++;
   };
 
   Selector.prototype.insertProperty = function(property, index) {
+    var i, _i;
     this.body = void 0;
-    if (!property.id) {
-      property.id = this.properties.length;
+    for (i = _i = 0; _i < 1000; i = ++_i) {
+      if (this.properties[index + i / 1000] == null) {
+        break;
+      }
     }
-    return this.properties.splice(index, 0, property);
+    index = index + i / 1000;
+    if (!property.id) {
+      property.id = index;
+    }
+    this.properties[index] = property;
+    return this.properties.length++;
+  };
+
+  Selector.prototype.deleteProperty = function(index) {
+    delete this.properties[index];
+    return this.properties.length--;
   };
 
   Selector.prototype.forEachPropertyNamed = function(name, run) {
@@ -1050,7 +1069,7 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
   return fashionText.substring(startIndex, endIndex - 1).trim();
 };
 window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseTree) {
-  var bindingLink, mode, name, property, propertyNumber, regex, transition, value, _results;
+  var bindingLink, elm, elm2, mode, name, property, propertyNumber, regex, transition, value, valueMode, _i, _j, _len, _len1, _results;
   propertyNumber = 0;
   regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*([^;}\n]*?)[\s]*(\![A-z0-9\-]+?)?[;}\n]/g;
   _results = [];
@@ -1077,7 +1096,29 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
         value.important = true;
       }
     }
-    mode = (selector.mode | value.mode) || 0;
+    valueMode = 0;
+    if ((value != null ? value.mode : void 0) != null) {
+      valueMode = value.mode;
+    } else if (value instanceof Array) {
+      for (_i = 0, _len = value.length; _i < _len; _i++) {
+        elm = value[_i];
+        if (!(elm != null)) {
+          continue;
+        }
+        if (elm instanceof Array) {
+          for (_j = 0, _len1 = elm.length; _j < _len1; _j++) {
+            elm2 = elm[_j];
+            if ((elm2 != null ? elm2.mode : void 0) != null) {
+              valueMode |= elm2.mode;
+            }
+          }
+        }
+        if (elm.mode != null) {
+          valueMode |= elm.mode;
+        }
+      }
+    }
+    mode = (selector.mode | valueMode) || 0;
     selector.addProperty(new Property(name, value, mode, transition));
     _results.push(propertyNumber++);
   }
@@ -1098,21 +1139,22 @@ window.fashion.$parser.parseScopedVariable = function(name, value, property, sco
 };
 
 window.fashion.$parser.parsePropertyValues = function(value, bindingLink, parseTree) {
-  var i, item;
+  var i, item, ret, split;
   if (value.indexOf(',') !== -1) {
-    value = window.fashion.$parser.splitByTopLevelCommas(value);
-    if (value.length === 1) {
-      return window.fashion.$parser.parsePropertyValue(value[0], bindingLink, parseTree);
+    split = window.fashion.$parser.splitByTopLevelCommas(value);
+    if (split.length === 1) {
+      return window.fashion.$parser.parsePropertyValue(split[0], bindingLink, parseTree);
     } else {
-      for (i in value) {
-        item = value[i];
-        value[i] = item.trim();
+      ret = [];
+      for (i in split) {
+        item = split[i];
+        split[i] = item.trim();
       }
-      for (i in value) {
-        item = value[i];
-        value[i] = window.fashion.$parser.parsePropertyValue(item, bindingLink, parseTree, true, true);
+      for (i in split) {
+        item = split[i];
+        ret[i] = window.fashion.$parser.parsePropertyValue(item, bindingLink, parseTree, true, true);
       }
-      return value;
+      return ret;
     }
   } else {
     return window.fashion.$parser.parsePropertyValue(value, bindingLink, parseTree);
@@ -1564,7 +1606,7 @@ window.fashion.$processor.api.addVariable = function(parseTree, name, value) {
   return $wf.$parser.addVariable(parseTree, name, value);
 };
 window.fashion.$processor.properties = function(parseTree, propertyModules) {
-  var API, funcs, index, property, propertyModule, rmode, selector, _i, _j, _len, _len1, _ref, _ref1;
+  var API, funcs, index, pid, property, propertyModule, rmode, selector, _i, _len, _ref, _ref1;
   funcs = window.fashion.$processor.api;
   rmode = $wf.$runtimeMode;
   _ref = parseTree.selectors;
@@ -1572,8 +1614,8 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
     selector = _ref[_i];
     index = -1;
     _ref1 = selector.properties;
-    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-      property = _ref1[_j];
+    for (pid in _ref1) {
+      property = _ref1[pid];
       index++;
       propertyModule = propertyModules[property.name];
       if (propertyModule) {
@@ -1591,7 +1633,7 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
         } else {
           propertyModules[property.name].compile.call(API, property.value);
           if (propertyModule.replace) {
-            selector.properties.splice(index--, 1);
+            selector.deleteProperty(index--);
           }
         }
       }
@@ -1934,22 +1976,21 @@ window.fashion.color = {
 };
 window.fashion.$actualizer = {
   actualize: function(parseTree) {
-    var capabilities, css, cssMap, cssSelectors, cullOffsets, hMap, indSels, js, jsSels, miniRuntimeData, rMode, runtimeData, selectors, _ref, _ref1;
-    rMode = $wf.$runtimeMode;
-    $wf.$actualizer.separateTransitions(parseTree);
-    _ref = $wf.$actualizer.regroupProperties(parseTree), selectors = _ref.selectors, hMap = _ref.map;
-    _ref1 = $wf.$actualizer.cullIndividuality(selectors, hMap), cssSelectors = _ref1.sel, cssMap = _ref1.map, cullOffsets = _ref1.offsets;
-    jsSels = $wf.$actualizer.filterStatic(cssSelectors);
-    indSels = $wf.$actualizer.addIndividualProperties(selectors, cullOffsets);
-    runtimeData = $wf.$actualizer.generateRuntimeData(parseTree, jsSels, indSels, cssMap);
-    $wf.$actualizer.addBindings(runtimeData, parseTree, jsSels, cssMap);
-    capabilities = $wf.$actualizer.determineRuntimeCapabilities(runtimeData, selectors);
-    $wf.$actualizer.addRuntimeFunctions(runtimeData, parseTree, capabilities);
-    $wf.$actualizer.removeUnnecessaryModuleData(runtimeData);
-    $wf.$actualizer.hideIndividualizedSelectors(cssSelectors, parseTree.scripts, indSels);
-    css = $wf.$actualizer.createCSS(runtimeData, cssSelectors);
-    miniRuntimeData = $wf.$actualizer.minifier.runtimeData(runtimeData);
-    js = $wf.$actualizer.createJS(runtimeData, miniRuntimeData, parseTree.scripts);
+    var $wfa, capabilities, css, cssSels, individualSels, js, jsSels, miniRuntimeData, rM, runtimeData, _ref;
+    rM = $wf.$runtimeMode;
+    $wfa = $wf.$actualizer;
+    $wfa.separateTransitions(parseTree);
+    _ref = $wfa.splitIndividual(parseTree.selectors), cssSels = _ref.cssSels, individualSels = _ref.individualSels;
+    $wfa.hideIndividualizedSelectors(cssSels, parseTree.scripts, individualSels);
+    jsSels = $wfa.filterStatic(cssSels);
+    runtimeData = $wfa.generateRuntimeData(parseTree, jsSels, individualSels);
+    $wfa.addBindings(runtimeData, parseTree, jsSels, individualSels);
+    capabilities = $wfa.determineRuntimeCapabilities(runtimeData, parseTree.selectors);
+    $wfa.addRuntimeFunctions(runtimeData, parseTree, capabilities);
+    $wfa.removeUnnecessaryModuleData(runtimeData);
+    css = $wfa.createCSS(runtimeData, cssSels);
+    miniRuntimeData = $wfa.minifier.runtimeData(runtimeData);
+    js = $wfa.createJS(runtimeData, miniRuntimeData, parseTree.scripts);
     return {
       css: css,
       js: js
@@ -1967,154 +2008,139 @@ window.fashion.$actualizer.createJS = function(runtimeData, minifiedData, script
     variables: {}
   })) + ";\nFSEXPAND = " + ($wf.$stringify($wf.$actualizer.minifier.expandRuntimeData)) + ";\nFSEXPAND(window." + $wf.minifiedObject + ",window." + $wf.runtimeObject + ");\nFSREADY = function(r){d=document;c=\"complete\";\n	if(d.readyState==c)r()\n	else d.addEventListener('readystatechange',function(){if(d.readyState==c)r()})\n}\n" + (scripts.join('\n'));
 };
-window.fashion.$actualizer.regroupProperties = function(parseTree) {
-  var expansionMap, homogenousSelectors, properties, selector, selectorIds, splitSelector, splitSelectors, _i, _j, _len, _len1, _ref;
-  homogenousSelectors = [];
-  expansionMap = [];
-  _ref = parseTree.selectors;
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    selector = _ref[_i];
-    properties = selector.properties;
-    if (!properties || properties.length === 0) {
-      continue;
+window.fashion.$actualizer.splitIndividual = function(selectors) {
+  var cssSelector, cssSelectors, id, indMode, indSelector, indSelectors, pid, property, selector, _ref;
+  cssSelectors = {};
+  indSelectors = {};
+  indMode = $wf.$runtimeMode.individual;
+  for (id in selectors) {
+    selector = selectors[id];
+    cssSelector = new Selector(selector.name, selector.mode);
+    indSelector = new Selector(selector.name, selector.mode);
+    _ref = selector.properties;
+    for (pid in _ref) {
+      property = _ref[pid];
+      if (pid !== 'length') {
+        if ((property.mode & indMode) === indMode) {
+          indSelector.addProperty(property);
+        } else {
+          cssSelector.addProperty(property);
+        }
+      }
     }
-    $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.dynamic);
-    $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.globalDynamic);
-    $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.live);
-    $wf.$actualizer.groupPropertiesWithMode(properties, $wf.$runtimeMode.individual);
-    splitSelectors = $wf.$actualizer.splitSelectorByModes(selector);
-    selectorIds = [];
-    for (_j = 0, _len1 = splitSelectors.length; _j < _len1; _j++) {
-      splitSelector = splitSelectors[_j];
-      splitSelector.index = homogenousSelectors.length;
-      homogenousSelectors.push(splitSelector);
-      selectorIds.push(homogenousSelectors.length - 1);
+    if (cssSelector.properties.length > 0) {
+      cssSelectors[id] = cssSelector;
     }
-    expansionMap.push(selectorIds);
+    if (indSelector.properties.length > 0) {
+      indSelectors[id] = indSelector;
+    }
   }
   return {
-    selectors: homogenousSelectors,
-    map: expansionMap
+    cssSels: cssSelectors,
+    individualSels: indSelectors
   };
 };
 
-window.fashion.$actualizer.groupPropertiesWithMode = function(properties, mode) {
-  var bottomCount, compareCategory, i, id, o, property, propertyCategory, _i, _ref, _results;
-  bottomCount = properties[properties.length - 1].mode === mode ? 1 : 0;
-  _results = [];
-  for (o = _i = _ref = properties.length - 2 - bottomCount; _i >= 0; o = _i += -1) {
-    property = properties[o];
-    if ((property.mode & mode) !== mode) {
+window.fashion.$actualizer.filterStatic = function(allSelectors, filterMode) {
+  var dynamicSelector, hasDynamic, id, passingSelectors, pid, property, selector, _ref;
+  passingSelectors = {};
+  for (id in allSelectors) {
+    selector = allSelectors[id];
+    dynamicSelector = new Selector(selector.name, selector.mode);
+    dynamicSelector.properties = {};
+    hasDynamic = false;
+    _ref = selector.properties;
+    for (pid in _ref) {
+      property = _ref[pid];
+      if (property.mode > 0) {
+        hasDynamic = true;
+        dynamicSelector.properties[pid] = property;
+      }
+    }
+    if (hasDynamic) {
+      passingSelectors[id] = dynamicSelector;
+    }
+  }
+  return passingSelectors;
+};
+window.fashion.$actualizer.addBindings = function(runtimeData, parseTree, jsSels, indSels) {
+  var bindings, global, name, vObj, _ref, _ref1, _results;
+  _ref = runtimeData.variables;
+  for (name in _ref) {
+    vObj = _ref[name];
+    if (!(vObj.mode !== 0)) {
       continue;
     }
-    if (property.name[0] === "-") {
-      id = 2;
-    } else {
-      id = 0;
+    bindings = parseTree.bindings.variables[name];
+    bindings = $wf.$actualizer.removeTriggerBindings(bindings, jsSels, indSels);
+    vObj.dependents = $wf.$actualizer.mapBindings(bindings, jsSels, indSels);
+  }
+  _ref1 = runtimeData.modules.globals;
+  _results = [];
+  for (name in _ref1) {
+    global = _ref1[name];
+    bindings = parseTree.bindings.globals[name];
+    bindings = $wf.$actualizer.removeTriggerBindings(bindings, jsSels, indSels);
+    _results.push(global.dependents = $wf.$actualizer.mapBindings(bindings, jsSels, indSels));
+  }
+  return _results;
+};
+
+window.fashion.$actualizer.removeTriggerBindings = function(bindings, jsSels, indSels) {
+  var binding, filteredBindings, property, propertyId, selectorId, triggerMode, _i, _len, _ref, _ref1;
+  triggerMode = $wf.$runtimeMode.triggered;
+  filteredBindings = [];
+  for (_i = 0, _len = bindings.length; _i < _len; _i++) {
+    binding = bindings[_i];
+    if (!(binding instanceof Array)) {
+      continue;
     }
-    propertyCategory = property.name.split('-')[id].toLowerCase();
-    i = o + 1;
-    while (i < properties.length - bottomCount) {
-      if (properties[i].name[0] === "-") {
-        id = 2;
+    selectorId = binding[0], propertyId = binding[1];
+    property = (_ref = jsSels[selectorId]) != null ? _ref.properties[propertyId] : void 0;
+    property || (property = (_ref1 = indSels[selectorId]) != null ? _ref1.properties[propertyId] : void 0);
+    if (property && (property.mode & triggerMode) !== triggerMode) {
+      filteredBindings.push(binding);
+    }
+  }
+  return filteredBindings;
+};
+
+window.fashion.$actualizer.mapBindings = function(bindings, jsSels, indSels) {
+  var binding, makeCamelCase, property, propertyId, selectorId, _i, _len, _ref, _ref1, _results;
+  makeCamelCase = window.fashion.$actualizer.makeCamelCase;
+  _results = [];
+  for (_i = 0, _len = bindings.length; _i < _len; _i++) {
+    binding = bindings[_i];
+    if (!(binding instanceof Array)) {
+      if (binding[0] === "$") {
+        _results.push(["v", binding.substr(1)]);
       } else {
-        id = 0;
+        console.log("[FASHION] Could not bind to '" + binding + "'");
+        _results.push(void 0);
       }
-      compareCategory = properties[i].name.split('-')[id].toLowerCase();
-      if (compareCategory === propertyCategory) {
-        break;
-      }
-      i++;
-    }
-    properties.splice(o, 1);
-    properties.splice(i - 1, 0, property);
-    if (i === properties.length - bottomCount) {
-      _results.push(bottomCount++);
     } else {
-      _results.push(void 0);
+      selectorId = binding[0], propertyId = binding[1];
+      if (property = (_ref = jsSels[selectorId]) != null ? _ref.properties[propertyId] : void 0) {
+        _results.push(["s", selectorId, makeCamelCase(property.name)]);
+      } else if (property = (_ref1 = indSels[selectorId]) != null ? _ref1.properties[propertyId] : void 0) {
+        _results.push(["i", selectorId, makeCamelCase(property.name)]);
+      } else {
+        console.log("[FASHION] Could not bind to " + (JSON.stringify(binding)));
+        console.log(new Error().stack);
+        _results.push(void 0);
+      }
     }
   }
   return _results;
 };
 
-window.fashion.$actualizer.splitSelectorByModes = function(selector) {
-  var currentSelector, newSelectors, property, _i, _len, _ref;
-  newSelectors = [];
-  currentSelector = void 0;
-  _ref = selector.properties;
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    property = _ref[_i];
-    if (!currentSelector || currentSelector.mode !== property.mode) {
-      currentSelector = new Selector(selector.name, property.mode);
-      newSelectors.push(currentSelector);
-    }
-    currentSelector.addProperty(property);
+window.fashion.$actualizer.makeCamelCase = function(cssName) {
+  if (cssName == null) {
+    return "";
   }
-  return newSelectors;
-};
-window.fashion.$actualizer.cullIndividuality = function(allSelectors, map) {
-  var currentOffset, exclude, id, inner, inners, mapIndividualCount, newId, newMap, offsets, outer, passingSelectors, selector, _i, _len;
-  passingSelectors = [];
-  offsets = {};
-  exclude = {};
-  currentOffset = 0;
-  for (id in allSelectors) {
-    selector = allSelectors[id];
-    if ((selector.mode & $wf.$runtimeMode.individual) === $wf.$runtimeMode.individual) {
-      currentOffset++;
-      exclude[id] = true;
-    } else {
-      newId = id - currentOffset;
-      passingSelectors.push(selector);
-    }
-    offsets[id] = currentOffset;
-  }
-  newMap = [];
-  mapIndividualCount = 0;
-  for (outer in map) {
-    inners = map[outer];
-    newMap.push([]);
-    for (_i = 0, _len = inners.length; _i < _len; _i++) {
-      inner = inners[_i];
-      if (exclude[inner] === true) {
-        newMap[outer].push("i" + mapIndividualCount++);
-      } else {
-        newMap[outer].push(inner - parseInt(offsets[inner]));
-      }
-    }
-  }
-  return {
-    sel: passingSelectors,
-    map: newMap,
-    offsets: offsets
-  };
-};
-
-window.fashion.$actualizer.filterStatic = function(allSelectors, filterMode) {
-  var id, passingSelectors, selector;
-  passingSelectors = {};
-  for (id in allSelectors) {
-    selector = allSelectors[id];
-    if (selector.mode > 0) {
-      passingSelectors[id] = selector;
-    }
-  }
-  return passingSelectors;
-};
-
-window.fashion.$actualizer.addIndividualProperties = function(selectors, offsets) {
-  var id, indMode, individualProperties, selector;
-  individualProperties = [];
-  indMode = $wf.$runtimeMode.individual;
-  for (id in selectors) {
-    selector = selectors[id];
-    if (!((selector.mode & indMode) === indMode)) {
-      continue;
-    }
-    selector.index = id - offsets[id];
-    individualProperties.push(selector);
-  }
-  return individualProperties;
+  return cssName.replace(/-([a-z])/gi, function(full, letter) {
+    return letter.toUpperCase();
+  });
 };
 var RuntimeData;
 
@@ -2168,9 +2194,9 @@ RuntimeVariable = (function() {
   return RuntimeVariable;
 
 })();
-window.fashion.$actualizer.generateRuntimeData = function(parseTree, jsSelectors, individual, cssMap) {
+window.fashion.$actualizer.generateRuntimeData = function(parseTree, jsSelectors, individual) {
   var rdata, vars;
-  vars = $wf.$actualizer.actualizeVariables(parseTree, jsSelectors, individual, cssMap);
+  vars = $wf.$actualizer.actualizeVariables(parseTree, jsSelectors, individual);
   rdata = new RuntimeData(parseTree, jsSelectors, vars);
   if (individual) {
     rdata.individual = individual;
@@ -2178,8 +2204,8 @@ window.fashion.$actualizer.generateRuntimeData = function(parseTree, jsSelectors
   return rdata;
 };
 
-window.fashion.$actualizer.actualizeVariables = function(parseTree, jsSelectors, individual, cssMap) {
-  var bindings, mode, name, rvar, scopes, type, unit, varName, varObj, variables, _ref;
+window.fashion.$actualizer.actualizeVariables = function(parseTree, jsSelectors, individual) {
+  var mode, name, rvar, scopes, type, unit, varName, varObj, variables, _ref;
   variables = {};
   _ref = parseTree.variables;
   for (varName in _ref) {
@@ -2203,10 +2229,6 @@ window.fashion.$actualizer.actualizeVariables = function(parseTree, jsSelectors,
       varObj = scopes[name];
       rvar.addScope(name, varObj.value);
     }
-    if (mode > 0) {
-      bindings = parseTree.bindings.variables[varName];
-      rvar.dependents = $wf.$actualizer.mapBindings(bindings, jsSelectors, individual, cssMap);
-    }
     variables[varName] = rvar;
   }
   return variables;
@@ -2229,15 +2251,21 @@ window.fashion.$actualizer.removeUnnecessaryModuleData = function(runtimeData) {
   return _results;
 };
 window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
-  var css, cssProperties, cssValue, evalFunction, id, property, selector, selectorName, value, _i, _len, _ref;
+  var css, cssProperties, cssValue, evalFunction, id, pid, property, selector, selectorName, value, _ref;
   evalFunction = $wf.$actualizer.evaluationFunction(runtimeData);
   css = "";
   for (id in cssSelectors) {
     selector = cssSelectors[id];
     cssProperties = [];
     _ref = selector.properties;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      property = _ref[_i];
+    for (pid in _ref) {
+      property = _ref[pid];
+      if (!(pid !== 'length')) {
+        continue;
+      }
+      if (property.value == null) {
+        console.log(selector);
+      }
       if ((selector.mode & $wf.$runtimeMode.globalDynamic) > 2) {
         continue;
       }
@@ -2262,7 +2290,7 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
 window.fashion.$actualizer.cssPrefixes = ["", "-webkit-", "-moz-", "-ms-"];
 
 window.fashion.$actualizer.separateTransitions = function(parseTree) {
-  var evalFunction, id, prefix, prefixes, property, pt, selector, string, strings, transitionMode, transitions, _i, _len, _ref, _ref1, _results;
+  var evalFunction, id, pid, prefix, prefixes, property, pt, selector, string, strings, transitionMode, transitions, _ref, _ref1, _results;
   evalFunction = $wf.$actualizer.evaluationFunction(null, parseTree);
   prefixes = window.fashion.$actualizer.cssPrefixes;
   transitionMode = 0;
@@ -2272,8 +2300,11 @@ window.fashion.$actualizer.separateTransitions = function(parseTree) {
     selector = _ref[id];
     transitions = [];
     _ref1 = selector.properties;
-    for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-      property = _ref1[_i];
+    for (pid in _ref1) {
+      property = _ref1[pid];
+      if (pid === "length") {
+        continue;
+      }
       if (property.value.transition) {
         pt = property.value.transition;
         pt.property = property.name;
@@ -2288,10 +2319,10 @@ window.fashion.$actualizer.separateTransitions = function(parseTree) {
     string = strings.join(",");
     property = new Property("transition", string, transitionMode);
     _results.push((function() {
-      var _j, _len1, _results1;
+      var _i, _len, _results1;
       _results1 = [];
-      for (_j = 0, _len1 = prefixes.length; _j < _len1; _j++) {
-        prefix = prefixes[_j];
+      for (_i = 0, _len = prefixes.length; _i < _len; _i++) {
+        prefix = prefixes[_i];
         _results1.push(selector.addProperty(property.copyWithName(prefix + "transition")));
       }
       return _results1;
@@ -2425,11 +2456,15 @@ window.fashion.$actualizer.determineRuntimeCapabilities = function(runtimeData, 
 };
 
 window.fashion.$actualizer.hasPropertyMode = function(selectors, mode) {
-  var id, selectorBlock;
+  var id, pid, property, selectorBlock, _ref;
   for (id in selectors) {
     selectorBlock = selectors[id];
-    if (selectorBlock.mode === mode) {
-      return true;
+    _ref = selectorBlock.properties;
+    for (pid in _ref) {
+      property = _ref[pid];
+      if ((property.mode & mode) === mode) {
+        return true;
+      }
     }
   }
   return false;
@@ -2496,120 +2531,36 @@ window.fashion.$actualizer.addModuleCapabilities = function(capabilities, runtim
   }
   return _results;
 };
-var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
-
-window.fashion.$actualizer.mapBindings = function(bindings, selectors, individual, map) {
-  var bindingTree, depends, hDependents, property, rmode, selector, selectorId, selectorOrName, values, _i, _j, _len, _len1, _ref, _ref1, _ref2;
-  rmode = $wf.$runtimeMode;
-  if (!bindings) {
+window.fashion.$actualizer.hideIndividualizedSelectors = function(cssSelectors, scripts, indSels) {
+  var hideSel, hideSelectors, id, joinedSelector, key, len, selector, value, _i, _len;
+  hideSelectors = (function() {
+    var _results;
+    _results = [];
+    for (id in indSels) {
+      selector = indSels[id];
+      _results.push(selector.name);
+    }
+    return _results;
+  })();
+  if (!hideSelectors || hideSelectors.length < 1) {
     return;
   }
-  hDependents = [];
-  bindingTree = $wf.$actualizer.createBindingTree(bindings);
-  for (selectorOrName in bindingTree) {
-    values = bindingTree[selectorOrName];
-    if (selectorOrName[0] === "$") {
-      hDependents.push(selectorOrName);
-    } else {
-      selectorOrName = parseInt(selectorOrName);
-      if (!map[selectorOrName]) {
-        continue;
-      }
-      _ref = map[selectorOrName];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        selectorId = _ref[_i];
-        if (typeof selectorId === "number") {
-          selector = selectors[selectorId];
-          if (!selector || (selector.mode & rmode.triggered) === rmode.triggered) {
-            continue;
-          }
-          if (selector.mode !== rmode["static"]) {
-            hDependents.push(selectorId);
-          }
-        } else {
-          selector = individual[parseInt(selectorId.substr(1))];
-          if (!selector) {
-            console.log("[FASHION] Selector at " + selectorId + " does not exist");
-            continue;
-          }
-          if ((selector.mode & rmode.triggered) === rmode.triggered) {
-            continue;
-          }
-          if (values === true) {
-            hDependents.push(selectorId);
-          } else {
-            depends = false;
-            _ref1 = selector.properties;
-            for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-              property = _ref1[_j];
-              if (_ref2 = property.id, __indexOf.call(values, _ref2) >= 0) {
-                depends = true;
-              }
-            }
-            if (depends) {
-              hDependents.push(selectorId);
-            }
-          }
-        }
-      }
-    }
+  joinedSelector = hideSelectors.join(",");
+  hideSel = new Selector(joinedSelector, $wf.$runtimeMode["static"]);
+  hideSel.addProperty(new Property("visibility", "hidden"));
+  cssSelectors["hs"] = hideSel;
+  len = 0;
+  for (value = _i = 0, _len = cssSelectors.length; _i < _len; value = ++_i) {
+    key = cssSelectors[value];
+    len++;
   }
-  return hDependents;
-};
-
-window.fashion.$actualizer.createBindingTree = function(bindings) {
-  var bindingLink, bindingTree, _i, _len;
-  bindingTree = {};
-  for (_i = 0, _len = bindings.length; _i < _len; _i++) {
-    bindingLink = bindings[_i];
-    if (bindingLink instanceof Array && bindingLink.length === 2) {
-      if (!bindingTree[bindingLink[0]]) {
-        bindingTree[bindingLink[0]] = [];
-      }
-      bindingTree[bindingLink[0]].push(bindingLink[1]);
-    } else {
-      bindingTree[bindingLink] = true;
-    }
-  }
-  return bindingTree;
-};
-
-window.fashion.$actualizer.addBindings = function(runtimeData, parseTree, selectors, map) {
-  return $wf.$actualizer.bindGlobals(runtimeData, parseTree.bindings.globals, selectors, map);
-};
-
-window.fashion.$actualizer.bindGlobals = function(runtimeData, globalBindings, selectors, map) {
-  var bindings, global, name, _ref, _results;
-  _ref = runtimeData.modules.globals;
-  _results = [];
-  for (name in _ref) {
-    global = _ref[name];
-    bindings = globalBindings[name];
-    _results.push(global.dependents = $wf.$actualizer.mapBindings(bindings, selectors, runtimeData.individual, map));
-  }
-  return _results;
-};
-window.fashion.$actualizer.hideIndividualizedSelectors = function(cssSelectors, scripts, indSels) {
-  var hideSel, id, onLoadScript, removeSelectors, selector, _i, _j, _len, _len1, _ref;
-  removeSelectors = [];
-  for (_i = 0, _len = indSels.length; _i < _len; _i++) {
-    selector = indSels[_i];
-    hideSel = new Selector(selector.name, $wf.$runtimeMode["static"]);
-    hideSel.addProperty(new Property("visibility", "hidden"));
-    removeSelectors.push(cssSelectors.length);
-    cssSelectors.push(hideSel);
-  }
-  onLoadScript = "FSREADY(function(){\nss = document.getElementById(FASHION.config.cssId);\nrm = function(id){if(ss&&ss.sheet)ss.sheet.deleteRule(id);};";
-  _ref = removeSelectors.reverse();
-  for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-    id = _ref[_j];
-    onLoadScript += "rm(" + id + ");";
-  }
-  return scripts.push(onLoadScript + "})");
+  return scripts.push("FSREADY(function(){\n	ss = document.getElementById(FASHION.config.cssId);\n	if(ss&&ss.sheet)ss.sheet.deleteRule(" + (len - 1) + ");\n});");
 };
 window.fashion.$actualizer.minifier = {
   runtimeData: function(runtimeData) {
-    var id, s, v;
+    var $wfam, id, iid, s, sid, v;
+    $wfam = window.fashion.$actualizer.minifier;
+    sid = iid = 0;
     return [
       (function() {
         var _ref, _results;
@@ -2617,7 +2568,7 @@ window.fashion.$actualizer.minifier = {
         _results = [];
         for (id in _ref) {
           s = _ref[id];
-          _results.push($wf.$actualizer.minifier.selector(id, s));
+          _results.push($wfam.selector(id, s, sid++));
         }
         return _results;
       })(), (function() {
@@ -2626,7 +2577,7 @@ window.fashion.$actualizer.minifier = {
         _results = [];
         for (id in _ref) {
           v = _ref[id];
-          _results.push($wf.$actualizer.minifier.variable(v));
+          _results.push($wfam.variable(v));
         }
         return _results;
       })(), (function() {
@@ -2635,32 +2586,36 @@ window.fashion.$actualizer.minifier = {
         _results = [];
         for (id in _ref) {
           s = _ref[id];
-          _results.push($wf.$actualizer.minifier.selector(id, s));
+          _results.push($wfam.selector(id, s, iid++));
         }
         return _results;
       })()
     ];
   },
-  selector: function(id, selObj) {
-    var name, properties, rawProperty, _i, _len, _ref;
+  selector: function(id, selObj, cssId) {
+    var $wfam, name, pid, properties, rawProperty, _ref;
+    $wfam = window.fashion.$actualizer.minifier;
     if (!selObj || !(selObj instanceof Selector)) {
       return;
     }
     if (selObj.name instanceof Expression) {
-      name = $wf.$actualizer.minifier.expression(selObj.name);
+      name = $wfam.expression(selObj.name);
     } else {
       name = selObj.name;
     }
     properties = [];
     _ref = selObj.properties;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      rawProperty = _ref[_i];
-      properties.push($wf.$actualizer.minifier.property(rawProperty));
+    for (pid in _ref) {
+      rawProperty = _ref[pid];
+      if (pid !== 'length') {
+        properties.push($wfam.property(rawProperty));
+      }
     }
-    return ["s", parseInt(id), name, selObj.mode, properties];
+    return ["s", parseInt(id), cssId, name, selObj.mode, properties];
   },
   property: function(propObj) {
-    var subVal, value, _i, _len, _ref;
+    var $wfam, subVal, value, _i, _len, _ref;
+    $wfam = window.fashion.$actualizer.minifier;
     if (!propObj || !(propObj instanceof Property)) {
       return;
     }
@@ -2670,13 +2625,13 @@ window.fashion.$actualizer.minifier = {
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         subVal = _ref[_i];
         if (subVal instanceof Expression) {
-          value.push($wf.$actualizer.minifier.expression(subVal));
+          value.push($wfam.expression(subVal));
         } else {
           value.push(subVal);
         }
       }
     } else if (propObj.value instanceof Expression) {
-      value = $wf.$actualizer.minifier.expression(propObj.value);
+      value = $wfam.expression(propObj.value);
     } else {
       value = propObj.value;
     }
@@ -2689,12 +2644,13 @@ window.fashion.$actualizer.minifier = {
     return ["e", exprObj.mode, exprObj.type, exprObj.unit, exprObj.setter, exprObj.script];
   },
   variable: function(varObj) {
-    var defaultVal, r, v, values, _i, _len, _ref;
+    var $wfam, defaultVal, r, v, values, _i, _len, _ref;
+    $wfam = window.fashion.$actualizer.minifier;
     if (!varObj || !(varObj instanceof RuntimeVariable)) {
       return;
     }
     if (varObj["default"] instanceof Expression) {
-      defaultVal = $wf.$actualizer.minifier.expression(varObj["default"]);
+      defaultVal = $wfam.expression(varObj["default"]);
     } else {
       defaultVal = varObj["default"];
     }
@@ -2703,7 +2659,7 @@ window.fashion.$actualizer.minifier = {
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       v = _ref[_i];
       if (v instanceof Expression) {
-        values.push($wf.$actualizer.minifier.expression(v));
+        values.push($wfam.expression(v));
       } else {
         values.push(v);
       }
@@ -2720,10 +2676,10 @@ window.fashion.$actualizer.minifier.expandRuntimeData = function(minData, expand
   expanderFunctions = {
     s: function(s) {
       return {
-        id: s[1],
-        name: expand(s[2]),
-        mode: s[3],
-        properties: expand(s[4])
+        rule: s[2],
+        name: expand(s[3]),
+        mode: s[4],
+        properties: expand(s[5])
       };
     },
     p: function(p) {
@@ -2782,7 +2738,8 @@ window.fashion.$actualizer.minifier.expandRuntimeData = function(minData, expand
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     selector = _ref[_i];
     selobj = expand(selector);
-    expandTo.selectors[selobj.id] = selobj;
+    selobj.sheet = "s";
+    expandTo.selectors[selector[1]] = selobj;
   }
   _ref1 = minData[1];
   for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
@@ -2796,7 +2753,8 @@ window.fashion.$actualizer.minifier.expandRuntimeData = function(minData, expand
     for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
       selector = _ref2[_k];
       selobj = expand(selector);
-      _results.push(expandTo.individual[selobj.id] = selobj);
+      selobj.sheet = "i";
+      _results.push(expandTo.individual[selector[1]] = selobj);
     }
     return _results;
   }
@@ -3513,7 +3471,7 @@ $wf.$extend(window.fashion.$properties, {
 $wf.$extend(window.fashion.$properties, new ((function() {
   function _Class() {
     var applyForCaughtEvent, applyForPropogatedEvent, caughtEvents, evt, propogatedEvents, _i, _j, _len, _len1;
-    caughtEvents = ["click", "dblclick", "mousedown", "mouseup", "drag", "dragdrop", "dragend", "drop", "blur", "change", "focus", "focusin", "focusout", "submit", "reset"];
+    caughtEvents = ["click", "dblclick", "mousedown", "mouseup", "drag", "dragdrop", "dragend", "drop", "blur", "change", "focus", "focusin", "focusout", "submit", "reset", "keydown", "keyup"];
     applyForCaughtEvent = function(evt) {
       var body;
       body = "if(element.getAttribute('data-hastrigger-" + evt + "'))return;\nelement.addEventListener('" + evt + "', function(eo){\n	eo.stopPropagation();\n	evaluate();\n}, false);\nelement.setAttribute('data-hastrigger-" + evt + "', 'true');";

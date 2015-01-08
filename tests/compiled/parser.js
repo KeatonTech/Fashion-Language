@@ -119,7 +119,6 @@
     it("should allow variables within nested selectors", function() {
       var result;
       result = parse(".menu {\n	.main {\n		$isSelected: true;\n	}\n}");
-      console.log(result.variables["isSelected"]);
       expect(result.variables["isSelected"][".menu .main"]["value"]).toEqual("true");
       return expect(result.variables["isSelected"][".menu .main"]["type"]).toEqual(type.Unknown);
     });

@@ -1,37 +1,27 @@
-# Returns an object that contains only selectors that need to be included in runtime data
-# ASIDE: This is my favorite function name ever.
-window.fashion.$actualizer.cullIndividuality = (allSelectors, map) ->
-	passingSelectors = []
-	offsets = {}
-	exclude = {}
-	currentOffset = 0
+# Creates two lists of selectors: 1 with normal CSS properties and one with individual ones
+# Returned lists are maps, so as to maintain the original indexes
+window.fashion.$actualizer.splitIndividual = (selectors) ->
+	cssSelectors = {}; indSelectors = {}
+	indMode = $wf.$runtimeMode.individual
+	for id, selector of selectors
 
-	# Move in the new selectors
-	for id, selector of allSelectors
-		if (selector.mode & $wf.$runtimeMode.individual) is $wf.$runtimeMode.individual
-			currentOffset++
-			exclude[id] = true
-		else
-			newId = id - currentOffset
-			passingSelectors.push selector
-	
-		offsets[id] = currentOffset
+		# Make 2 new selector objects
+		cssSelector = new Selector selector.name, selector.mode
+		indSelector = new Selector selector.name, selector.mode
 
-	# Create the new offset map
-	newMap = []
-	mapIndividualCount = 0
-	for outer, inners of map
-		newMap.push []
+		# Go through each property and add it to one or the other
+		for pid,property of selector.properties when pid isnt 'length'
+			if (property.mode & indMode) is indMode
+				indSelector.addProperty property
+			else
+				cssSelector.addProperty property
 
-		# Add individual properties as strings beginning with an 'i'
-		# Other properties are added as numbers
-		for inner in inners
-			if exclude[inner] is true
-				newMap[outer].push("i" + mapIndividualCount++)
-			else 
-				newMap[outer].push(inner - parseInt(offsets[inner]))
+		# Add the selector objects as necessary
+		if cssSelector.properties.length > 0 then cssSelectors[id] = cssSelector
+		if indSelector.properties.length > 0 then indSelectors[id] = indSelector
 
-	return {sel: passingSelectors, map: newMap, offsets: offsets}
+	# Return the maps
+	{cssSels: cssSelectors, individualSels: indSelectors}
 
 
 # Returns an object that contains only selectors that need to be included in runtime data
@@ -40,17 +30,17 @@ window.fashion.$actualizer.filterStatic = (allSelectors, filterMode) ->
 
 	# Move in the new selectors
 	for id, selector of allSelectors
-		if selector.mode > 0
-			passingSelectors[id] = selector
+		dynamicSelector = new Selector selector.name, selector.mode
+		dynamicSelector.properties = {}
+		hasDynamic = false
+
+		# Add each dynamic property
+		for pid,property of selector.properties
+			if property.mode > 0
+				hasDynamic = true
+				dynamicSelector.properties[pid] = property
+
+		# If there's at least one dynamic property, the JS needs to know about the selector
+		if hasDynamic then passingSelectors[id] = dynamicSelector
 
 	return passingSelectors
-
-
-# Add each individual selector to the runtime data
-window.fashion.$actualizer.addIndividualProperties = (selectors, offsets) ->
-	individualProperties = []
-	indMode = $wf.$runtimeMode.individual
-	for id, selector of selectors when (selector.mode & indMode) is indMode
-		selector.index = id - offsets[id]
-		individualProperties.push selector
-	return individualProperties

@@ -8,7 +8,7 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 
 		# Go through each property (I know, I'm bored already)
 		index = -1
-		for property in selector.properties
+		for pid,property of selector.properties
 			index++
 			propertyModule = propertyModules[property.name]
 
@@ -35,7 +35,7 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 					propertyModules[property.name].compile.call API, property.value
 
 					# Remove it if necessary
-					if propertyModule.replace then selector.properties.splice index--, 1
+					if propertyModule.replace then selector.deleteProperty index--
 
 
 	# Pass it back

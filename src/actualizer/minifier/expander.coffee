@@ -8,7 +8,7 @@ window.fashion.$actualizer.minifier.expandRuntimeData = (minData, expandTo) ->
 	# Return an object from an array
 	expanderFunctions = 
 
-		s: (s) -> {id: s[1], name: expand(s[2]), mode: s[3], properties: expand(s[4])}
+		s: (s) -> {rule: s[2], name: expand(s[3]), mode: s[4], properties: expand(s[5])}
 		p: (p) -> {name: p[1], mode: p[2], value: expand(p[3])}
 		e: (e) -> {
 			mode: e[1], type: e[2], unit: e[3], setter: e[4], 
@@ -36,7 +36,8 @@ window.fashion.$actualizer.minifier.expandRuntimeData = (minData, expandTo) ->
 	# Expand each selector
 	for selector in minData[0]
 		selobj = expand selector
-		expandTo.selectors[selobj.id] = selobj
+		selobj.sheet = "s"
+		expandTo.selectors[selector[1]] = selobj
 
 	# Expand each variable
 	for variable in minData[1]
@@ -47,4 +48,5 @@ window.fashion.$actualizer.minifier.expandRuntimeData = (minData, expandTo) ->
 	if minData[2]
 		for selector in minData[2]
 			selobj = expand selector
-			expandTo.individual[selobj.id] = selobj
+			selobj.sheet = "i"
+			expandTo.individual[selector[1]] = selobj

@@ -31,7 +31,7 @@ window.fashiontests.actualizer.css = ()->
 
 		{css} = actualize parseTree
 
-		cssString = 'body {background-color: blue !important;}\nbody {width: 50px !important;}\n'
+		cssString = 'body {background-color: blue !important;width: 50px !important;}\n'
 		expect(css).toBe(cssString)
 
 
@@ -45,8 +45,7 @@ window.fashiontests.actualizer.css = ()->
 			"""
 
 		cssString = """
-			body {width: 100%;}
-			body {min-height: 100px;}
+			body {width: 100%;min-height: 100px;}
 
 			"""
 
@@ -166,7 +165,7 @@ window.fashiontests.actualizer.css = ()->
 			}
 			"""
 
-		cssString = 'body {background-color: blue;}\nbody {'
+		cssString = 'body {background-color: blue;'
 		for prefix in prefixes
 			cssString += "#{prefix}transition: background-color 314ms linear;"
 		cssString += "}\n"

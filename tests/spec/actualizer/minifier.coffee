@@ -23,13 +23,13 @@ window.fashiontests.actualizer.minifier = ()->
 		# Selectors
 		expect(window.FSMIN[0].length).toBe(1);
 		expect(window.FSMIN[0][0]).toContain('body');
-		expect(window.FSMIN[0][0]).toContain($wf.$runtimeMode.dynamic);
+		expect(window.FSMIN[0][0]).toContain($wf.$runtimeMode.static);
 
 		# Properties (This section might be a little overly specific)
-		expect(window.FSMIN[0][0][4][0]).toContain("padding");
-		expect(window.FSMIN[0][0][4][0][3][0]).toBe("e");
-		expect(window.FSMIN[0][0][4][1]).toContain("width");
-		expect(window.FSMIN[0][0][4][1][3][0]).toBe("e");
+		expect(window.FSMIN[0][0][5][0]).toContain("padding");
+		expect(window.FSMIN[0][0][5][0][3][0]).toBe("e");
+		expect(window.FSMIN[0][0][5][1]).toContain("width");
+		expect(window.FSMIN[0][0][5][1][3][0]).toBe("e");
 
 		# Variables
 		expect(window.FSMIN[1].length).toBe(1);
@@ -45,7 +45,7 @@ window.fashiontests.actualizer.minifier = ()->
 
 		# Actual minified data taken from the above example
 		minData = [[
-			["s",0,"body",1,[
+			["s",0,1,"body",1,[
 				["p","padding",1,["e",1,1,"px","return (v('size').value) + 'px'"]],
 				["p","width",1,["e",1,1,"px","return (v('size').value) + 'px'"]]
 			]]],[
@@ -93,18 +93,18 @@ window.fashiontests.actualizer.minifier = ()->
 		# Selectors
 		expect(window.FSMIN[2].length).toBe(1);
 		expect(window.FSMIN[2][0]).toContain('body');
-		expect(window.FSMIN[2][0]).toContain($wf.$runtimeMode.individual);
+		expect(window.FSMIN[2][0]).toContain($wf.$runtimeMode.static);
 
 		# Properties (This section might be a little overly specific)
-		expect(window.FSMIN[2][0][4][0]).toContain("color");
-		expect(window.FSMIN[2][0][4][0]).toContain($wf.$runtimeMode.individual);
-		expect(window.FSMIN[2][0][4][0][3][0]).toBe("e");
+		expect(window.FSMIN[2][0][5][0]).toContain("color");
+		expect(window.FSMIN[2][0][5][0]).toContain($wf.$runtimeMode.individual);
+		expect(window.FSMIN[2][0][5][0][3][0]).toBe("e");
 		
 
 	it 'should expand individual properties', ()->
 
 		# Whew, dense. Again, this is the data from before
-		data = [[],[],[["s",0,"body",7,[["p","color",7,["e",7,2,null,"return e.color"]]]]]]
+		data = [[],[],[["s",0,0,"body",1,[["p","color",7,["e",7,2,null,"return e.color"]]]]]]
 
 		# Expand this data into a blank runtime data object
 		rd = {selectors: {}, variables: {}, individual: {}}
@@ -112,7 +112,7 @@ window.fashiontests.actualizer.minifier = ()->
 
 		# See how it did on individual selectors
 		expect(rd.individual[0].name).toBe("body")
-		expect(rd.individual[0].mode).toBe(7)
+		expect(rd.individual[0].mode).toBe(1)
 		expect(rd.individual[0].properties.length).toBe(1)
 
 		# ... and their properties
@@ -135,8 +135,27 @@ window.fashiontests.actualizer.minifier = ()->
 		eval(js)
 
 		# Properties (This section might be a little overly specific)
-		expect(window.FSMIN[0][0][4][0]).toContain("border");
-		expect(window.FSMIN[0][0][4][0][3][0][0]).toBe("e");
-		expect(window.FSMIN[0][0][4][0][3][1]).toBe("solid");
-		expect(window.FSMIN[0][0][4][0][3][2]).toBe("black");
+		expect(window.FSMIN[0][0][5][0]).toContain("border");
+		expect(window.FSMIN[0][0][5][0][3][0][0]).toBe("e");
+		expect(window.FSMIN[0][0][5][0][3][1]).toBe("solid");
+		expect(window.FSMIN[0][0][5][0][3][2]).toBe("black");
+
+
+	it 'should minify dynamic properties', () ->
+
+		{js} = actualize process parse """
+			$id: test;
+			#$id {
+				border: blue;
+			}
+			"""
+
+		window.FASHION = {}
+		eval(js)
+
+		# Selectors
+		expect(window.FSMIN[0].length).toBe(1);
+		expect(window.FSMIN[0][0][3][0]).toBe('e');
+		expect(window.FSMIN[0][0]).toContain($wf.$runtimeMode.dynamic);
+
 

@@ -155,8 +155,8 @@ window.fashiontests.processor.properties = function() {
     }));
     parseTree = process(parse("body {\n	testReplaceWithAlign: center;\n}"));
     expect(parseTree.selectors[0].properties.length).toBe(1);
-    expect(parseTree.selectors[0].properties[0].name).toBe("text-align");
-    return expect(parseTree.selectors[0].properties[0].value).toBe("center");
+    expect(parseTree.selectors[0].properties[1].name).toBe("text-align");
+    return expect(parseTree.selectors[0].properties[1].value).toBe("center");
   });
   it("should be able to read other properties in the same selector", function() {
     var compileSpy, parseTree;

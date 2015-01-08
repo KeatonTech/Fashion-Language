@@ -40,8 +40,17 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 			if typeof value is "string" then value += " !important"
 			if typeof value is "object" then value.important = true
 
+		# Compute the value mode of multi-part properties
+		valueMode = 0
+		if value?.mode? then valueMode = value.mode
+		else if value instanceof Array
+			for elm in value when elm?
+				if elm instanceof Array
+					valueMode |= elm2.mode for elm2 in elm when elm2?.mode?
+				if elm.mode? then valueMode |= elm.mode
+
 		# Add the property to the properties object
-		mode = (selector.mode | value.mode) || 0
+		mode = (selector.mode | valueMode) || 0
 		selector.addProperty(new Property name, value, mode, transition)
 		propertyNumber++
 
@@ -65,19 +74,20 @@ window.fashion.$parser.parsePropertyValues = (value, bindingLink, parseTree) ->
 
 	# Commas mean array
 	if value.indexOf(',') isnt -1
-		value = window.fashion.$parser.splitByTopLevelCommas value
+		split = window.fashion.$parser.splitByTopLevelCommas value
 
 		# False alarm
-		if value.length is 1
-			return window.fashion.$parser.parsePropertyValue(value[0],bindingLink,parseTree)
+		if split.length is 1
+			return window.fashion.$parser.parsePropertyValue(split[0],bindingLink,parseTree)
 
 		# Build an array of processed values
 		else
-			value[i] = item.trim() for i,item of value
-			for i,item of value
-				value[i] = window.fashion.$parser.parsePropertyValue(
+			ret = []
+			split[i] = item.trim() for i,item of split
+			for i,item of split
+				ret[i] = window.fashion.$parser.parsePropertyValue(
 					item, bindingLink, parseTree, true, true)
-			return value
+			return ret
 
 	# Just process the one value
 	else return window.fashion.$parser.parsePropertyValue(value, bindingLink, parseTree)
