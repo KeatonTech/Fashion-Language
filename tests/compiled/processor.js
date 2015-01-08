@@ -43,7 +43,7 @@ window.fashiontests.processor.blocks = function() {
     return expect(parseTree.scripts[0]).toBe("alert('Hello World');");
   });
   it("should be able to add rules as strings", function() {
-    var compileSpy, parseTree;
+    var compileSpy, parseTree, val;
     compileSpy = jasmine.createSpy("Compile Block").and.callFake(function(args, body) {
       return this.addRule("table", "border: $" + args[0] + " solid black");
     });
@@ -52,7 +52,8 @@ window.fashiontests.processor.blocks = function() {
     expect(parseTree.selectors[0].name).toBe("table");
     expect(parseTree.selectors[0].properties[0].name).toBe("border");
     expect(parseTree.selectors[0].properties[0].value[0].script).toBeDefined();
-    return expect(parseTree.bindings.variables["borderWidth"][0]).toEqual([0, 0]);
+    val = parseTree.selectors[0].properties[0].value[0];
+    return expect(val.bindings.variables[0]).toBe("borderWidth");
   });
   it("should be able to parse its body as a full fashion document", function() {
     var compileSpy, parseTree;

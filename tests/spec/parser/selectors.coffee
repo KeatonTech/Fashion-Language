@@ -106,8 +106,7 @@ window.fashiontests.parser.selectors = ()->
 		expect(nameExpression.evaluate(v)).toBe(".content")
 
 		# Test linkback
-		expect(result.bindings.variables["contentDiv"].length).toBe(1)
-		expect(result.bindings.variables["contentDiv"][0]).toBe(0)
+		expect(nameExpression.bindings.variables[0]).toBe("contentDiv")
 
 
 	it "should allow variables to be part of selectors", ()->
@@ -130,10 +129,8 @@ window.fashiontests.parser.selectors = ()->
 		expect(nameExpression.evaluate(v)).toBe(".content h3 p")
 
 		# Test linkback
-		expect(result.bindings.variables["contentDiv"].length).toBe(1)
-		expect(result.bindings.variables["contentDiv"][0]).toBe(0)
-		expect(result.bindings.variables["contentSub"].length).toBe(1)
-		expect(result.bindings.variables["contentSub"][0]).toBe(0)
+		expect(nameExpression.bindings.variables[0]).toBe("contentDiv")
+		expect(nameExpression.bindings.variables[1]).toBe("contentSub")
 
 
 	it "should allow nested selectors inside of variable selectors", ()->
@@ -156,9 +153,8 @@ window.fashiontests.parser.selectors = ()->
 		expect(result.selectors[1].name.evaluate(v)).toBe(".content h3")
 
 		# Test linkback
-		expect(result.bindings.variables["contentDiv"].length).toBe(2)
-		expect(result.bindings.variables["contentDiv"][0]).toBe(0)
-		expect(result.bindings.variables["contentDiv"][1]).toBe(1)
+		expect(result.selectors[0].name.bindings.variables[0]).toBe("contentDiv")
+		expect(result.selectors[1].name.bindings.variables[0]).toBe("contentDiv")
 
 
 	it "should allow nested variable selectors", ()->
@@ -180,8 +176,7 @@ window.fashiontests.parser.selectors = ()->
 		expect(result.selectors[1].name.evaluate(v)).toBe("div .content")
 
 		# Test linkback
-		expect(result.bindings.variables["contentDiv"].length).toBe(1)
-		expect(result.bindings.variables["contentDiv"][0]).toBe(1)
+		expect(result.selectors[1].name.bindings.variables[0]).toBe("contentDiv")
 
 
 	it "should properly nest comma separated selectors", ()->

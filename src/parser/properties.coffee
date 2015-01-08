@@ -17,10 +17,8 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 		transition = undefined
 		if property.length < 7 then continue # Sanity check
 
-		bindingLink = [selector.index, propertyNumber]
-
 		# Create a value object
-		value = $wf.$parser.parsePropertyValues property[6], bindingLink, parseTree
+		value = $wf.$parser.parsePropertyValues property[6], parseTree
 
 		# Check to see if this is a variable declaration
 		name = property[1]
@@ -31,9 +29,9 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 		# Parse transition
 		if property[3]
 			transition = new PropertyTransition( # Easing, Duration, Delay
-				$wf.$parser.parsePropertyValue(property[3], bindingLink, parseTree, false),
-				$wf.$parser.parsePropertyValue(property[4], bindingLink, parseTree, false),
-				$wf.$parser.parsePropertyValue(property[5], bindingLink, parseTree, false))
+				$wf.$parser.parsePropertyValue(property[3], parseTree, false),
+				$wf.$parser.parsePropertyValue(property[4], parseTree, false),
+				$wf.$parser.parsePropertyValue(property[5], parseTree, false))
 
 		# Note the important flag
 		if property[7] is "!important"
@@ -70,7 +68,7 @@ window.fashion.$parser.parseScopedVariable = (name, value, property, scope, pars
 
 
 # Splits a value up by commas if necessary and then evaluates it
-window.fashion.$parser.parsePropertyValues = (value, bindingLink, parseTree) ->
+window.fashion.$parser.parsePropertyValues = (value, parseTree) ->
 
 	# Commas mean array
 	if value.indexOf(',') isnt -1
@@ -78,7 +76,7 @@ window.fashion.$parser.parsePropertyValues = (value, bindingLink, parseTree) ->
 
 		# False alarm
 		if split.length is 1
-			return window.fashion.$parser.parsePropertyValue(split[0],bindingLink,parseTree)
+			return window.fashion.$parser.parsePropertyValue(split[0],parseTree)
 
 		# Build an array of processed values
 		else
@@ -86,16 +84,16 @@ window.fashion.$parser.parsePropertyValues = (value, bindingLink, parseTree) ->
 			split[i] = item.trim() for i,item of split
 			for i,item of split
 				ret[i] = window.fashion.$parser.parsePropertyValue(
-					item, bindingLink, parseTree, true, true)
+					item, parseTree, true, true)
 			return ret
 
 	# Just process the one value
-	else return window.fashion.$parser.parsePropertyValue(value, bindingLink, parseTree)
+	else return window.fashion.$parser.parsePropertyValue(value, parseTree)
 
 
 # Convert a property value into a linked object or expression, if necessary
 window.fashion.$parser.parsePropertyValue = 
-	(value, bindingLink, parseTree, allowExpression = true, forceArray = false) ->
+	(value, parseTree, allowExpression = true, forceArray = false) ->
 
 		# Check to see if we have a multi-piece property
 		if forceArray or (typeof value is "string" and value.indexOf(" ") isnt -1)
@@ -103,16 +101,16 @@ window.fashion.$parser.parsePropertyValue =
 
 			# False alarm!
 			if !forceArray and parts.length is 1
-				return window.fashion.$parser.parseSingleValue value, bindingLink, parseTree
+				return window.fashion.$parser.parseSingleValue value, parseTree
 
 			# Accumulate all of the single values into an array and calculate the mode
-			vals = ($wf.$parser.parseSingleValue(v, bindingLink, parseTree) for v in parts)
+			vals = ($wf.$parser.parseSingleValue(v, parseTree) for v in parts)
 			vals.mode = 0
 			(vals.mode |= (val.mode || 0)) for val in vals
 			return vals
 
 		# We have a single-piece property
-		else window.fashion.$parser.parseSingleValue value, bindingLink, parseTree
+		else window.fashion.$parser.parseSingleValue value, parseTree
 
 
 # Shared regex used to identify expressions
@@ -128,12 +126,12 @@ window.fashion.$parser.identifyExpression = () ->
 
 
 # Convert a property value into a linked object or expression, if necessary
-window.fashion.$parser.parseSingleValue = (value, bindingLink, parseTree, isVar = false) ->
+window.fashion.$parser.parseSingleValue = (value, parseTree, isVar = false) ->
 	if !value or typeof value isnt 'string' then return value
 
 	# Check to see if it's an expression
 	if value.match $wf.$parser.identifyExpression()
-		return window.fashion.$parser.parseExpression(value, bindingLink, parseTree,
+		return window.fashion.$parser.parseExpression(value, parseTree,
 			window.fashion.$functions, window.fashion.$globals, true, isVar)
 
 	# Nope, this is just a normal property

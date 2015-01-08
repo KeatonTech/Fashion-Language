@@ -5,7 +5,7 @@ $wf.$extend window.fashion.$properties, new class then constructor: ->
 		"click", "dblclick", "mousedown", "mouseup",
 		"drag", "dragdrop", "dragend", "drop",
 		"blur", "change", "focus", "focusin", "focusout",
-		"submit", "reset"
+		"submit", "reset", "keydown", "keyup"
 	]
 
 	applyForCaughtEvent = (evt) -> 

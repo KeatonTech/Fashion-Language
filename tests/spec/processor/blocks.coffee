@@ -82,7 +82,8 @@ window.fashiontests.processor.blocks = ()->
 		expect(parseTree.selectors[0].properties[0].value[0].script).toBeDefined()
 
 		# Make sure the variable backlink was established
-		expect(parseTree.bindings.variables["borderWidth"][0]).toEqual([0,0])
+		val = parseTree.selectors[0].properties[0].value[0]
+		expect(val.bindings.variables[0]).toBe("borderWidth")
 
 
 	it "should be able to parse its body as a full fashion document", ()->

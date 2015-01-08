@@ -24,12 +24,6 @@ class ParseTree
 			functions: {}
 			properties: {}
 
-		# Track which properties that rely on different values
-		@bindings =
-			variables: {}
-			globals: {}
-			dom: []
-
 		# Extending
 		if extendsTree then @variables[k] = v for k,v of extendsTree.variables
 			
@@ -43,7 +37,6 @@ class ParseTree
 		if !vName then throw new Error "Variables must be named"
 		if !@variables[vName] then @variables[vName] = {}
 		@variables[vName][selectorScope] = variableObject
-		@bindings.variables[vName] = []
 
 	# As Fashion becomes more extensible, type checking should be added here.
 	# However, for now, that would just slow everything down
@@ -64,25 +57,6 @@ class ParseTree
 		@dependencies.functions[name] = moduleObject
 	addPropertyDependency: (name, moduleObject) -> 
 		@dependencies.properties[name] = moduleObject
-
-	# Variable bindings can only happen to variables that already exist
-	addVariableBinding: (bindingLink, variableName) ->
-		if !@bindings.variables[variableName] then @bindings.variables[variableName] = []
-		@bindings.variables[variableName].push bindingLink
-
-	# Global bindings are fairly straightforward
-	addGlobalBinding: (bindingLink, globalName)->
-		if !@bindings.globals[globalName] then @bindings.globals[globalName] = []
-		@bindings.globals[globalName].push bindingLink
-
-	# Dom bindings are hard to generalize because they can occur relative to a selector
-	# Therefore, we're just storing a big list of them
-	# The runtime can try and do something a little smarter with this stuff
-	addDOMBinding: (selectorId, selector, boundSelector, boundProperty)->
-		@bindings.dom.push 
-			watch: [boundSelector, boundProperty]
-			rel: selector
-			bind: selectorId
 
 
 	# ITERATE
