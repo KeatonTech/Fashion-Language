@@ -48,11 +48,19 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 		vObj = FASHION.variables[varName]
 
 		# Update all of the dependents
-		for selectorId in vObj.dependents
-			if typeof selectorId is 'string' and selectorId[0] is "$"
-				@updateDependencies selectorId.substr(1)
+		for bindLink in vObj.dependents
+
+			# If the dependency is a variable, go through and update all its stuff
+			if bindLink[0] is "v"
+				@updateDependencies bindLink[1]
+
+			# Bound to a specific property that we can just update
+			else if bindLink.length is 3
+				@setPropertyOnSelector bindLink[0], bindLink[1], bindLink[2]
+
+			# Bound to an entire selector that will need to be regenerated
 			else
-				@regenerateSelector selectorId
+				@regenerateSelector bindLink[0], bindLink[1]
 
 
 	# Register the module that gets and sets dynamic variables

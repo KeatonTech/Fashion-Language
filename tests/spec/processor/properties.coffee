@@ -121,8 +121,8 @@ window.fashiontests.processor.properties = ()->
 
 		# Make sure the property got replaced
 		expect(parseTree.selectors[0].properties.length).toBe(1)
-		expect(parseTree.selectors[0].properties[1].name).toBe("text-align")
-		expect(parseTree.selectors[0].properties[1].value).toBe("center")
+		expect(parseTree.selectors[0].properties[0].name).toBe("text-align")
+		expect(parseTree.selectors[0].properties[0].value).toBe("center")
 
 
 	it "should be able to read other properties in the same selector", ()->

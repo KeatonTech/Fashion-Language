@@ -132,8 +132,8 @@ window.fashiontests.actualizer.js = ()->
 		expect(divIndividual.properties[1].name).toBe("on-click")
 
 		pIndividual = window.FASHION.individual[1]
-		expect(pIndividual.properties[0].name).toBe("left")
-		expect(pIndividual.properties[1].name).toBe("top")
+		expect(pIndividual.properties[0].name).toBe("top")
+		expect(pIndividual.properties[1].name).toBe("left")
 
 
 	it 'should properly map variable bindings to the separated CSS selectors', () ->
@@ -226,6 +226,23 @@ window.fashiontests.actualizer.js = ()->
 
 		expect(FASHION.variables["padding"].dependents[0]).toEqual(['s',0,'padding'])
 		expect(FASHION.variables["padding"].dependents[1]).toEqual(['i',1,'paddingLeft'])
+
+
+	it 'should not bind variables to other variables', () ->
+		{js} = actualize process parse """
+			$padding: 10px;
+			$width: 1000px - 2 * $padding;
+			div {
+				width: $width;
+			}
+			"""
+
+		window.FASHION = {}
+		eval(js)
+
+		console.log FASHION.variables
+		expect(FASHION.variables["padding"].dependents.length).toBe(1);
+		expect(FASHION.variables["padding"].dependents[0]).toEqual(['v','width','0']);
 
 
 	it 'should properly map global bindings to the separated CSS selectors', () ->

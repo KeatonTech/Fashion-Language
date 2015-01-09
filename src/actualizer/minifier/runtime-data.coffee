@@ -6,14 +6,14 @@ window.fashion.$actualizer.minifier =
 		$wfam = window.fashion.$actualizer.minifier
 		sid = iid = 0
 		[
-			($wfam.selector(id, s, sid++) for id,s of runtimeData.selectors),
+			($wfam.selector(id, s) for id,s of runtimeData.selectors),
 			($wfam.variable(v) for id,v of runtimeData.variables),
-			($wfam.selector(id, s, iid++) for id,s of runtimeData.individual)
+			($wfam.selector(id, s) for id,s of runtimeData.individual)
 		]
 
 	# Minify a single selector
 	# FORMAT: ['s', id, cssIndex, name, mode, properties]
-	selector: (id, selObj, cssId) ->
+	selector: (id, selObj) ->
 		$wfam = window.fashion.$actualizer.minifier
 		if !selObj or not (selObj instanceof Selector) then return
 
@@ -24,11 +24,11 @@ window.fashion.$actualizer.minifier =
 
 		# Go through each property
 		properties = []
-		for pid, rawProperty of selObj.properties when pid isnt 'length'
+		for pid, rawProperty of selObj.properties
 			properties.push $wfam.property rawProperty
 
 		# Return the selector object
-		return ["s", parseInt(id), cssId, name, selObj.mode, properties]
+		return ["s", parseInt(id), selObj.rule, name, selObj.mode, properties]
 
 
 	# Minify a single property

@@ -83,8 +83,9 @@ fs.readFile inputFile, (err, data) ->
 		# Add all the other non-fashion JS stuff (semicolon added for safety)
 		js += ";" + auxjs
 
-		# Make the js smaller
+		# Make the js smaller but keep the header
 		js = require("uglify-js").minify(js, {fromString: true}).code
+		js = window.fashion.$actualizer.jsHeader + js
 
 		# Turn everything into one nice HTML file
 		html = inlineStylesAndScripts strippedHTML, css, js

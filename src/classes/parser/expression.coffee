@@ -43,6 +43,7 @@ class ExpressionBindings
 
 	# Add another binding object to this one
 	extend: (bindingObject) ->
+		if !bindingObject? or !bindingObject.variables? then return
 		ext = (list,v) -> if !(v in list) then list.push v
 
 		ext(@variables, v) for v in bindingObject.variables

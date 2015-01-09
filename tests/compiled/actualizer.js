@@ -480,8 +480,8 @@
       expect(divIndividual.properties[0].name).toBe("background-color");
       expect(divIndividual.properties[1].name).toBe("on-click");
       pIndividual = window.FASHION.individual[1];
-      expect(pIndividual.properties[0].name).toBe("left");
-      return expect(pIndividual.properties[1].name).toBe("top");
+      expect(pIndividual.properties[0].name).toBe("top");
+      return expect(pIndividual.properties[1].name).toBe("left");
     });
     it('should properly map variable bindings to the separated CSS selectors', function() {
       var js;
@@ -519,6 +519,15 @@
       eval(js);
       expect(FASHION.variables["padding"].dependents[0]).toEqual(['s', 0, 'padding']);
       return expect(FASHION.variables["padding"].dependents[1]).toEqual(['i', 1, 'paddingLeft']);
+    });
+    it('should not bind variables to other variables', function() {
+      var js;
+      js = actualize(process(parse("$padding: 10px;\n$width: 1000px - 2 * $padding;\ndiv {\n	width: $width;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      console.log(FASHION.variables);
+      expect(FASHION.variables["padding"].dependents.length).toBe(1);
+      return expect(FASHION.variables["padding"].dependents[0]).toEqual(['v', 'width', '0']);
     });
     return it('should properly map global bindings to the separated CSS selectors', function() {
       var js;

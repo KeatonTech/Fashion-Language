@@ -10,7 +10,7 @@ window.fashion.$actualizer.createCSS = (runtimeData, cssSelectors) ->
 
 		# Convert each property to a CSS string
 		cssProperties = []
-		for pid,property of selector.properties when pid isnt 'length'
+		for pid,property of selector.properties
 			if !property.value? then console.log selector
 
 			# These properties cannot be calculated at compile time

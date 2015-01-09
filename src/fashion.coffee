@@ -29,7 +29,7 @@ THE SOFTWARE.
 $wf = window.fashion = {
 
 	# Library metadata
-	version: "0.3"
+	version: "0.3.1"
 	url: "http://writefashion.org"
 	author: "Keaton Brandt"
 

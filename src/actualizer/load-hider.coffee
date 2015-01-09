@@ -2,7 +2,9 @@ window.fashion.$actualizer.hideIndividualizedSelectors =
 (cssSelectors, scripts, indSels) ->
 
 	# Get all of the selectors that need to be hidden
-	hideSelectors = (selector.name for id,selector of indSels)
+	hideSelectors = []
+	for id,selector of indSels when typeof selector.name is 'string'
+		hideSelectors.push selector.rawName 
 	if !hideSelectors or hideSelectors.length < 1 then return
 
 	# Combine them into one super massive joined selector
@@ -15,7 +17,7 @@ window.fashion.$actualizer.hideIndividualizedSelectors =
 
 	# Figure out how many selectors there are so one can be added to the end
 	len = 0
-	len++ for key, value in cssSelectors
+	len++ for key, value of cssSelectors
 
 	# Add a script to remove this super selector at runtime
 	scripts.push	"""

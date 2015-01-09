@@ -1,7 +1,12 @@
 # Add mapped bindings to globals and variables
 window.fashion.$actualizer.addBindings = (runtimeData, jsSels, indSels) ->
+
+	# CSS Properties can depend on variables
 	$wf.$actualizer.bindSelectors runtimeData, jsSels, "s"
 	$wf.$actualizer.bindSelectors runtimeData, indSels, "i"
+
+	# Variables can also depend on variables
+	$wf.$actualizer.bindVariables runtimeData
 
 
 # Go through each selector and bind any expressions
@@ -40,6 +45,19 @@ window.fashion.$actualizer.bindSelectors = (runtimeData, selectors, sheet) ->
 
 			else if property.value instanceof Expression
 				$wf.$actualizer.bindExpression runtimeData, property.value, bindLink
+
+
+# Go through each variable and bind any expressions
+window.fashion.$actualizer.bindVariables = (runtimeData) ->
+	for varName, vObj of runtimeData.variables
+
+		# Variables can be bound to different things in different scopes
+		for scope, scopeValue of vObj.values
+
+			# If the variable's value is an expression, it can depend on other variables
+			if scopeValue instanceof Expression
+				bindLink = ["v", varName, scope]
+				$wf.$actualizer.bindExpression runtimeData, scopeValue, bindLink
 
 
 # Add bindings from an expression
