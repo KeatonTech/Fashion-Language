@@ -1,6 +1,7 @@
 $wf.addRuntimeModule "elements", [],
 
 	elementFunction: (element)-> (property, keyword) =>
+		if !element? then return
 
 		# Return the element directly
 		if !property? and keyword? then return element

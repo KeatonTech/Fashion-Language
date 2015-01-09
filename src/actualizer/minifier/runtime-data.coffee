@@ -2,34 +2,39 @@
 window.fashion.$actualizer.minifier =
 
 	# Convert the runtime data object into much smaller nested arrays
-	runtimeData: (runtimeData) -> [
-		($wf.$actualizer.minifier.selector(id,s) for id,s of runtimeData.selectors),
-		($wf.$actualizer.minifier.variable(v) for id,v of runtimeData.variables),
-		($wf.$actualizer.minifier.selector(id,s) for id,s of runtimeData.individual)
-	]
+	runtimeData: (runtimeData) -> 
+		$wfam = window.fashion.$actualizer.minifier
+		sid = iid = 0
+		[
+			($wfam.selector(id, s) for id,s of runtimeData.selectors),
+			($wfam.variable(v) for id,v of runtimeData.variables),
+			($wfam.selector(id, s) for id,s of runtimeData.individual)
+		]
 
 	# Minify a single selector
-	# FORMAT: ['s', id, name, mode, properties]
+	# FORMAT: ['s', id, cssIndex, name, mode, properties]
 	selector: (id, selObj) ->
+		$wfam = window.fashion.$actualizer.minifier
 		if !selObj or not (selObj instanceof Selector) then return
 
 		# The name can either be a constant value or an expression
 		if selObj.name instanceof Expression
-			name = $wf.$actualizer.minifier.expression selObj.name
+			name = $wfam.expression selObj.name
 		else name = selObj.name
 
 		# Go through each property
 		properties = []
-		for rawProperty in selObj.properties
-			properties.push $wf.$actualizer.minifier.property rawProperty
+		for pid, rawProperty of selObj.properties
+			properties.push $wfam.property rawProperty
 
 		# Return the selector object
-		return ["s", parseInt(id), name, selObj.mode, properties]
+		return ["s", parseInt(id), selObj.rule, name, selObj.mode, properties]
 
 
 	# Minify a single property
 	# FORMAT: ['p', name, mode, value]
 	property: (propObj) ->
+		$wfam = window.fashion.$actualizer.minifier
 		if !propObj or not (propObj instanceof Property) then return
 
 		# Array of values (multipart and multi-value)
@@ -38,12 +43,12 @@ window.fashion.$actualizer.minifier =
 			value = []
 			for subVal in propObj.value
 				if subVal instanceof Expression
-					value.push $wf.$actualizer.minifier.expression subVal
+					value.push $wfam.expression subVal
 				else value.push subVal 
 
 		# Nope, just a normal property
 		else if propObj.value instanceof Expression
-			value = $wf.$actualizer.minifier.expression propObj.value
+			value = $wfam.expression propObj.value
 		else value = propObj.value
 
 		# Return the selector object
@@ -62,18 +67,19 @@ window.fashion.$actualizer.minifier =
 	# Minify a runtime variable object
 	# FORMAT: ['v', name, type, unit, default, dependents, scopes?, values?]
 	variable: (varObj) ->
+		$wfam = window.fashion.$actualizer.minifier
 		if !varObj or not (varObj instanceof RuntimeVariable) then return
 
 		# The default value can either be a constant value or an expression
 		if varObj.default instanceof Expression
-			defaultVal = $wf.$actualizer.minifier.expression varObj.default
+			defaultVal = $wfam.expression varObj.default
 		else defaultVal = varObj.default
 
 		# Go through each value and condense them into expressions if necessary
 		values = []
 		for v in varObj.values
 			if v instanceof Expression
-				values.push $wf.$actualizer.minifier.expression v
+				values.push $wfam.expression v
 			else values.push v
 
 		# Return the selector object

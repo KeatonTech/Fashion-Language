@@ -6,7 +6,7 @@
 # NOTE(keatontech): Yes, this is a very long function that violates the 40 line rule.
 # I'm accepting suggestions for how to fix that.
 window.fashion.$parser.parseExpression = 
-(expString, bindingLink, parseTree, funcs, globals, top = true, suppressUnits = false) ->
+(expString, parseTree, funcs, globals, top = true, suppressUnits = false) ->
 
 	expander = $wf.$parser.expressionExpander
 	matchParens = window.fashion.$parser.matchParenthesis
@@ -14,6 +14,7 @@ window.fashion.$parser.parseExpression =
 	# Create some space
 	script = expString; 
 	mode = $wf.$runtimeMode.static
+	bindings = new ExpressionBindings
 
 	# Track the types and units of things included in the expression
 	types = []; units = []
@@ -48,7 +49,7 @@ window.fashion.$parser.parseExpression =
 
 		# Sets a local variable (top-level or scoped)
 		if section[2]
-			eObj = expander.localVariable section[2], bindingLink, parseTree, true
+			eObj = expander.localVariable section[2], parseTree, true
 			isSetter = true
 
 		# @self, @this or @parent objects
@@ -56,11 +57,11 @@ window.fashion.$parser.parseExpression =
 
 		# Local variable (top-level or scoped)
 		else if section[5]
-			eObj = expander.localVariable section[5], bindingLink, parseTree
+			eObj = expander.localVariable section[5], parseTree
 
 		# Global variable
 		else if section[6]
-			eObj = expander.globalVariable section[6], bindingLink, globals, parseTree
+			eObj = expander.globalVariable section[6], globals, parseTree
 
 		# Number with unit (constant)
 		else if section[7] then eObj = expander.numberWithUnit section[7]
@@ -79,7 +80,7 @@ window.fashion.$parser.parseExpression =
 			if tailingUnit then length += tailingUnit.length
 
 			# Wow this function has a lot of arguments!
-			eObj = expander.function(section[10], contained, tailingUnit, bindingLink, 
+			eObj = expander.function(section[10], contained, tailingUnit, 
 				parseTree, funcs, globals)
 
 
@@ -89,6 +90,7 @@ window.fashion.$parser.parseExpression =
 		# Handle the expanded object (eObj)
 		if eObj.script then replaceInScript start, length, eObj.script
 		if eObj.mode then mode |= eObj.mode
+		if eObj.bindings then bindings.extend eObj.bindings
 
 		types.push(if eObj.type is undefined then $wf.$type.Unknown else eObj.type)
 		units.push(eObj.unit || '')
@@ -104,7 +106,7 @@ window.fashion.$parser.parseExpression =
 	script = $wf.$parser.wrapExpressionScript script, top, type, unit, suppressUnits
 	
 	# Return something useful for the parser
-	expr = new Expression script, type, unit, mode
+	expr = new Expression script, type, unit, bindings, mode
 	if top then expr.generate() # Create a function based on the script
 	return expr
 
@@ -174,7 +176,7 @@ window.fashion.$parser.determineExpressionType = (types, units, expression) ->
 window.fashion.$parser.expressionExpander =
 
 	# Expand local variables
-	localVariable: (name, bindingLink, parseTree, isSetter = false) ->
+	localVariable: (name, parseTree, isSetter = false) ->
 		vars = parseTree.variables
 		selectors = vars[name]
 		if !selectors then return console.log "[FASHION] Variable $#{name} does not exist."
@@ -194,35 +196,35 @@ window.fashion.$parser.expressionExpander =
 
 		else
 			# Link this variable in the parse tree
-			parseTree.addVariableBinding bindingLink, name
+			bindings = new ExpressionBindings "variable", name
 			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value"
 
 		# Has to account for the fact that variables can also be expressions
 		mode = if isIndividual then mode | $wf.$runtimeMode.individual else mode
-		return new Expression script, type, unit, mode
+		return new Expression script, type, unit, bindings, mode
 
 
 	# Expand global variables
-	globalVariable: (name, bindingLink, globals, parseTree) ->
+	globalVariable: (name, globals, parseTree) ->
 		name = name.toLowerCase()
 		vObj = globals[name]
 		if !vObj then return console.log "[FASHION] Variable $#{name} does not exist."
 
 		# Add a global-module dependency
 		parseTree.addGlobalDependency name, vObj
-		parseTree.addGlobalBinding bindingLink, name
+		bindings = new ExpressionBindings "global", name
 
 		script = "g.#{name}.get()"
-		return new Expression script, vObj.type, vObj.unit, vObj.mode
+		return new Expression script, vObj.type, vObj.unit, bindings, vObj.mode
 
 
 	# Expand numbers with units
 	numberWithUnit: (value) ->
 		numberType = window.fashion.$type.Number
-		staticMode = $wf.$runtimeMode.static
+		mstatic = $wf.$runtimeMode.static
 		unitValue = window.fashion.$shared.getUnit(value, numberType, $wf.$type, $wf.$unit)
 		if unitValue.value is NaN then unitValue.value = 0
-		return new Expression unitValue.value, numberType, unitValue.unit, staticMode
+		return new Expression unitValue.value, numberType, unitValue.unit, false, mstatic
 
 
 	# Expand relative object references (disguised as globals)
@@ -251,11 +253,11 @@ window.fashion.$parser.expressionExpander =
 		# If there's no property, make it return the object itself
 		else script = "e(void 0, #{JSON.stringify keyword})"
 
-		return new Expression script, type, unit, $wf.$runtimeMode.individual
+		return new Expression script, type, unit, false, $wf.$runtimeMode.individual
 
 
 	# Expand functions, which involves expanding any arguments of theirs into expressions
-	function: (name, argumentsString, inputUnit, bindingLink, parseTree, funcs, globals) ->
+	function: (name, argumentsString, inputUnit, parseTree, funcs, globals) ->
 		vars = parseTree.variables
 
 		# Make sure the function actually exists before continuing on
@@ -273,13 +275,13 @@ window.fashion.$parser.expressionExpander =
 				if argComponents = arg.match /([a-zA-Z0-9\-\'\"]+)\s*\:\s*(.*)/
 					objectProp = "'#{argComponents[1]}': "
 					objectProp += window.fashion.$parser.parseExpression(
-						argComponents[2], bindingLink, parseTree, funcs, globals, 0).script
+						argComponents[2], parseTree, funcs, globals, 0).script
 					namedArgs.push objectProp
 
 				# Normal argument
 				else
 					expressions.push window.fashion.$parser.parseExpression(
-						arg, bindingLink, parseTree, funcs, globals, false)
+						arg, parseTree, funcs, globals, false)
 
 			# Add the named arguments as an object at the end
 			if namedArgs.length > 0 then expressions.push script: "{#{namedArgs.join(',')}}"
@@ -289,9 +291,11 @@ window.fashion.$parser.expressionExpander =
 		# Bundle everything together
 		scripts = ["t"]
 		mode = fObj.mode
+		bindings = new ExpressionBindings
 		for expr in expressions when expr.script?
 			mode |= expr.mode
 			scripts.push expr.script
+			bindings.extend expr.bindings
 
 		# Figure out the return units of the function
 		if fObj.unit isnt "" then unit = fObj.unit
@@ -303,4 +307,4 @@ window.fashion.$parser.expressionExpander =
 
 		# Return a neat little package
 		script = "f['#{name}'].get.call(#{scripts.join(',')})"
-		return new Expression script, fObj.type, inputUnit || unit, mode
+		return new Expression script, fObj.type, inputUnit || unit, bindings, mode

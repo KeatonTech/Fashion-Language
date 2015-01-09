@@ -19,10 +19,9 @@ window.fashiontests.actualizer.js = ()->
 		eval(js)
 
 		expect(window.FASHION.variables.colorVar.default).toBe('blue')
-		expect(window.FASHION.selectors[0]).toBeUndefined()
-		expect(window.FASHION.selectors[1].name).toBe('body')
-		expect(window.FASHION.selectors[1].properties.length).toBe(1)
-		expect(window.FASHION.selectors[1].properties[0].name).toBe('background-color')
+		expect(window.FASHION.selectors[0].name).toBe('body')
+		expect(window.FASHION.selectors[0].properties.length).toBe(1)
+		expect(window.FASHION.selectors[0].properties[0].name).toBe('background-color')
 
 
 	# NOTE: These next 3 expectations depend on method names from runtime code,
@@ -129,12 +128,10 @@ window.fashiontests.actualizer.js = ()->
 
 		# Temporary layout given by current regrouper
 		divIndividual = window.FASHION.individual[0]
-		expect(divIndividual.properties[0].name).toBe("on-click")
-
-		divIndividual = window.FASHION.individual[1]
 		expect(divIndividual.properties[0].name).toBe("background-color")
+		expect(divIndividual.properties[1].name).toBe("on-click")
 
-		pIndividual = window.FASHION.individual[2]
+		pIndividual = window.FASHION.individual[1]
 		expect(pIndividual.properties[0].name).toBe("top")
 		expect(pIndividual.properties[1].name).toBe("left")
 
@@ -155,7 +152,26 @@ window.fashiontests.actualizer.js = ()->
 		window.FASHION = {}
 		eval(js)
 
-		expect(FASHION.variables["padding"].dependents).toEqual([1,3])
+		expect(FASHION.variables["padding"].dependents[0]).toEqual(['s',0,'padding'])
+		expect(FASHION.variables["padding"].dependents[1]).toEqual(['s',1,'padding'])
+
+
+	it 'should properly map selector variable bindings to the separated CSS selectors', () ->
+		{js} = actualize process parse """
+			$id: test;
+			body {
+				color: blue;
+			}
+			#$id {
+				color: white;
+			}
+			"""
+
+		window.FASHION = {}
+		eval(js)
+
+		# Make sure it's linked up right
+		expect(FASHION.variables["id"].dependents[0]).toEqual(['s',1])
 
 
 	it 'should leave out static variables', () ->
@@ -201,14 +217,32 @@ window.fashiontests.actualizer.js = ()->
 			}
 			p {
 				pin: center;
-				padding-left: @self.leftOffset + $padding;
+				padding-left: @self.left + $padding;
 			}
 			"""
 
 		window.FASHION = {}
 		eval(js)
 
-		expect(FASHION.variables["padding"].dependents).toEqual([1,'i0'])
+		expect(FASHION.variables["padding"].dependents[0]).toEqual(['s',0,'padding'])
+		expect(FASHION.variables["padding"].dependents[1]).toEqual(['i',1,'paddingLeft'])
+
+
+	it 'should not bind variables to other variables', () ->
+		{js} = actualize process parse """
+			$padding: 10px;
+			$width: 1000px - 2 * $padding;
+			div {
+				width: $width;
+			}
+			"""
+
+		window.FASHION = {}
+		eval(js)
+
+		console.log FASHION.variables
+		expect(FASHION.variables["padding"].dependents.length).toBe(1);
+		expect(FASHION.variables["padding"].dependents[0]).toEqual(['v','width','0']);
 
 
 	it 'should properly map global bindings to the separated CSS selectors', () ->
@@ -223,4 +257,5 @@ window.fashiontests.actualizer.js = ()->
 		window.FASHION = {}
 		eval(js.replace(/FSREADY\(/g,"FSREADYTEST("))
 
-		expect(FASHION.modules.globals["height"].dependents).toEqual([1])
+		expect(FASHION.modules.globals["height"].dependents[0]).toEqual(['s',0,'width'])
+		expect(FASHION.modules.globals["height"].dependents[1]).toEqual(['s',0,'height'])

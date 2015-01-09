@@ -35,8 +35,9 @@ window.fashion.$actualizer.determineRuntimeCapabilities = (runtimeData, selector
 # Test the runtime data to see if it has a selector block with the given mode
 window.fashion.$actualizer.hasPropertyMode = (selectors, mode) ->
 	for id, selectorBlock of selectors
-		if selectorBlock.mode is mode
-			return true
+		for pid, property of selectorBlock.properties
+			if (property.mode & mode) is mode
+				return true
 	return false
 
 

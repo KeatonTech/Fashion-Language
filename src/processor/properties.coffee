@@ -4,11 +4,11 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 	rmode = $wf.$runtimeMode
 
 	# Go through each selector (yes, this is tedious)
-	for selector in parseTree.selectors
+	for sid,selector of parseTree.selectors
 
 		# Go through each property (I know, I'm bored already)
 		index = -1
-		for property in selector.properties
+		for pid,property of selector.properties
 			index++
 			propertyModule = propertyModules[property.name]
 
@@ -21,7 +21,7 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 					throwError: funcs.throwError.bind 0, property
 					setProperty: funcs.setProperty.bind 0, selector, index
 					getProperty: funcs.getProperty.bind 0, parseTree, selector.name
-					parseValue: funcs.parseValue
+					parseValue: funcs.parseValue.bind 0, parseTree, [sid,pid]
 					determineType: funcs.determineType
 					determineUnit: funcs.determineUnit
 
@@ -35,7 +35,7 @@ window.fashion.$processor.properties = (parseTree, propertyModules) ->
 					propertyModules[property.name].compile.call API, property.value
 
 					# Remove it if necessary
-					if propertyModule.replace then selector.properties.splice index--, 1
+					if propertyModule.replace then selector.deleteProperty index--
 
 
 	# Pass it back

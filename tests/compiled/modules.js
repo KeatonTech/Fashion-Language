@@ -49,13 +49,15 @@
       return expect(transitions['my-transition']['50% - 100%'][0].name).toBe(".class2");
     });
     it("should be able to read variables defined outside", function() {
-      var parseTree, transitions;
+      var endProperty, parseTree, startProperty, transitions;
       parseTree = process(parse("$offColor: #336;\n$onColor: #da0;\n\n@transition highlight {\n	0% {\n		#item {background-color: $offColor;}\n	}\n	100% {\n		#item {background-color: $onColor;}\n	}\n}"));
       transitions = parseTree.dependencies.blocks.transition.runtimeObject.transitions;
-      expect(transitions['highlight']['0%'][0].properties[0].value.script).toBeDefined();
-      expect(transitions['highlight']['100%'][0].properties[0].value.script).toBeDefined();
-      expect(parseTree.bindings.variables["offColor"]).toEqual([]);
-      return expect(parseTree.bindings.variables["onColor"]).toEqual([]);
+      startProperty = transitions['highlight']['0%'][0].properties[0];
+      endProperty = transitions['highlight']['100%'][0].properties[0];
+      expect(startProperty.value.script).toBeDefined();
+      expect(endProperty.value.script).toBeDefined();
+      expect(startProperty.value.bindings.variables[0]).toBe("offColor");
+      return expect(endProperty.value.bindings.variables[0]).toBe("onColor");
     });
     return it("should be able to read variables defined inside", function() {
       var parseTree, transitions;

@@ -1,9 +1,8 @@
 # Generate a runtime data object from homogenous selectors and a parse tree
-window.fashion.$actualizer.generateRuntimeData = 
-(parseTree, jsSelectors, individual, cssMap) ->
+window.fashion.$actualizer.generateRuntimeData = (parseTree, jsSelectors, individual) ->
 
 	# Turn the parse tree's variables into runtime object variables and map the dependents
-	vars = $wf.$actualizer.actualizeVariables parseTree, jsSelectors, individual, cssMap
+	vars = $wf.$actualizer.actualizeVariables parseTree, jsSelectors, individual
 
 	# Create the runtime data object
 	rdata = new RuntimeData parseTree, jsSelectors, vars
@@ -16,8 +15,7 @@ window.fashion.$actualizer.generateRuntimeData =
 
 
 # Converts the parser's variable objects into runtime variable objects.
-window.fashion.$actualizer.actualizeVariables =
-(parseTree, jsSelectors, individual, cssMap) ->
+window.fashion.$actualizer.actualizeVariables = (parseTree, jsSelectors, individual) ->
 	variables = {}
 	for varName, scopes of parseTree.variables
 
@@ -35,12 +33,6 @@ window.fashion.$actualizer.actualizeVariables =
 		# Add each scope
 		for name, varObj of scopes
 			rvar.addScope name, varObj.value 
-
-		# Add the dependencies, mapped to the split up selector blocks
-		if mode > 0
-			bindings = parseTree.bindings.variables[varName]
-			rvar.dependents = $wf.$actualizer.mapBindings(
-				bindings, jsSelectors, individual, cssMap)
 
 		# Store this variable
 		variables[varName] = rvar

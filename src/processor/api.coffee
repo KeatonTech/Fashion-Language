@@ -41,9 +41,9 @@ window.fashion.$processor.api =
 
 
 	# Parse a value
-	parseValue: (value) ->
+	parseValue: (parseTree, bindLink, value) ->
 		if !value or typeof value isnt "string" then return ""
-		return $wf.$parser.parseSingleValue value
+		return $wf.$parser.parseSingleValue value, bindLink, parseTree
 
 	# Get the type of a value expressed as a string
 	determineType: (value) ->

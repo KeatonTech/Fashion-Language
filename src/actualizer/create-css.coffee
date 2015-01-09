@@ -10,7 +10,8 @@ window.fashion.$actualizer.createCSS = (runtimeData, cssSelectors) ->
 
 		# Convert each property to a CSS string
 		cssProperties = []
-		for property in selector.properties
+		for pid,property of selector.properties
+			if !property.value? then console.log selector
 
 			# These properties cannot be calculated at compile time
 			if (selector.mode & $wf.$runtimeMode.globalDynamic) > 2 then continue
@@ -49,7 +50,8 @@ window.fashion.$actualizer.separateTransitions = (parseTree) ->
 		transitions = []
 
 		# Go through each property 
-		for property in selector.properties
+		for pid,property of selector.properties
+			if pid is "length" then continue
 			if property.value.transition
 				pt = property.value.transition
 				pt.property = property.name

@@ -2,7 +2,7 @@
 window.fashion.$parser.addVariable = (parseTree, name, value, flag, scope) ->
 
 	# Parse the value into an expression if necessary
-	value = $wf.$parser.parseSingleValue(value, "$"+name, parseTree, true)
+	value = $wf.$parser.parseSingleValue(value, parseTree, true)
 
 	# Make a variable object
 	variableObject = new Variable name, value, scope

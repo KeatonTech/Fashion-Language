@@ -29,6 +29,10 @@ class Selector
 		if !property.id then property.id = @properties.length
 		@properties.splice index, 0, property
 
+	# Delete property
+	deleteProperty: (index) ->
+		@properties.splice index, 1
+
 	# ITERATION
 	# Run a function for each property with a given name
 	forEachPropertyNamed: (name, run)->

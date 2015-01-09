@@ -126,7 +126,8 @@ window.fashion.$parser.createSelector = (parseTree, name) ->
 	if name.indexOf("$") == -1 then return selector
 
 	# Little mini expression generator going on here
-	isIndividualized = false; script = "return "; lastIndex = 0
+	script = "return "; lastIndex = 0
+	bindings = new ExpressionBindings()
 
 	# Search for variable names
 	regex = /\$([\w\-]+)/g
@@ -139,10 +140,10 @@ window.fashion.$parser.createSelector = (parseTree, name) ->
 
 		# Create a variable sub-expression
 		expander = $wf.$parser.expressionExpander.localVariable
-		vExpr = expander foundVar[1], selector.index, parseTree
+		vExpr = expander foundVar[1], parseTree
 
 		# Use its results
-		isIndividualized |= (vExpr['individualized'] || false)
+		bindings.extend vExpr.bindings
 		script += vExpr.script + "+"
 
 	# Add the end of the string if necessary
@@ -150,8 +151,8 @@ window.fashion.$parser.createSelector = (parseTree, name) ->
 
 	# Make an expression from this whole mess
 	trimmed = script.substr(0, script.length - 1)
-	selector.mode = $wf.$runtimeMode.dynamic
-	selector.name = new Expression(trimmed, $wf.$type.String, 0, true, isIndividualized)
+	dmode = selector.mode = $wf.$runtimeMode.dynamic
+	selector.name = new Expression(trimmed, $wf.$type.String, 0, bindings, dmode)
 	selector.name.generate()
 	return selector
 

@@ -1,78 +1,88 @@
-# Add dependencies to each variable/module object, based on homogenous selectors
-window.fashion.$actualizer.mapBindings = (bindings, selectors, individual, map) ->
-	rmode = $wf.$runtimeMode
+# Add mapped bindings to globals and variables
+window.fashion.$actualizer.addBindings = (runtimeData, jsSels, indSels) ->
 
-	if !bindings then return
-	hDependents = []
-	bindingTree = $wf.$actualizer.createBindingTree bindings
-	for selectorOrName, values of bindingTree
+	# CSS Properties can depend on variables
+	$wf.$actualizer.bindSelectors runtimeData, jsSels, "s"
+	$wf.$actualizer.bindSelectors runtimeData, indSels, "i"
 
-		# Variable bindings don't need to be mapped
-		if selectorOrName[0] is "$"
-			hDependents.push selectorOrName
+	# Variables can also depend on variables
+	$wf.$actualizer.bindVariables runtimeData
 
-		# Selector bindings
+
+# Go through each selector and bind any expressions
+window.fashion.$actualizer.bindSelectors = (runtimeData, selectors, sheet) ->
+	tmode = $wf.$runtimeMode.triggered
+
+	# Loopdie loopdie loop
+	for sid, selector of selectors
+
+		# Check to see if the selector is dynamic
+		if selector.name instanceof Expression
+			bindLink = [sheet, parseInt(sid)]
+			$wf.$actualizer.bindExpression runtimeData, selector.name, bindLink
+
+		# Go through each property
+		for pid, property of selector.properties
+
+			# Ignore triggered properties
+			if (property.mode & tmode) is tmode then continue
+
+			# Generate the bind link, an array with the necessary data for runtime
+			bindLink = [sheet, parseInt(sid), $wf.$actualizer.makeCamelCase property.name]
+
+			# Go through pulling all the expressions out of the property value
+			if property.value instanceof Array
+				for csval in property.value
+
+					if csval instanceof Array
+						for ccmp in csval
+
+							if ccmp instanceof Expression
+								$wf.$actualizer.bindExpression runtimeData, ccmp, bindLink
+
+					else if csval instanceof Expression
+						$wf.$actualizer.bindExpression runtimeData, csval, bindLink
+
+			else if property.value instanceof Expression
+				$wf.$actualizer.bindExpression runtimeData, property.value, bindLink
+
+
+# Go through each variable and bind any expressions
+window.fashion.$actualizer.bindVariables = (runtimeData) ->
+	for varName, vObj of runtimeData.variables
+
+		# Variables can be bound to different things in different scopes
+		for scope, scopeValue of vObj.values
+
+			# If the variable's value is an expression, it can depend on other variables
+			if scopeValue instanceof Expression
+				bindLink = ["v", varName, scope]
+				$wf.$actualizer.bindExpression runtimeData, scopeValue, bindLink
+
+
+# Add bindings from an expression
+window.fashion.$actualizer.bindExpression = (runtimeData, expression, bindLink) ->
+
+	# Add variable bindings
+	for varName in expression.bindings.variables
+		vObj = runtimeData.variables[varName]
+		if !vObj
+			console.log "[FASHION] Could not bind to nonexistent variable: '#{varName}'"
 		else
-			selectorOrName = parseInt selectorOrName # We know it's a selector now
-			if !map[selectorOrName] then continue
-			for selectorId in map[selectorOrName]
+			vObj.addDependent bindLink
 
-				# We should get rid of static properties; the JS doesn't know about those
-				if typeof selectorId is "number"
-					selector = selectors[selectorId]
-
-					# Triggered properties don't need to be bound
-					if !selector or (selector.mode & rmode.triggered) is rmode.triggered
-						continue
-
-					if selector.mode isnt rmode.static then hDependents.push selectorId
-
-				# If it's a string, it's probably an individual property
-				# We have to test these to see if they actually depend on the variable
-				else
-					selector = individual[parseInt(selectorId.substr(1))]
-
-					if !selector
-						console.log "[FASHION] Selector at #{selectorId} does not exist"
-						continue
-
-					if (selector.mode & rmode.triggered) is rmode.triggered then continue
-
-					if values is true
-						hDependents.push selectorId
-
-					else 
-						depends = false
-						for property in selector.properties
-							if property.id in values then depends = true
-						if depends then hDependents.push selectorId
-
-	return hDependents
-
-
-# Convert the list of property bindings (like: [1,1], [1,2], [2,4]) into a more useful
-# tree structure (like: {1: [1,2], 2: [4]}). This is another example where the parse
-# format, though nice and simple for sake of the parser's code structure (and my
-# personal vendetta on object oriented programming), sometimes needs some help.
-window.fashion.$actualizer.createBindingTree = (bindings) ->
-	bindingTree = {}
-	for bindingLink in bindings
-		if bindingLink instanceof Array and bindingLink.length is 2
-			if !bindingTree[bindingLink[0]] then bindingTree[bindingLink[0]] = []
-			bindingTree[bindingLink[0]].push bindingLink[1]
+	# Add global bindings
+	for globalName in expression.bindings.globals
+		gObj = runtimeData.modules.globals[globalName]
+		if !gObj
+			console.log "[FASHION] Could not bind to nonexistent global: '#{varName}'"
 		else
-			bindingTree[bindingLink] = true
-	return bindingTree
+			if !gObj.dependents? then gObj.dependents = []
+			if bindLink in gObj.dependents then continue
+			gObj.dependents.push bindLink
 
 
-# Generate dependents for globals and other modules
-window.fashion.$actualizer.addBindings = (runtimeData, parseTree, selectors, map) ->
-	$wf.$actualizer.bindGlobals runtimeData, parseTree.bindings.globals, selectors, map
-
-
-# Generate mapped dependent selectors for global modules
-window.fashion.$actualizer.bindGlobals = (runtimeData, globalBindings, selectors, map) ->
-	for name, global of runtimeData.modules.globals
-		bindings = globalBindings[name]
-		global.dependents = $wf.$actualizer.mapBindings(
-			bindings, selectors, runtimeData.individual, map)
+# Convert CSS names into JS names
+window.fashion.$actualizer.makeCamelCase = (cssName) ->
+	if !cssName? then return ""
+	cssName.replace /-([a-z])/gi, (full, letter) -> letter.toUpperCase();

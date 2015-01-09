@@ -29,6 +29,7 @@ window.fashion.$shared.getVariable =
 window.fashion.$shared.evaluate =
 (valueObject, variables, globals, funcs, runtime, element, cssMode = true) ->
 	isImportant = false
+	iMode = @runtimeModes?.individual || $wf?.$runtimeMode?.individual
 
 	# Evaluates a single value, not an array
 	evaluateSingleValue = (valueObject) =>
@@ -46,7 +47,11 @@ window.fashion.$shared.evaluate =
 
 		# Create the element property lookup function, if necessary
 		# This requires the 'elements' module to be installed and only works on runtime
-		if element? then elmLookup = @elementFunction element
+		if (valueObject.mode & iMode) is iMode or element?
+			if !element?
+				return @throwError "Expression requires element but none provided"
+			elmLookup = @elementFunction element
+			if !elmLookup? then return @throwError "Could not generate element function"
 
 		# Handle expressions
 		if valueObject.evaluate

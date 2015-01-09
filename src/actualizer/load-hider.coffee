@@ -1,18 +1,28 @@
 window.fashion.$actualizer.hideIndividualizedSelectors = 
 (cssSelectors, scripts, indSels) ->
 
-	removeSelectors = []
-	for selector in indSels
-		hideSel = new Selector selector.name, $wf.$runtimeMode.static
-		hideSel.addProperty new Property "visibility", "hidden"
-		removeSelectors.push cssSelectors.length
-		cssSelectors.push hideSel
+	# Get all of the selectors that need to be hidden
+	hideSelectors = []
+	for id,selector of indSels when typeof selector.name is 'string'
+		hideSelectors.push selector.rawName 
+	if !hideSelectors or hideSelectors.length < 1 then return
 
-	onLoadScript = 	"""FSREADY(function(){
-					ss = document.getElementById(FASHION.config.cssId);
-					rm = function(id){if(ss&&ss.sheet)ss.sheet.deleteRule(id);};
+	# Combine them into one super massive joined selector
+	joinedSelector = hideSelectors.join ","
+
+	# Build a new selector object that hides them
+	hideSel = new Selector joinedSelector, $wf.$runtimeMode.static
+	hideSel.addProperty new Property "visibility", "hidden"
+	cssSelectors["hs"] = hideSel
+
+	# Figure out how many selectors there are so one can be added to the end
+	len = 0
+	len++ for key, value of cssSelectors
+
+	# Add a script to remove this super selector at runtime
+	scripts.push	"""
+					FSREADY(function(){
+						ss = document.getElementById(FASHION.config.cssId);
+						if(ss&&ss.sheet)ss.sheet.deleteRule(#{len - 1});
+					});
 					"""
-	for id in removeSelectors.reverse()
-		onLoadScript += "rm(#{id});"
-
-	scripts.push onLoadScript + "})"

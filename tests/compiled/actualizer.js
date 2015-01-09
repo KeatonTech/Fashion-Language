@@ -7,74 +7,6 @@
 
 }).call(this);
 (function() {
-  window.fashiontests.actualizer.regrouper = function() {
-    var $wf, groupPropertiesWithMode, parse, process, regrouper;
-    $wf = window.fashion;
-    parse = window.fashion.$parser.parse;
-    process = window.fashion.$processor.process;
-    regrouper = window.fashion.$actualizer.regroupProperties;
-    groupPropertiesWithMode = window.fashion.$actualizer.groupPropertiesWithMode;
-    it("should group properties by mode", function() {
-      var parseTree, properties;
-      parseTree = process(parse("$dynamic: 'test';\nbody {\n	property1: $dynamic;\n	property2: static;\n	property3: random($dynamic);\n	property4: 10px;\n}"));
-      properties = parseTree.selectors[0].properties;
-      groupPropertiesWithMode(properties, $wf.$runtimeMode.dynamic);
-      expect(properties[0].name).toBe("property2");
-      expect(properties[1].name).toBe("property4");
-      expect(properties[2].name).toBe("property1");
-      return expect(properties[3].name).toBe("property3");
-    });
-    it("should avoid rearranging properties that would change how the CSS works", function() {
-      var parseTree, properties;
-      parseTree = process(parse("$dynamic: 10px;\nbody {\n	margin-top: $dynamic;\n	padding-top: $dynamic;\n	margin-bottom: $dynamic;\n	margin: 0 auto;\n	border-top: $dynamic;\n}"));
-      properties = parseTree.selectors[0].properties;
-      groupPropertiesWithMode(properties, $wf.$runtimeMode.dynamic);
-      expect(properties[0].name).toBe("margin-top");
-      expect(properties[1].name).toBe("margin-bottom");
-      expect(properties[2].name).toBe("margin");
-      expect(properties[3].name).toBe("padding-top");
-      return expect(properties[4].name).toBe("border-top");
-    });
-    it("should split a selector into multiple pieces grouped by mode", function() {
-      var expansionMap, newSelectors, parseTree, _ref;
-      parseTree = process(parse("$dynamic: 'test';\nbody {\n	property1: $dynamic;\n	property2: static;\n	property3: random($dynamic);\n	property4: @self.id;\n	property5: 10px;\n}"));
-      _ref = regrouper(parseTree), newSelectors = _ref.selectors, expansionMap = _ref.map;
-      expect(expansionMap.length).toBe(1);
-      expect(expansionMap[0]).toEqual([0, 1, 2]);
-      expect(newSelectors.length).toBe(3);
-      expect(newSelectors[0].properties.length).toBe(2);
-      expect(newSelectors[1].properties.length).toBe(2);
-      return expect(newSelectors[2].properties.length).toBe(1);
-    });
-    it("should continue to work even if properties cannot be fully grouped", function() {
-      var expansionMap, newSelectors, parseTree, _ref;
-      parseTree = process(parse("$dynamic: 'test';\nbody {\n	margin-top: $dynamic;\n	padding-top: $dynamic;\n	margin-bottom: $dynamic;\n	margin: 0 auto;\n	border-top: $dynamic;\n}"));
-      _ref = regrouper(parseTree), newSelectors = _ref.selectors, expansionMap = _ref.map;
-      expect(expansionMap.length).toBe(1);
-      expect(expansionMap[0]).toEqual([0, 1, 2]);
-      expect(newSelectors.length).toBe(3);
-      expect(newSelectors[0].properties.length).toBe(2);
-      expect(newSelectors[0].properties[0].mode).toBe($wf.$runtimeMode.dynamic);
-      expect(newSelectors[1].properties.length).toBe(1);
-      expect(newSelectors[1].properties[0].mode).toBe($wf.$runtimeMode["static"]);
-      expect(newSelectors[2].properties.length).toBe(2);
-      return expect(newSelectors[2].properties[0].mode).toBe($wf.$runtimeMode.dynamic);
-    });
-    return it("should work with multiple selectors", function() {
-      var expansionMap, newSelectors, parseTree, _ref;
-      parseTree = process(parse("$dynamic: 'test';\nbody {\n	property1: $dynamic;\n	property2: static;\n	property3: random($dynamic);\n	property4: @self.id;\n	property5: 10px;\n}"));
-      _ref = regrouper(parseTree), newSelectors = _ref.selectors, expansionMap = _ref.map;
-      expect(expansionMap.length).toBe(1);
-      expect(expansionMap[0]).toEqual([0, 1, 2]);
-      expect(newSelectors.length).toBe(3);
-      expect(newSelectors[0].properties.length).toBe(2);
-      expect(newSelectors[1].properties.length).toBe(2);
-      return expect(newSelectors[2].properties.length).toBe(1);
-    });
-  };
-
-}).call(this);
-(function() {
   window.fashiontests.actualizer.transitions = function() {
     var $wf, parse, prefixes, process, separateTransitions;
     $wf = window.fashion;
@@ -132,6 +64,146 @@
 
 }).call(this);
 (function() {
+  window.fashiontests.actualizer.components = function() {
+    var $wf, actualizer, rm;
+    $wf = window.fashion;
+    actualizer = $wf.$actualizer;
+    rm = window.fashion.$runtimeMode;
+    it("should accurately split properties", function() {
+      var combinedMode, css, individual, selectors, _ref;
+      combinedMode = rm.individual | rm.triggered;
+      selectors = [
+        {
+          name: "t1",
+          mode: 0,
+          properties: [
+            {
+              name: "t1p1",
+              mode: rm["static"]
+            }, {
+              name: "t1p2",
+              mode: rm.individual
+            }
+          ]
+        }, {
+          name: "t2",
+          mode: 1,
+          properties: [
+            {
+              name: "t2p1",
+              mode: rm.dynamic
+            }
+          ]
+        }, {
+          name: "t3",
+          mode: 0,
+          properties: [
+            {
+              name: "t3p1",
+              mode: combinedMode
+            }
+          ]
+        }
+      ];
+      _ref = actualizer.splitIndividual(selectors), css = _ref.cssSels, individual = _ref.individualSels;
+      expect(css[0]).toBeDefined();
+      expect(css[1]).toBeDefined();
+      expect(css[2]).not.toBeDefined();
+      expect(individual[0]).toBeDefined();
+      expect(individual[1]).not.toBeDefined();
+      expect(individual[2]).toBeDefined();
+      expect(css[0].properties.length).toBe(1);
+      expect(css[1].properties.length).toBe(1);
+      expect(individual[0].properties.length).toBe(1);
+      expect(individual[2].properties.length).toBe(1);
+      expect(css[0].properties[0].name).toBe("t1p1");
+      expect(css[1].properties[0].name).toBe("t2p1");
+      expect(individual[0].properties[0].name).toBe("t1p2");
+      return expect(individual[2].properties[0].name).toBe("t3p1");
+    });
+    return it("should convert CSS property names to JS", function() {
+      var convert;
+      convert = actualizer.makeCamelCase;
+      expect(convert()).toBe("");
+      expect(convert("margin")).toBe("margin");
+      expect(convert("margin-left")).toBe("marginLeft");
+      expect(convert("text-align")).toBe("textAlign");
+      expect(convert("border-width-right")).toBe("borderWidthRight");
+      expect(convert("-webkit-transform")).toBe("WebkitTransform");
+      return expect(convert("-webkit-border-radius")).toBe("WebkitBorderRadius");
+    });
+
+    /*
+    	These two functions no longer exist but I'm leaving their tests because they might be
+    	helpful for writing tests for the new system
+    
+    	it "should map bindings based on whether they are dynamic or individual", ()->
+    
+    		jsSels = {
+    			0: {properties: {
+    				0: {name: "width"}
+    				3: {name: "border-radius"}
+    			}},
+    			1: {properties: {
+    				0: {name: "border-color-top"}
+    			}},
+    		}
+    
+    		indSels = {
+    			0: {properties: {
+    				1: {name: "height"}
+    				2: {name: "background-color"}
+    			}},
+    			2: {properties: {
+    				0: {name: "-webkit-transform"}
+    			}},
+    		}
+    
+    		bindings = [[0,0],[0,2],"$var",[0,3],[1,0],[2,0]]
+    
+    		 * Run the dependency mapper
+    		deps = window.fashion.$actualizer.addBindings bindings, jsSels, indSels
+    		
+    		expect(deps.length).toBe(6)
+    		expect(deps[0]).toEqual(["s",0,"width"])
+    		expect(deps[1]).toEqual(["i",0,"backgroundColor"])
+    		expect(deps[2]).toEqual(["v","var"])
+    		expect(deps[3]).toEqual(["s",0,"borderRadius"])
+    		expect(deps[4]).toEqual(["s",1,"borderColorTop"])
+    		expect(deps[5]).toEqual(["i",2,"WebkitTransform"])
+    
+    
+    	it "should remove bindings to triggered properties", ()->
+    		jsSels = {
+    			0: {properties: {
+    				0: {name: "width", mode: 0}
+    			}},
+    			1: {properties: {
+    				0: {name: "height", mode: $wf.$runtimeMode.triggered}
+    			}},
+    		}
+    
+    		indSels = {
+    			0: {properties: {
+    				1: {name: "top", mode: $wf.$runtimeMode.triggered}
+    			}},
+    			2: {properties: {
+    				0: {name: "bottom", mode: 0}
+    			}},
+    		}
+    
+    		bindings = [[0,0],[0,1],[1,0],[2,0]]
+    		
+    		culled = window.fashion.$actualizer.removeTriggerBindings bindings, jsSels, indSels
+    
+    		expect(culled.length).toBe(2);
+    		expect(culled[0]).toEqual([0,0])
+    		expect(culled[1]).toEqual([2,0])
+     */
+  };
+
+}).call(this);
+(function() {
   window.fashiontests.actualizer.css = function() {
     var $wf, actualize, parse, prefixes, process;
     $wf = window.fashion;
@@ -151,13 +223,13 @@
       var css, cssString, parseTree;
       parseTree = process(parse("$width: 100px;\nbody {\n	background-color: blue !important;\n	width: $width / 2 !important\n}"));
       css = actualize(parseTree).css;
-      cssString = 'body {background-color: blue !important;}\nbody {width: 50px !important;}\n';
+      cssString = 'body {background-color: blue !important;width: 50px !important;}\n';
       return expect(css).toBe(cssString);
     });
     it('should be able to lookup variable values', function() {
       var css, cssString;
       css = actualize(process(parse("$minHeight: 100px;\nbody {\n	width:100%;\n	min-height: $minHeight;\n}"))).css;
-      cssString = "body {width: 100%;}\nbody {min-height: 100px;}\n";
+      cssString = "body {width: 100%;min-height: 100px;}\n";
       return expect(css).toBe(cssString);
     });
     it('should ignore empty selectors', function() {
@@ -210,7 +282,7 @@
     return it('should generate the CSS for dynamic transitions', function() {
       var css, cssString, prefix, _i, _len;
       css = actualize(process(parse("$duration: 314ms;\nbody {\n	background-color: [linear $duration] blue;\n}"))).css;
-      cssString = 'body {background-color: blue;}\nbody {';
+      cssString = 'body {background-color: blue;';
       for (_i = 0, _len = prefixes.length; _i < _len; _i++) {
         prefix = prefixes[_i];
         cssString += "" + prefix + "transition: background-color 314ms linear;";
@@ -238,11 +310,11 @@
       expect(window.FSMIN.length).toBe(3);
       expect(window.FSMIN[0].length).toBe(1);
       expect(window.FSMIN[0][0]).toContain('body');
-      expect(window.FSMIN[0][0]).toContain($wf.$runtimeMode.dynamic);
-      expect(window.FSMIN[0][0][4][0]).toContain("padding");
-      expect(window.FSMIN[0][0][4][0][3][0]).toBe("e");
-      expect(window.FSMIN[0][0][4][1]).toContain("width");
-      expect(window.FSMIN[0][0][4][1][3][0]).toBe("e");
+      expect(window.FSMIN[0][0]).toContain($wf.$runtimeMode["static"]);
+      expect(window.FSMIN[0][0][5][0]).toContain("padding");
+      expect(window.FSMIN[0][0][5][0][3][0]).toBe("e");
+      expect(window.FSMIN[0][0][5][1]).toContain("width");
+      expect(window.FSMIN[0][0][5][1][3][0]).toBe("e");
       expect(window.FSMIN[1].length).toBe(1);
       expect(window.FSMIN[1][0]).toContain('size');
       expect(window.FSMIN[1][0]).toContain(10);
@@ -252,7 +324,7 @@
     it('should expand minified selectors and variables', function() {
       var minData, props, rd;
       minData = [
-        [["s", 0, "body", 1, [["p", "padding", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]], ["p", "width", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]]]]], [
+        [["s", 0, 1, "body", 1, [["p", "padding", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]], ["p", "width", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]]]]], [
           [
             "v", "size", 1, "px", 1, 10, [], {
               "0": 10
@@ -287,14 +359,14 @@
       expect(window.FSMIN[2].length).toBe(1);
       expect(window.FSMIN[2].length).toBe(1);
       expect(window.FSMIN[2][0]).toContain('body');
-      expect(window.FSMIN[2][0]).toContain($wf.$runtimeMode.individual);
-      expect(window.FSMIN[2][0][4][0]).toContain("color");
-      expect(window.FSMIN[2][0][4][0]).toContain($wf.$runtimeMode.individual);
-      return expect(window.FSMIN[2][0][4][0][3][0]).toBe("e");
+      expect(window.FSMIN[2][0]).toContain($wf.$runtimeMode["static"]);
+      expect(window.FSMIN[2][0][5][0]).toContain("color");
+      expect(window.FSMIN[2][0][5][0]).toContain($wf.$runtimeMode.individual);
+      return expect(window.FSMIN[2][0][5][0][3][0]).toBe("e");
     });
     it('should expand individual properties', function() {
       var data, props, rd;
-      data = [[], [], [["s", 0, "body", 7, [["p", "color", 7, ["e", 7, 2, null, "return e.color"]]]]]];
+      data = [[], [], [["s", 0, 0, "body", 1, [["p", "color", 7, ["e", 7, 2, null, "return e.color"]]]]]];
       rd = {
         selectors: {},
         variables: {},
@@ -302,22 +374,31 @@
       };
       window.fashion.$actualizer.minifier.expandRuntimeData(data, rd);
       expect(rd.individual[0].name).toBe("body");
-      expect(rd.individual[0].mode).toBe(7);
+      expect(rd.individual[0].mode).toBe(1);
       expect(rd.individual[0].properties.length).toBe(1);
       props = rd.individual[0].properties;
       expect(props[0].name).toBe("color");
       expect(props[0].mode).toBe(7);
       return expect(props[0].value.evaluate).toBeDefined();
     });
-    return it('should minify multipart properties', function() {
+    it('should minify multipart properties', function() {
       var js;
       js = actualize(process(parse("$size: 10px;\nbody {\n	border: $size solid black;\n}"))).js;
       window.FASHION = {};
       eval(js);
-      expect(window.FSMIN[0][0][4][0]).toContain("border");
-      expect(window.FSMIN[0][0][4][0][3][0][0]).toBe("e");
-      expect(window.FSMIN[0][0][4][0][3][1]).toBe("solid");
-      return expect(window.FSMIN[0][0][4][0][3][2]).toBe("black");
+      expect(window.FSMIN[0][0][5][0]).toContain("border");
+      expect(window.FSMIN[0][0][5][0][3][0][0]).toBe("e");
+      expect(window.FSMIN[0][0][5][0][3][1]).toBe("solid");
+      return expect(window.FSMIN[0][0][5][0][3][2]).toBe("black");
+    });
+    return it('should minify dynamic properties', function() {
+      var js;
+      js = actualize(process(parse("$id: test;\n#$id {\n	border: blue;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      expect(window.FSMIN[0].length).toBe(1);
+      expect(window.FSMIN[0][0][3][0]).toBe('e');
+      return expect(window.FSMIN[0][0]).toContain($wf.$runtimeMode.dynamic);
     });
   };
 
@@ -337,10 +418,9 @@
       window.FASHION = {};
       eval(js);
       expect(window.FASHION.variables.colorVar["default"]).toBe('blue');
-      expect(window.FASHION.selectors[0]).toBeUndefined();
-      expect(window.FASHION.selectors[1].name).toBe('body');
-      expect(window.FASHION.selectors[1].properties.length).toBe(1);
-      return expect(window.FASHION.selectors[1].properties[0].name).toBe('background-color');
+      expect(window.FASHION.selectors[0].name).toBe('body');
+      expect(window.FASHION.selectors[0].properties.length).toBe(1);
+      return expect(window.FASHION.selectors[0].properties[0].name).toBe('background-color');
     });
     it('should include all necessary basic runtime functions', function() {
       var js;
@@ -397,10 +477,9 @@
       window.FASHION = {};
       eval(js);
       divIndividual = window.FASHION.individual[0];
-      expect(divIndividual.properties[0].name).toBe("on-click");
-      divIndividual = window.FASHION.individual[1];
       expect(divIndividual.properties[0].name).toBe("background-color");
-      pIndividual = window.FASHION.individual[2];
+      expect(divIndividual.properties[1].name).toBe("on-click");
+      pIndividual = window.FASHION.individual[1];
       expect(pIndividual.properties[0].name).toBe("top");
       return expect(pIndividual.properties[1].name).toBe("left");
     });
@@ -409,7 +488,15 @@
       js = actualize(process(parse("$padding: 10px;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding: $padding;\n}"))).js;
       window.FASHION = {};
       eval(js);
-      return expect(FASHION.variables["padding"].dependents).toEqual([1, 3]);
+      expect(FASHION.variables["padding"].dependents[0]).toEqual(['s', 0, 'padding']);
+      return expect(FASHION.variables["padding"].dependents[1]).toEqual(['s', 1, 'padding']);
+    });
+    it('should properly map selector variable bindings to the separated CSS selectors', function() {
+      var js;
+      js = actualize(process(parse("$id: test;\nbody {\n	color: blue;\n}\n#$id {\n	color: white;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      return expect(FASHION.variables["id"].dependents[0]).toEqual(['s', 1]);
     });
     it('should leave out static variables', function() {
       var js;
@@ -427,26 +514,37 @@
     });
     it('should properly map variable bindings to the individual CSS selectors', function() {
       var js;
-      js = actualize(process(parse("$padding: 10px;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding-left: @self.leftOffset + $padding;\n}"))).js;
+      js = actualize(process(parse("$padding: 10px;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding-left: @self.left + $padding;\n}"))).js;
       window.FASHION = {};
       eval(js);
-      return expect(FASHION.variables["padding"].dependents).toEqual([1, 'i0']);
+      expect(FASHION.variables["padding"].dependents[0]).toEqual(['s', 0, 'padding']);
+      return expect(FASHION.variables["padding"].dependents[1]).toEqual(['i', 1, 'paddingLeft']);
+    });
+    it('should not bind variables to other variables', function() {
+      var js;
+      js = actualize(process(parse("$padding: 10px;\n$width: 1000px - 2 * $padding;\ndiv {\n	width: $width;\n}"))).js;
+      window.FASHION = {};
+      eval(js);
+      console.log(FASHION.variables);
+      expect(FASHION.variables["padding"].dependents.length).toBe(1);
+      return expect(FASHION.variables["padding"].dependents[0]).toEqual(['v', 'width', '0']);
     });
     return it('should properly map global bindings to the separated CSS selectors', function() {
       var js;
       js = actualize(process(parse("div {\n	width: @height;\n	height: @height;\n	color: white;\n}"))).js;
       window.FASHION = {};
       eval(js.replace(/FSREADY\(/g, "FSREADYTEST("));
-      return expect(FASHION.modules.globals["height"].dependents).toEqual([1]);
+      expect(FASHION.modules.globals["height"].dependents[0]).toEqual(['s', 0, 'width']);
+      return expect(FASHION.modules.globals["height"].dependents[1]).toEqual(['s', 0, 'height']);
     });
   };
 
 }).call(this);
 (function() {
   describe("Actualizer", function() {
-    describe("Regrouper", window.fashiontests.actualizer.regrouper);
     describe("CSS Transitions", window.fashiontests.actualizer.transitions);
     describe("CSS Generator", window.fashiontests.actualizer.css);
+    describe("Components", window.fashiontests.actualizer.components);
     describe("JS Minifier", window.fashiontests.actualizer.minifier);
     return describe("JS Generator", window.fashiontests.actualizer.js);
   });

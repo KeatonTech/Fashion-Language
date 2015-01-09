@@ -14,7 +14,7 @@ window.fashion.$processor.blocks = (parseTree, blocks) ->
 			throwError: funcs.throwError.bind 0, block.type
 			addRule: funcs.addRule.bind 0, parseTree
 			addScript: funcs.addScript.bind 0, parseTree
-			parseValue: funcs.parseValue,
+			parseValue: funcs.parseValue.bind 0, parseTree, "b"+bID
 			parse: funcs.parseBody.bind 0, parseTree
 			runtimeObject: parseTree.dependencies.blocks[block.type].runtimeObject
 			addVariable: funcs.addVariable.bind 0, parseTree
