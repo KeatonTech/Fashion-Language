@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "description": "A new CSS for the web of 2014 and beyond.",
   "author": "Keaton Brandt <keaton.brandt@gmail.com>",
-  "main": "./fashion.compiler.0.3.js",
+  "main": "./fashion.compiler.0.3.1.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/KeatonTech/Fashion-Language.git"

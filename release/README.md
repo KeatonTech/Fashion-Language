@@ -1,6 +1,12 @@
-# Fashion 0.3.0
+# Fashion 0.3.1
 
-The first build that could actually theoretically be used for production sites. Still quite buggy and not feature complete, but getting there!
+### Features Since 0.3
+
+* Variables and globals are now bound to specific properties, not selectors, giving a substantial performance boost
+* Simplified the code structure by removing the regrouper
+* Bindings are attached to expressions now, allowing some more features down the road
+* Rearranged runtime code a bit to slightly cut down on size
+* A few new unit tests
 
 ### Features Since 0.2.2
 
