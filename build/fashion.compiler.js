@@ -1824,7 +1824,6 @@ window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime
     return this.throwError("Scoped variables are not yet supported");
   } else if (vObj["default"] !== void 0) {
     if (vObj["default"].evaluate) {
-      console.log("W", vObj["default"]);
       return {
         value: this.evaluate(vObj["default"], variables, globals, funcs, runtime, elem)
       };
@@ -2529,7 +2528,7 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
 window.fashion.$actualizer.cssPrefixes = ["", "-webkit-", "-moz-", "-ms-"];
 
 window.fashion.$actualizer.separateTransitions = function(parseTree) {
-  var evalFunction, id, pid, prefix, prefixes, property, pt, selector, strings, transitionMode, transitions, value, _ref, _ref1, _results;
+  var evalFunction, id, pid, prefix, prefixes, property, pt, selector, t, transitionMode, transitions, value, _ref, _ref1, _results;
   evalFunction = $wf.$actualizer.evaluationFunction(null, parseTree);
   prefixes = window.fashion.$actualizer.cssPrefixes;
   transitionMode = 0;
@@ -2551,17 +2550,17 @@ window.fashion.$actualizer.separateTransitions = function(parseTree) {
         transitionMode |= pt.easing.mode | pt.duration.mode | pt.delay.mode;
       }
     }
-    if (transitionMode === $wf.$runtimeMode["static"]) {
-      strings = $wf.$actualizer.transitionStrings(evalFunction, transitions);
-      if (strings.length === 0) {
-        continue;
+    value = (function() {
+      var _i, _len, _results1;
+      _results1 = [];
+      for (_i = 0, _len = transitions.length; _i < _len; _i++) {
+        t = transitions[_i];
+        _results1.push([t.property, t.duration, t.easing, t.delay]);
       }
-      value = strings.join(",");
-    } else {
-      value = $wf.$actualizer.transitionExpression(transitions);
-      if (!value) {
-        continue;
-      }
+      return _results1;
+    })();
+    if (!value || value.length === 0) {
+      continue;
     }
     property = new Property("transition", value, transitionMode);
     _results.push((function() {
@@ -2573,29 +2572,6 @@ window.fashion.$actualizer.separateTransitions = function(parseTree) {
       }
       return _results1;
     })());
-  }
-  return _results;
-};
-
-window.fashion.$actualizer.transitionStrings = function(evalFunction, transitions) {
-  var delay, duration, easing, t, _i, _len, _results;
-  _results = [];
-  for (_i = 0, _len = transitions.length; _i < _len; _i++) {
-    t = transitions[_i];
-    duration = evalFunction(t.duration);
-    easing = evalFunction(t.easing);
-    delay = evalFunction(t.delay);
-    _results.push($wf.$actualizer.cssTransitionTemplate(t.property, t.duration, t.easing, t.delay));
-  }
-  return _results;
-};
-
-window.fashion.$actualizer.transitionExpression = function(transitions) {
-  var t, _i, _len, _results;
-  _results = [];
-  for (_i = 0, _len = transitions.length; _i < _len; _i++) {
-    t = transitions[_i];
-    _results.push([t.property, t.duration, t.easing, t.delay]);
   }
   return _results;
 };

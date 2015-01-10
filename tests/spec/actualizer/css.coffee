@@ -151,7 +151,7 @@ window.fashiontests.actualizer.css = ()->
 
 		cssString = 'body {border: 1px solid black;background-color: blue;'
 		for prefix in prefixes
-			cssString += "#{prefix}transition: background-color 100ms linear;"
+			cssString += "#{prefix}transition: background-color 100ms linear ;"
 		cssString += "}\n"
 
 		expect(css).toBe(cssString)

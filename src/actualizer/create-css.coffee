@@ -60,16 +60,9 @@ window.fashion.$actualizer.separateTransitions = (parseTree) ->
 				# Determine the mode of the transition
 				transitionMode |= pt.easing.mode | pt.duration.mode | pt.delay.mode
 
-		if transitionMode is $wf.$runtimeMode.static
-			# Generate the static CSS string for the transition property
-			strings = $wf.$actualizer.transitionStrings evalFunction, transitions
-			if strings.length is 0 then continue
-			value = strings.join(",")
-
-		else
-			# Generate an expression that will output the transition property
-			value = $wf.$actualizer.transitionExpression transitions
-			if !value then continue
+		# Generate an expression that will output the transition property
+		value = ([t.property, t.duration, t.easing, t.delay] for t in transitions)
+		if !value || value.length is 0 then continue
 
 		# Turn that transition into a brand new property object
 		property = new Property "transition", value, transitionMode
@@ -77,27 +70,6 @@ window.fashion.$actualizer.separateTransitions = (parseTree) ->
 		# Add it once for each prefix (you're welcome, developers)
 		for prefix in prefixes
 			selector.addProperty property.copyWithName prefix + "transition"
-
-
-# Generate a list of property strings for transitions of a given mode
-window.fashion.$actualizer.transitionStrings = (evalFunction, transitions) ->
-	for t in transitions
-
-		# "But Keaton", you say, "why are we evaluating expressions here? I thought we'd
-		# already determined that this transition property was entirely static!"
-		# Ah, you have much to learn, young padawan. Expressions *can* be static.
-		duration = evalFunction t.duration
-		easing = evalFunction t.easing
-		delay = evalFunction t.delay
-
-		# Put everything into the template
-		$wf.$actualizer.cssTransitionTemplate t.property, t.duration, t.easing, t.delay
-
-
-# Split the property into expression arrays, just like the parse would've done
-window.fashion.$actualizer.transitionExpression = (transitions) ->
-	for t in transitions
-		[t.property, t.duration, t.easing, t.delay]
 
 
 # Helpful function that returns a function that easily evaluates expressions

@@ -8,14 +8,15 @@
 }).call(this);
 (function() {
   window.fashiontests.actualizer.transitions = function() {
-    var $wf, parse, prefixes, process, separateTransitions;
+    var $wf, evaluate, parse, prefixes, process, separateTransitions;
     $wf = window.fashion;
     parse = window.fashion.$parser.parse;
     process = window.fashion.$processor.process;
     separateTransitions = window.fashion.$actualizer.separateTransitions;
     prefixes = window.fashion.$actualizer.cssPrefixes;
+    evaluate = window.fashion.$shared.evaluate;
     it("should pull transitions out into their own objects", function() {
-      var id, parseTree, prefix, properties, _results;
+      var id, parseTree, prefix, properties, property, _results;
       parseTree = process(parse("body {\n	background-color: [linear 100ms] blue;\n}"));
       separateTransitions(parseTree);
       properties = parseTree.selectors[0].properties;
@@ -23,9 +24,10 @@
       _results = [];
       for (id in prefixes) {
         prefix = prefixes[id];
-        expect(properties[parseInt(id) + 1].name).toBe("" + prefix + "transition");
-        expect(properties[parseInt(id) + 1].value).toBe("background-color 100ms linear");
-        _results.push(expect(properties[parseInt(id) + 1].mode).toBe($wf.$runtimeMode["static"]));
+        property = properties[parseInt(id) + 1];
+        expect(property.name).toBe("" + prefix + "transition");
+        expect(evaluate(property.value)).toBe("background-color 100ms linear ");
+        _results.push(expect(property.mode).toBe($wf.$runtimeMode["static"]));
       }
       return _results;
     });
@@ -36,12 +38,12 @@
       properties = parseTree.selectors[0].properties;
       expect(properties[0].name).toBe("background-color");
       expect(properties[1].name).toBe("color");
-      str = "background-color 100ms linear,color 200ms ease-out";
+      str = "background-color 100ms linear , color 200ms ease-out ";
       _results = [];
       for (id in prefixes) {
         prefix = prefixes[id];
         expect(properties[parseInt(id) + 2].name).toBe("" + prefix + "transition");
-        expect(properties[parseInt(id) + 2].value).toBe(str);
+        expect(evaluate(properties[parseInt(id) + 2].value)).toBe(str);
         _results.push(expect(properties[parseInt(id) + 2].mode).toBe($wf.$runtimeMode["static"]));
       }
       return _results;
@@ -277,7 +279,7 @@
       cssString = 'body {border: 1px solid black;background-color: blue;';
       for (_i = 0, _len = prefixes.length; _i < _len; _i++) {
         prefix = prefixes[_i];
-        cssString += "" + prefix + "transition: background-color 100ms linear;";
+        cssString += "" + prefix + "transition: background-color 100ms linear ;";
       }
       cssString += "}\n";
       return expect(css).toBe(cssString);

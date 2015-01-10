@@ -5,6 +5,7 @@ window.fashiontests.actualizer.transitions = ()->
 	process = window.fashion.$processor.process
 	separateTransitions = window.fashion.$actualizer.separateTransitions
 	prefixes = window.fashion.$actualizer.cssPrefixes
+	evaluate = window.fashion.$shared.evaluate
 
 
 	it "should pull transitions out into their own objects", ()->
@@ -18,9 +19,10 @@ window.fashiontests.actualizer.transitions = ()->
 		properties = parseTree.selectors[0].properties
 		expect(properties[0].name).toBe("background-color")
 		for id, prefix of prefixes
-			expect(properties[parseInt(id) + 1].name).toBe("#{prefix}transition")
-			expect(properties[parseInt(id) + 1].value).toBe("background-color 100ms linear")
-			expect(properties[parseInt(id) + 1].mode).toBe($wf.$runtimeMode.static)
+			property = properties[parseInt(id) + 1]
+			expect(property.name).toBe("#{prefix}transition")
+			expect(evaluate property.value).toBe("background-color 100ms linear ")
+			expect(property.mode).toBe($wf.$runtimeMode.static)
 
 
 	it "should combine multiple transitions into one property", ()->
@@ -36,10 +38,10 @@ window.fashiontests.actualizer.transitions = ()->
 		expect(properties[0].name).toBe("background-color")
 		expect(properties[1].name).toBe("color")
 
-		str = "background-color 100ms linear,color 200ms ease-out"
+		str = "background-color 100ms linear , color 200ms ease-out "
 		for id, prefix of prefixes
 			expect(properties[parseInt(id) + 2].name).toBe("#{prefix}transition")
-			expect(properties[parseInt(id) + 2].value).toBe(str)
+			expect(evaluate properties[parseInt(id) + 2].value).toBe(str)
 			expect(properties[parseInt(id) + 2].mode).toBe($wf.$runtimeMode.static)
 
 
