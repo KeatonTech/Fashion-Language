@@ -358,13 +358,14 @@
       var props, result;
       result = parse("p {\n	height: 100px !important\n}");
       props = result.selectors[0].properties;
-      return expect(props[0].value).toBe("100px !important");
+      expect(props[0].value).toBe("100px");
+      return expect(props[0].important).toBe(true);
     });
     it("should acknowledge !important on linked properties", function() {
       var props, result;
       result = parse("$height: 100px;\np {\n	height: $height !important\n}");
       props = result.selectors[0].properties;
-      expect(props[0].value.important).toBe(true);
+      expect(props[0].important).toBe(true);
       return expect(props[0].mode).toBe($wf.$runtimeMode.dynamic);
     });
     return it("should parse transitions", function() {
@@ -589,7 +590,7 @@
           value: 30
         };
       })).toBe("10px");
-      expect(expression.important).toBe(true);
+      expect(result.selectors[0].properties[0].important).toBe(true);
       expect(expression.mode).toBe($wf.$runtimeMode.dynamic);
       return expect(expression.unit).toBe("px");
     });

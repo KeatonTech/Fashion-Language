@@ -503,6 +503,7 @@ Property = (function() {
     }
     this.name = name;
     this.mode = runtimeMode;
+    this.important = false;
     if (transition) {
       if (typeof value !== 'object') {
         this.value = {
@@ -1096,7 +1097,7 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
   return fashionText.substring(startIndex, endIndex - 1).trim();
 };
 window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseTree) {
-  var elm, elm2, mode, name, property, propertyNumber, regex, transition, value, valueMode, _i, _j, _len, _len1, _results;
+  var elm, elm2, mode, name, pObj, property, propertyNumber, regex, transition, value, valueMode, _i, _j, _len, _len1, _results;
   propertyNumber = 0;
   regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*([^;}\n]*?)[\s]*(\![A-z0-9\-]+?)?[;}\n]/g;
   _results = [];
@@ -1113,14 +1114,6 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
     }
     if (property[3]) {
       transition = new PropertyTransition($wf.$parser.parsePropertyValue(property[3], parseTree, false), $wf.$parser.parsePropertyValue(property[4], parseTree, false), $wf.$parser.parsePropertyValue(property[5], parseTree, false));
-    }
-    if (property[7] === "!important") {
-      if (typeof value === "string") {
-        value += " !important";
-      }
-      if (typeof value === "object") {
-        value.important = true;
-      }
     }
     valueMode = 0;
     if ((value != null ? value.mode : void 0) != null) {
@@ -1145,7 +1138,11 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
       }
     }
     mode = (selector.mode | valueMode) || 0;
-    selector.addProperty(new Property(name, value, mode, transition));
+    pObj = new Property(name, value, mode, transition);
+    if (property[7] === "!important") {
+      pObj.important = true;
+    }
+    selector.addProperty(pObj);
     _results.push(propertyNumber++);
   }
   return _results;
@@ -2382,7 +2379,7 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
       } else {
         cssValue = evalFunction(value);
       }
-      cssProperties.push($wf.$actualizer.cssPropertyTemplate(property.name, cssValue));
+      cssProperties.push($wf.$actualizer.cssPropertyTemplate(property, cssValue));
     }
     selectorName = evalFunction(selector.name);
     css += $wf.$actualizer.cssSelectorTemplate(selectorName, cssProperties);
@@ -2453,8 +2450,8 @@ window.fashion.$actualizer.evaluationFunction = function(runtimeData, parseTree)
   };
 };
 
-window.fashion.$actualizer.cssPropertyTemplate = function(name, value) {
-  return "" + name + ": " + value + ";";
+window.fashion.$actualizer.cssPropertyTemplate = function(property, value) {
+  return "" + property.name + ": " + value + (property.important ? " !important" : "") + ";";
 };
 
 window.fashion.$actualizer.cssSelectorTemplate = function(selector, properties) {
@@ -2713,7 +2710,7 @@ window.fashion.$actualizer.minifier = {
     return ["s", parseInt(id), selObj.rule, name, selObj.mode, properties];
   },
   property: function(propObj) {
-    var $wfam, subVal, value, _i, _len, _ref;
+    var $wfam, important, subVal, value, _i, _len, _ref;
     $wfam = window.fashion.$actualizer.minifier;
     if (!propObj || !(propObj instanceof Property)) {
       return;
@@ -2734,7 +2731,8 @@ window.fashion.$actualizer.minifier = {
     } else {
       value = propObj.value;
     }
-    return ["p", propObj.name, propObj.mode, value];
+    important = propObj.important ? 1 : 0;
+    return ["p", propObj.name, propObj.mode, important, value];
   },
   expression: function(exprObj) {
     if (!exprObj || !(exprObj instanceof Expression)) {
@@ -2785,7 +2783,8 @@ window.fashion.$actualizer.minifier.expandRuntimeData = function(minData, expand
       return {
         name: p[1],
         mode: p[2],
-        value: expand(p[3])
+        important: p[3],
+        value: expand(p[4])
       };
     },
     e: function(e) {
@@ -3021,7 +3020,7 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
     return propertyObject.jsName;
   },
   setPropertyOnSelector: function(sheet, selectorId, propertyName) {
-    var pObj, rule, rules, selector, _i, _len, _ref, _results;
+    var pObj, regex, replacement, rule, rules, selector, _i, _len, _ref, _results;
     if (sheet === "i") {
       return this.setPropertyOnIndividual(selectorId, propertyName);
     }
@@ -3034,7 +3033,13 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       pObj = _ref[_i];
       if (this.makeCamelCase(pObj) === propertyName) {
-        _results.push(rule.style[propertyName] = this.CSSRuleForProperty(pObj, void 0, true));
+        if (pObj.important) {
+          regex = new RegExp(pObj.name + ":.*?\;", 'g');
+          replacement = "" + pObj.name + ": " + (this.CSSRuleForProperty(pObj, void 0, true)) + ";";
+          _results.push(rule.style.cssText = rule.style.cssText.replace(regex, replacement));
+        } else {
+          _results.push(rule.style[propertyName] = this.CSSRuleForProperty(pObj, void 0, true));
+        }
       }
     }
     return _results;
@@ -3072,9 +3077,10 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
     }
     value = this.evaluate(propertyObject.value, element);
     if (unwrapped) {
-      return value;
+      return value + (propertyObject.important === 1 ? " !important" : "");
+    } else {
+      return this.CSSPropertyTemplate(propertyObject, value);
     }
-    return this.CSSPropertyTemplate(propertyObject.name, value);
   },
   CSSRuleForSelector: function(selector, element, name) {
     var cssProperties, pO, selectorName;

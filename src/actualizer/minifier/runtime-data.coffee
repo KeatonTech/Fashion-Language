@@ -52,7 +52,8 @@ window.fashion.$actualizer.minifier =
 		else value = propObj.value
 
 		# Return the selector object
-		return ["p", propObj.name, propObj.mode, value]
+		important = if propObj.important then 1 else 0
+		return ["p", propObj.name, propObj.mode, important, value]
 
 
 	# Minify an expression

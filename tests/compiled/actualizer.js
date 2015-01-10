@@ -312,9 +312,9 @@
       expect(window.FSMIN[0][0]).toContain('body');
       expect(window.FSMIN[0][0]).toContain($wf.$runtimeMode["static"]);
       expect(window.FSMIN[0][0][5][0]).toContain("padding");
-      expect(window.FSMIN[0][0][5][0][3][0]).toBe("e");
+      expect(window.FSMIN[0][0][5][0][4][0]).toBe("e");
       expect(window.FSMIN[0][0][5][1]).toContain("width");
-      expect(window.FSMIN[0][0][5][1][3][0]).toBe("e");
+      expect(window.FSMIN[0][0][5][1][4][0]).toBe("e");
       expect(window.FSMIN[1].length).toBe(1);
       expect(window.FSMIN[1][0]).toContain('size');
       expect(window.FSMIN[1][0]).toContain(10);
@@ -324,7 +324,7 @@
     it('should expand minified selectors and variables', function() {
       var minData, props, rd;
       minData = [
-        [["s", 0, 1, "body", 1, [["p", "padding", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]], ["p", "width", 1, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]]]]], [
+        [["s", 0, 1, "body", 1, [["p", "padding", 1, 0, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]], ["p", "width", 1, 0, ["e", 1, 1, "px", "return (v('size').value) + 'px'"]]]]], [
           [
             "v", "size", 1, "px", 1, 10, [], {
               "0": 10
@@ -362,11 +362,11 @@
       expect(window.FSMIN[2][0]).toContain($wf.$runtimeMode["static"]);
       expect(window.FSMIN[2][0][5][0]).toContain("color");
       expect(window.FSMIN[2][0][5][0]).toContain($wf.$runtimeMode.individual);
-      return expect(window.FSMIN[2][0][5][0][3][0]).toBe("e");
+      return expect(window.FSMIN[2][0][5][0][4][0]).toBe("e");
     });
     it('should expand individual properties', function() {
       var data, props, rd;
-      data = [[], [], [["s", 0, 0, "body", 1, [["p", "color", 7, ["e", 7, 2, null, "return e.color"]]]]]];
+      data = [[], [], [["s", 0, 0, "body", 1, [["p", "color", 7, 0, ["e", 7, 2, null, "return e.color"]]]]]];
       rd = {
         selectors: {},
         variables: {},
@@ -387,9 +387,9 @@
       window.FASHION = {};
       eval(js);
       expect(window.FSMIN[0][0][5][0]).toContain("border");
-      expect(window.FSMIN[0][0][5][0][3][0][0]).toBe("e");
-      expect(window.FSMIN[0][0][5][0][3][1]).toBe("solid");
-      return expect(window.FSMIN[0][0][5][0][3][2]).toBe("black");
+      expect(window.FSMIN[0][0][5][0][4][0][0]).toBe("e");
+      expect(window.FSMIN[0][0][5][0][4][1]).toBe("solid");
+      return expect(window.FSMIN[0][0][5][0][4][2]).toBe("black");
     });
     return it('should minify dynamic properties', function() {
       var js;
@@ -529,13 +529,21 @@
       expect(FASHION.variables["padding"].dependents.length).toBe(1);
       return expect(FASHION.variables["padding"].dependents[0]).toEqual(['v', 'width', '0']);
     });
-    return it('should properly map global bindings to the separated CSS selectors', function() {
+    it('should properly map global bindings to the separated CSS selectors', function() {
       var js;
       js = actualize(process(parse("div {\n	width: @height;\n	height: @height;\n	color: white;\n}"))).js;
       window.FASHION = {};
       eval(js.replace(/FSREADY\(/g, "FSREADYTEST("));
       expect(FASHION.modules.globals["height"].dependents[0]).toEqual(['s', 0, 'width']);
       return expect(FASHION.modules.globals["height"].dependents[1]).toEqual(['s', 0, 'height']);
+    });
+    return it('should mark !important properties as !important', function() {
+      var js;
+      js = actualize(process(parse("$color: blue;\ndiv {\n	color: $color !important;\n	background-color: $color;\n}"))).js;
+      window.FASHION = {};
+      eval(js.replace(/FSREADY\(/g, "FSREADYTEST("));
+      expect(FASHION.selectors[0].properties[0].important).toEqual(1);
+      return expect(FASHION.selectors[0].properties[1].important).toEqual(0);
     });
   };
 

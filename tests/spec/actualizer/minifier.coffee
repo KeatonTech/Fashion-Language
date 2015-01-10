@@ -27,9 +27,9 @@ window.fashiontests.actualizer.minifier = ()->
 
 		# Properties (This section might be a little overly specific)
 		expect(window.FSMIN[0][0][5][0]).toContain("padding");
-		expect(window.FSMIN[0][0][5][0][3][0]).toBe("e");
+		expect(window.FSMIN[0][0][5][0][4][0]).toBe("e");
 		expect(window.FSMIN[0][0][5][1]).toContain("width");
-		expect(window.FSMIN[0][0][5][1][3][0]).toBe("e");
+		expect(window.FSMIN[0][0][5][1][4][0]).toBe("e");
 
 		# Variables
 		expect(window.FSMIN[1].length).toBe(1);
@@ -46,8 +46,8 @@ window.fashiontests.actualizer.minifier = ()->
 		# Actual minified data taken from the above example
 		minData = [[
 			["s",0,1,"body",1,[
-				["p","padding",1,["e",1,1,"px","return (v('size').value) + 'px'"]],
-				["p","width",1,["e",1,1,"px","return (v('size').value) + 'px'"]]
+				["p","padding",1,0,["e",1,1,"px","return (v('size').value) + 'px'"]],
+				["p","width",1,0,["e",1,1,"px","return (v('size').value) + 'px'"]]
 			]]],[
 			["v","size",1,"px",1,10,[],{"0":10}]]
 		]
@@ -98,13 +98,13 @@ window.fashiontests.actualizer.minifier = ()->
 		# Properties (This section might be a little overly specific)
 		expect(window.FSMIN[2][0][5][0]).toContain("color");
 		expect(window.FSMIN[2][0][5][0]).toContain($wf.$runtimeMode.individual);
-		expect(window.FSMIN[2][0][5][0][3][0]).toBe("e");
+		expect(window.FSMIN[2][0][5][0][4][0]).toBe("e");
 		
 
 	it 'should expand individual properties', ()->
 
 		# Whew, dense. Again, this is the data from before
-		data = [[],[],[["s",0,0,"body",1,[["p","color",7,["e",7,2,null,"return e.color"]]]]]]
+		data = [[],[],[["s",0,0,"body",1,[["p","color",7,0,["e",7,2,null,"return e.color"]]]]]]
 
 		# Expand this data into a blank runtime data object
 		rd = {selectors: {}, variables: {}, individual: {}}
@@ -136,9 +136,9 @@ window.fashiontests.actualizer.minifier = ()->
 
 		# Properties (This section might be a little overly specific)
 		expect(window.FSMIN[0][0][5][0]).toContain("border");
-		expect(window.FSMIN[0][0][5][0][3][0][0]).toBe("e");
-		expect(window.FSMIN[0][0][5][0][3][1]).toBe("solid");
-		expect(window.FSMIN[0][0][5][0][3][2]).toBe("black");
+		expect(window.FSMIN[0][0][5][0][4][0][0]).toBe("e");
+		expect(window.FSMIN[0][0][5][0][4][1]).toBe("solid");
+		expect(window.FSMIN[0][0][5][0][4][2]).toBe("black");
 
 
 	it 'should minify dynamic properties', () ->

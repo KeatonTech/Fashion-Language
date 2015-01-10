@@ -41,6 +41,7 @@
 ## Fixes
 
 * CSS3 Transition durations and delays are not properly made dynamic
+* !important flags are not handled right at runtime
 * Two closing parenthesis in a row confuse the expression parser
 * Empty selectors cause the indexes of individual properties to get offset
 * Make variables declared in @transition blocks take an isolated scope

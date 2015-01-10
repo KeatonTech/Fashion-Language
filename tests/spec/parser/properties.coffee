@@ -133,7 +133,8 @@ window.fashiontests.parser.properties = ()->
 						""")
 
 		props = result.selectors[0].properties
-		expect(props[0].value).toBe("100px !important")
+		expect(props[0].value).toBe("100px")
+		expect(props[0].important).toBe(true)
 
 
 	it "should acknowledge !important on linked properties", ()->
@@ -145,7 +146,7 @@ window.fashiontests.parser.properties = ()->
 						""")
 
 		props = result.selectors[0].properties
-		expect(props[0].value.important).toBe(true)
+		expect(props[0].important).toBe(true)
 		expect(props[0].mode).toBe($wf.$runtimeMode.dynamic)
 
 

@@ -25,7 +25,7 @@ window.fashion.$actualizer.createCSS = (runtimeData, cssSelectors) ->
 			else cssValue = evalFunction value 					# Dynamic / Live
 
 			# Turn this property into a string
-			cssProperties.push $wf.$actualizer.cssPropertyTemplate property.name, cssValue
+			cssProperties.push $wf.$actualizer.cssPropertyTemplate property, cssValue
 
 		# Turn this selector into a string
 		selectorName = evalFunction selector.name
@@ -97,8 +97,8 @@ window.fashion.$actualizer.evaluationFunction = (runtimeData, parseTree) -> (val
 # Templates used in generating CSS
 # NOTE: These are copied into the runtime and used there as well
 
-window.fashion.$actualizer.cssPropertyTemplate = (name, value) ->
-	"#{name}: #{value};"
+window.fashion.$actualizer.cssPropertyTemplate = (property, value) ->
+	"#{property.name}: #{value}#{if property.important then " !important" else ""};"
 
 window.fashion.$actualizer.cssSelectorTemplate = (selector, properties) ->
 	"#{selector} {#{properties.join('')}}\n"

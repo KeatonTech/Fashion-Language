@@ -9,7 +9,7 @@ window.fashion.$actualizer.minifier.expandRuntimeData = (minData, expandTo) ->
 	expanderFunctions = 
 
 		s: (s) -> {rule: s[2], name: expand(s[3]), mode: s[4], properties: expand(s[5])}
-		p: (p) -> {name: p[1], mode: p[2], value: expand(p[3])}
+		p: (p) -> {name: p[1], mode: p[2], important: p[3], value: expand(p[4])}
 		e: (e) -> {
 			mode: e[1], type: e[2], unit: e[3], setter: e[4], 
 			evaluate: Function("v","g","f","t","e",e[5])}

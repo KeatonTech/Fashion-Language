@@ -259,3 +259,19 @@ window.fashiontests.actualizer.js = ()->
 
 		expect(FASHION.modules.globals["height"].dependents[0]).toEqual(['s',0,'width'])
 		expect(FASHION.modules.globals["height"].dependents[1]).toEqual(['s',0,'height'])
+
+
+	it 'should mark !important properties as !important', () ->
+		{js} = actualize process parse """
+			$color: blue;
+			div {
+				color: $color !important;
+				background-color: $color;
+			}
+			"""
+
+		window.FASHION = {}
+		eval(js.replace(/FSREADY\(/g,"FSREADYTEST("))
+
+		expect(FASHION.selectors[0].properties[0].important).toEqual(1)
+		expect(FASHION.selectors[0].properties[1].important).toEqual(0)

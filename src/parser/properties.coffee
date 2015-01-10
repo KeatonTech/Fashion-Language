@@ -33,11 +33,6 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 				$wf.$parser.parsePropertyValue(property[4], parseTree, false),
 				$wf.$parser.parsePropertyValue(property[5], parseTree, false))
 
-		# Note the important flag
-		if property[7] is "!important"
-			if typeof value is "string" then value += " !important"
-			if typeof value is "object" then value.important = true
-
 		# Compute the value mode of multi-part properties
 		valueMode = 0
 		if value?.mode? then valueMode = value.mode
@@ -47,9 +42,15 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 					valueMode |= elm2.mode for elm2 in elm when elm2?.mode?
 				if elm.mode? then valueMode |= elm.mode
 
-		# Add the property to the properties object
+		# Create the property object
 		mode = (selector.mode | valueMode) || 0
-		selector.addProperty(new Property name, value, mode, transition)
+		pObj = new Property name, value, mode, transition
+
+		# Note the important flag
+		if property[7] is "!important" then pObj.important = true
+
+		# Add the property to the properties object
+		selector.addProperty(pObj)
 		propertyNumber++
 
 

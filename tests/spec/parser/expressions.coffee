@@ -223,7 +223,7 @@ window.fashiontests.parser.expressions = ()->
 
 		expression = result.selectors[0].properties[0].value
 		expect(expression.evaluate(() -> return value: 30)).toBe("10px")
-		expect(expression.important).toBe(true)
+		expect(result.selectors[0].properties[0].important).toBe(true)
 		expect(expression.mode).toBe($wf.$runtimeMode.dynamic)
 		expect(expression.unit).toBe("px")
 

@@ -29,8 +29,17 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 		# There could be multiple properties that match, usually as fallbacks
 		for pObj in selector.properties when @makeCamelCase(pObj) is propertyName
 
-			# Generate the CSS property and set it as a style on our rule
-			rule.style[propertyName] = @CSSRuleForProperty pObj, undefined, true
+			# Important properties can't just be set, for some reason
+			if pObj.important
+
+				# It bothers me that this is necessary
+				regex = new RegExp pObj.name + ":.*?\;", 'g'
+				replacement = "#{pObj.name}: #{@CSSRuleForProperty pObj, undefined, true};"
+				rule.style.cssText = rule.style.cssText.replace regex, replacement
+
+			else
+				# Generate the CSS property and set it as a style on our rule
+				rule.style[propertyName] = @CSSRuleForProperty pObj, undefined, true
 
 
 	# Update the CSS of a selector block
@@ -71,9 +80,10 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
 		# Evaluate the property and make it into valid CSS
 		value = @evaluate(propertyObject.value, element)
-		if unwrapped then return value
+		if unwrapped
+			value + (if propertyObject.important is 1 then " !important" else "")
 
-		@CSSPropertyTemplate(propertyObject.name, value)
+		else @CSSPropertyTemplate(propertyObject, value)
 
 
 	# Generate a CSS rule for the given selector block

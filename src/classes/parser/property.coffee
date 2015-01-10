@@ -3,6 +3,7 @@ class Property
 	constructor: (name, value, runtimeMode = $wf.$runtimeMode.static, transition) -> 
 		@name = name
 		@mode = runtimeMode
+		@important = false
 
 		if transition 
 			if typeof value isnt 'object'
