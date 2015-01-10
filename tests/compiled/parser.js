@@ -619,7 +619,7 @@
       expect(expression.type).toBe($wf.$type.Number);
       return expect(expression.unit).toBe("px");
     });
-    return it("should deal with parenthesis in expressions", function() {
+    it("should deal with parenthesis in expressions", function() {
       var expression, expressionResult, globals, locals, result;
       result = parse("$padding: 10px;\n$contentWidth: 100px;\ndiv {\n	width: @width / 2 - ($contentWidth - $padding) / 2\n}");
       locals = function(name) {
@@ -644,6 +644,20 @@
       expression = result.selectors[0].properties[0].value;
       expressionResult = expression.evaluate(locals, globals, $wf.$functions);
       return expect(expressionResult).toBe("155px");
+    });
+    return it("should deal with multiple parenthesis in expressions", function() {
+      var expression, expressionResult, globals, result;
+      result = parse("div {\n	width: max(100px, min(0px, @width))\n}");
+      globals = {
+        width: {
+          get: function() {
+            return 400;
+          }
+        }
+      };
+      expression = result.selectors[0].properties[0].value;
+      expressionResult = expression.evaluate((function() {}), globals, $wf.$functions);
+      return expect(expressionResult).toBe("100px");
     });
   };
 

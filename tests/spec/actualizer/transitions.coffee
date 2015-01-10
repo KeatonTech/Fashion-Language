@@ -54,6 +54,9 @@ window.fashiontests.actualizer.transitions = ()->
 
 		properties = parseTree.selectors[0].properties
 		for id, prefix of prefixes
-			expect(properties[parseInt(id) + 1].name).toBe("#{prefix}transition")
-			expect(properties[parseInt(id) + 1].value).toBe("background-color 100ms linear")
-			expect(properties[parseInt(id) + 1].mode).toBe($wf.$runtimeMode.dynamic)
+			property = properties[parseInt(id) + 1]
+			expect(property.name).toBe("#{prefix}transition")
+			expect(property.value[0][0]).toBe("background-color")
+			expect(property.value[0][1].bindings.variables[0]).toBe("duration")
+			expect(property.value[0][2]).toBe("linear")
+			expect(property.mode).toBe($wf.$runtimeMode.dynamic)

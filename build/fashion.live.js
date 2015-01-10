@@ -1254,7 +1254,7 @@ window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, g
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([\S]*))/g;
+  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([^\s\)]*))/g;
   shouldBreak = false;
   while (!shouldBreak && (section = regex.exec(expString))) {
     eObj = void 0;
@@ -1692,6 +1692,7 @@ window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime
     return this.throwError("Scoped variables are not yet supported");
   } else if (vObj["default"] !== void 0) {
     if (vObj["default"].evaluate) {
+      console.log("W", vObj["default"]);
       return {
         value: this.evaluate(vObj["default"], variables, globals, funcs, runtime, elem)
       };
@@ -1714,7 +1715,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
   iMode = ((_ref = this.runtimeModes) != null ? _ref.individual : void 0) || (typeof $wf !== "undefined" && $wf !== null ? (_ref1 = $wf.$runtimeMode) != null ? _ref1.individual : void 0 : void 0);
   evaluateSingleValue = (function(_this) {
     return function(valueObject) {
-      var elmLookup, v, val, varLookup, varObjects, _i, _len;
+      var e, elmLookup, v, val, varLookup, varObjects, _i, _len;
       if (typeof valueObject === "string") {
         return valueObject;
       }
@@ -1732,7 +1733,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         });
         return vObj;
       };
-      if ((valueObject.mode & iMode) === iMode || (element != null)) {
+      if (((valueObject.mode & iMode) === iMode || (element != null)) && (_this.elementFunction != null)) {
         if (element == null) {
           return _this.throwError("Expression requires element but none provided");
         }
@@ -1742,7 +1743,13 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         }
       }
       if (valueObject.evaluate) {
-        val = valueObject.evaluate(varLookup, globals, funcs, runtime, elmLookup);
+        try {
+          val = valueObject.evaluate(varLookup, globals, funcs, runtime, elmLookup);
+        } catch (_error) {
+          e = _error;
+          console.log("[FASHION] Could not evaluate: " + valueObject.evaluate);
+          return console.log(e);
+        }
         if (valueObject.important === true) {
           isImportant = true;
         }
@@ -2390,7 +2397,7 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
 window.fashion.$actualizer.cssPrefixes = ["", "-webkit-", "-moz-", "-ms-"];
 
 window.fashion.$actualizer.separateTransitions = function(parseTree) {
-  var evalFunction, id, pid, prefix, prefixes, property, pt, selector, string, strings, transitionMode, transitions, _ref, _ref1, _results;
+  var evalFunction, id, pid, prefix, prefixes, property, pt, selector, strings, transitionMode, transitions, value, _ref, _ref1, _results;
   evalFunction = $wf.$actualizer.evaluationFunction(null, parseTree);
   prefixes = window.fashion.$actualizer.cssPrefixes;
   transitionMode = 0;
@@ -2412,12 +2419,19 @@ window.fashion.$actualizer.separateTransitions = function(parseTree) {
         transitionMode |= pt.easing.mode | pt.duration.mode | pt.delay.mode;
       }
     }
-    strings = $wf.$actualizer.transitionStrings(evalFunction, transitions);
-    if (strings.length === 0) {
-      continue;
+    if (transitionMode === $wf.$runtimeMode["static"]) {
+      strings = $wf.$actualizer.transitionStrings(evalFunction, transitions);
+      if (strings.length === 0) {
+        continue;
+      }
+      value = strings.join(",");
+    } else {
+      value = $wf.$actualizer.transitionExpression(transitions);
+      if (!value) {
+        continue;
+      }
     }
-    string = strings.join(",");
-    property = new Property("transition", string, transitionMode);
+    property = new Property("transition", value, transitionMode);
     _results.push((function() {
       var _i, _len, _results1;
       _results1 = [];
@@ -2436,10 +2450,20 @@ window.fashion.$actualizer.transitionStrings = function(evalFunction, transition
   _results = [];
   for (_i = 0, _len = transitions.length; _i < _len; _i++) {
     t = transitions[_i];
-    duration = t.duration.script ? evalFunction(t.duration) : t.duration;
-    easing = t.easing.script ? evalFunction(t.easing) : t.easing;
-    delay = t.delay.script ? evalFunction(t.delay) : t.delay;
-    _results.push($wf.$actualizer.cssTransitionTemplate(t.property, duration, easing, delay));
+    duration = evalFunction(t.duration);
+    easing = evalFunction(t.easing);
+    delay = evalFunction(t.delay);
+    _results.push($wf.$actualizer.cssTransitionTemplate(t.property, t.duration, t.easing, t.delay));
+  }
+  return _results;
+};
+
+window.fashion.$actualizer.transitionExpression = function(transitions) {
+  var t, _i, _len, _results;
+  _results = [];
+  for (_i = 0, _len = transitions.length; _i < _len; _i++) {
+    t = transitions[_i];
+    _results.push([t.property, t.duration, t.easing, t.delay]);
   }
   return _results;
 };

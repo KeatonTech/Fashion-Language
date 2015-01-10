@@ -285,3 +285,17 @@ window.fashiontests.parser.expressions = ()->
 		expression = result.selectors[0].properties[0].value
 		expressionResult = expression.evaluate locals, globals, $wf.$functions
 		expect(expressionResult).toBe("155px")
+
+
+	it "should deal with multiple parenthesis in expressions", ()->
+		result = parse( """
+						div {
+							width: max(100px, min(0px, @width))
+						}
+						""")
+
+		globals = {width: {get: () -> 400}}
+		expression = result.selectors[0].properties[0].value
+		expressionResult = expression.evaluate (()->), globals, $wf.$functions
+		expect(expressionResult).toBe("100px")
+

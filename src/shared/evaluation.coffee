@@ -47,7 +47,7 @@ window.fashion.$shared.evaluate =
 
 		# Create the element property lookup function, if necessary
 		# This requires the 'elements' module to be installed and only works on runtime
-		if (valueObject.mode & iMode) is iMode or element?
+		if ((valueObject.mode & iMode) is iMode or element?) and @elementFunction?
 			if !element?
 				return @throwError "Expression requires element but none provided"
 			elmLookup = @elementFunction element
@@ -55,7 +55,12 @@ window.fashion.$shared.evaluate =
 
 		# Handle expressions
 		if valueObject.evaluate
-			val = valueObject.evaluate varLookup, globals, funcs, runtime, elmLookup
+			try
+				val = valueObject.evaluate varLookup, globals, funcs, runtime, elmLookup
+			catch e
+				console.log "[FASHION] Could not evaluate: #{valueObject.evaluate}"
+				return console.log e
+
 			if valueObject.important is true then isImportant = true
 
 			# Check to see if the expression changed any variable values

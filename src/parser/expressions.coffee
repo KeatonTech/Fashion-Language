@@ -38,7 +38,7 @@ window.fashion.$parser.parseExpression =
 			\d+(\.\d+)*)			# Number with unit (decimal in middle)
 			[a-zA-Z]{1,4})|			# Number with unit (unit)
 			([\w\-\@\$]*)\(|		# Function definition
-			\)([\S]*)				# Pull out function units
+			\)([^\s\)]*)			# Pull out function units
 			)///g
 	
 	# Handle each piece

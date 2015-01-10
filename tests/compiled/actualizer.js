@@ -47,16 +47,19 @@
       return _results;
     });
     return it("should turn dynamic transitions into dynamic properties", function() {
-      var id, parseTree, prefix, properties, _results;
+      var id, parseTree, prefix, properties, property, _results;
       parseTree = process(parse("$duration: 100ms;\nbody {\n	background-color: [linear $duration] blue;\n}"));
       separateTransitions(parseTree);
       properties = parseTree.selectors[0].properties;
       _results = [];
       for (id in prefixes) {
         prefix = prefixes[id];
-        expect(properties[parseInt(id) + 1].name).toBe("" + prefix + "transition");
-        expect(properties[parseInt(id) + 1].value).toBe("background-color 100ms linear");
-        _results.push(expect(properties[parseInt(id) + 1].mode).toBe($wf.$runtimeMode.dynamic));
+        property = properties[parseInt(id) + 1];
+        expect(property.name).toBe("" + prefix + "transition");
+        expect(property.value[0][0]).toBe("background-color");
+        expect(property.value[0][1].bindings.variables[0]).toBe("duration");
+        expect(property.value[0][2]).toBe("linear");
+        _results.push(expect(property.mode).toBe($wf.$runtimeMode.dynamic));
       }
       return _results;
     });
@@ -285,7 +288,7 @@
       cssString = 'body {background-color: blue;';
       for (_i = 0, _len = prefixes.length; _i < _len; _i++) {
         prefix = prefixes[_i];
-        cssString += "" + prefix + "transition: background-color 314ms linear;";
+        cssString += "" + prefix + "transition: background-color 314ms linear ;";
       }
       cssString += "}\n";
       return expect(css).toBe(cssString);
