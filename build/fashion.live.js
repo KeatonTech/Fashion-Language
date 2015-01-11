@@ -37,7 +37,8 @@ $wf = window.fashion = {
   cssId: "FASHION-stylesheet",
   minifiedObject: "FSMIN",
   runtimeObject: "FASHION",
-  runtimeModules: []
+  runtimeModules: [],
+  readyEvent: "fashion-ready"
 };
 
 window.fashion.runtimeConfig = {
@@ -2030,6 +2031,7 @@ window.fashion.$actualizer = {
     capabilities = $wfa.determineRuntimeCapabilities(runtimeData, parseTree.selectors);
     $wfa.addRuntimeFunctions(runtimeData, parseTree, capabilities);
     $wfa.removeUnnecessaryModuleData(runtimeData);
+    parseTree.scripts.push("document.dispatchEvent(new Event('" + $wf.readyEvent + "'));");
     css = $wfa.createCSS(runtimeData, cssSels);
     miniRuntimeData = $wfa.minifier.runtimeData(runtimeData);
     js = $wfa.createJS(runtimeData, miniRuntimeData, parseTree.scripts);
@@ -3100,7 +3102,7 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
 });
 $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom"], {
   $initializeIndividualProperties: function() {
-    var id, selector, _ref, _ref1, _results;
+    var id, selector, _ref, _ref1;
     FASHION.individualSheet = this.addStylesheet("" + FASHION.config.individualCSSID).sheet;
     _ref = FASHION.individual;
     for (id in _ref) {
@@ -3108,12 +3110,12 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
       this.updateSelectorElements(selector);
     }
     _ref1 = FASHION.individual;
-    _results = [];
     for (id in _ref1) {
       selector = _ref1[id];
-      _results.push(this.regenerateIndividualSelector(id));
+      this.regenerateIndividualSelector(id);
     }
-    return _results;
+    this.watchForDOMAddition();
+    return window.FASHION.pageChanged = window.FASHION.domChanged = this.pageChanged.bind(this);
   },
   updateSelectorElements: function(selector) {
     var element, id, individual, matchedElements, selectorName, _i, _len, _ref, _results;
@@ -3212,6 +3214,83 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
     }
     css = this.CSSRuleForSelector(selector, element.element, "#" + id);
     return FASHION.individualSheet.insertRule(css, element.cssid);
+  },
+  watchForDOMAddition: function() {
+    if (window.FASHION_NO_OBSERVE === true) {
+      return;
+    }
+    window.FSOBSERVER = new MutationObserver(function(mutations) {
+      var mutation, _i, _len;
+      if ((window.FSOBSERVER == null) || (window.FASHION == null) || (FASHION.runtime.addedElements == null) || window.FASHION_NO_OBSERVE === true) {
+        return;
+      }
+      for (_i = 0, _len = mutations.length; _i < _len; _i++) {
+        mutation = mutations[_i];
+        if (mutation.addedNodes.length > 0) {
+          FASHION.runtime.addedElements(mutation.addedNodes);
+        }
+      }
+      return true;
+    });
+    return window.FSOBSERVER.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  },
+  pageChanged: function(addedElements) {
+    var element, id, matchedElements, selector, _i, _len, _ref;
+    if (addedElements != null) {
+      return this.addedElements(addedElements);
+    }
+    addedElements = [];
+    _ref = FASHION.individual;
+    for (id in _ref) {
+      selector = _ref[id];
+      matchedElements = this.elementsForSelector(selector.elementsSelector);
+      for (_i = 0, _len = matchedElements.length; _i < _len; _i++) {
+        element = matchedElements[_i];
+        if (!selector.elements[element.id]) {
+          addedElements.push(element);
+        }
+      }
+    }
+    return this.addedElements(addedElements);
+  },
+  addedElements: function(elements) {
+    var element, id, indElement, indObj, matches, _i, _len, _results;
+    if (typeof FASHION === "undefined" || FASHION === null) {
+      return;
+    }
+    _results = [];
+    for (_i = 0, _len = elements.length; _i < _len; _i++) {
+      element = elements[_i];
+      matches = element.matches || element.webkitMatchesSelector || element.mozMatchesSelector || element.msMatchesSelector;
+      _results.push((function() {
+        var _ref, _results1;
+        _ref = FASHION.individual;
+        _results1 = [];
+        for (id in _ref) {
+          indObj = _ref[id];
+          if (!(!indObj.elements[element.id])) {
+            continue;
+          }
+          if (!element.matches(indObj.name)) {
+            continue;
+          }
+          if (!element.id) {
+            element.setAttribute('id', this.generateRandomId());
+          }
+          indElement = {
+            element: element,
+            cssid: -1
+          };
+          indObj.elements[element.id] = indElement;
+          _results1.push(this.regenerateElementSelector(indObj, element.id, indElement));
+        }
+        return _results1;
+      }).call(this));
+    }
+    return _results;
   }
 });
 $wf.addRuntimeModule("globals", ["selectors"], {

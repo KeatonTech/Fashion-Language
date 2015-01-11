@@ -11,19 +11,47 @@
   };
 
   window.fashiontests.runtime.cleanup = function() {
-    var sheet;
+    var sheet, tdiv;
     sheet = document.getElementById(window.fashion.cssId);
-    sheet.parentNode.removeChild(sheet);
+    if (sheet != null) {
+      sheet.parentNode.removeChild(sheet);
+    }
+    sheet = document.getElementById(window.fashion.runtimeConfig.individualCSSID);
+    if (sheet != null) {
+      sheet.parentNode.removeChild(sheet);
+    }
     window.FASHION = void 0;
     window.FSMIN = void 0;
-    return window.style = void 0;
+    window.style = void 0;
+    if (tdiv = document.getElementById("FSTESTBLOCK")) {
+      document.body.removeChild(tdiv);
+    }
+    if (window.FSOBSERVER != null) {
+      window.FSOBSERVER.disconnect();
+      return window.FSOBSERVER = void 0;
+    }
   };
 
-  window.fashiontests.runtime.getRule = function(id) {
+  window.fashiontests.runtime.getRule = function(id, sheetId) {
     var rules, sheet;
-    sheet = document.getElementById(window.fashion.cssId);
+    if (sheetId == null) {
+      sheetId = window.fashion.cssId;
+    }
+    sheet = document.getElementById(sheetId);
     rules = sheet.sheet.rules || sheet.sheet.cssRules;
+    if (id > rules.length) {
+      console.log("[FASHION] No rule at index " + id);
+    }
     return rules[id];
+  };
+
+  window.fashiontests.runtime.testDiv = function(html) {
+    var testDiv;
+    testDiv = document.createElement("div");
+    testDiv.id = "FSTESTBLOCK";
+    testDiv.innerHTML = html;
+    document.body.appendChild(testDiv);
+    return "FSTESTBLOCK";
   };
 
 }).call(this);
@@ -79,8 +107,100 @@
 
 }).call(this);
 (function() {
+  window.fashiontests.runtime.individual = function() {
+    var $wf, getIndRule, testDiv, testFSS;
+    $wf = window.fashion;
+    testFSS = function(fss) {
+      var css, js, _ref;
+      _ref = $wf.$actualizer.actualize($wf.$processor.process($wf.$parser.parse(fss))), css = _ref.css, js = _ref.js;
+      return window.fashiontests.runtime.simulateRuntime(css, js);
+    };
+    beforeEach(window.fashiontests.runtime.cleanup);
+    afterEach(window.fashiontests.runtime.cleanup);
+    getIndRule = function(rule) {
+      return window.fashiontests.runtime.getRule(rule, $wf.runtimeConfig.individualCSSID);
+    };
+    testDiv = window.fashiontests.runtime.testDiv;
+    it("should read attributes", function() {
+      var id;
+      id = testDiv("<div class=\"item\" color=\"red\"></div>\n<div class=\"item\" color=\"blue\"></div>\n<div class=\"item\" color=\"green\"></div>");
+      testFSS(".item {\n	background-color: @self.color;\n}");
+      expect(getIndRule(0).style.backgroundColor).toBe("red");
+      expect(getIndRule(1).style.backgroundColor).toBe("blue");
+      return expect(getIndRule(2).style.backgroundColor).toBe("green");
+    });
+    it("should not get confused by empty selectors", function() {
+      var id;
+      id = testDiv("<div class=\"item\" color=\"red\"></div>\n<div class=\"item2\" color=\"blue\"></div>\n<div class=\"item3\" color=\"green\"></div>");
+      testFSS(".item2 {}\n.item {\n	background-color: @self.color;\n}\n.item3 {}");
+      return expect(getIndRule(0).style.backgroundColor).toBe("red");
+    });
+    it("should automatically process new elements added with appendChild", function(done) {
+      var id, wait;
+      id = testDiv("<div class=\"item\" color=\"red\"></div>");
+      testFSS(".item {\n	background-color: @self.color;\n}");
+      wait = function(d, f) {
+        return setTimeout(f, d);
+      };
+      return wait(1, function() {
+        var newDiv;
+        newDiv = document.createElement("div");
+        newDiv.setAttribute("class", "item");
+        newDiv.setAttribute("color", "yellow");
+        document.getElementById(id).appendChild(newDiv);
+        return wait(1, function() {
+          expect(getIndRule(1).style.backgroundColor).toBe("yellow");
+          return done();
+        });
+      });
+    });
+    it("should automatically process new elements added with innerHTML", function(done) {
+      var id, wait;
+      id = testDiv("<div class=\"item\" color=\"red\"></div>");
+      testFSS(".item {\n	background-color: @self.color;\n}");
+      wait = function(d, f) {
+        return setTimeout(f, d);
+      };
+      return wait(1, function() {
+        var ct;
+        ct = document.getElementById(id);
+        ct.innerHTML += '<div class="item" color="orange"></div>';
+        return wait(1, function() {
+          expect(getIndRule(1).style.backgroundColor).toBe("orange");
+          return done();
+        });
+      });
+    });
+    return it("should manually process additions, for browsers without O.o()", function(done) {
+      var id, wait;
+      window.FASHION_NO_OBSERVE = true;
+      id = testDiv("<div class=\"item\" color=\"red\"></div>");
+      testFSS(".item {\n	background-color: @self.color;\n}");
+      wait = function(d, f) {
+        return setTimeout(f, d);
+      };
+      return wait(1, function() {
+        var ct;
+        ct = document.getElementById(id);
+        ct.innerHTML += '<div class="item" color="purple"></div>';
+        return wait(1, function() {
+          expect(getIndRule(1)).not.toBeDefined();
+          FASHION.pageChanged();
+          return wait(1, function() {
+            expect(getIndRule(1).style.backgroundColor).toBe("purple");
+            window.FASHION_NO_OBSERVE = false;
+            return done();
+          });
+        });
+      });
+    });
+  };
+
+}).call(this);
+(function() {
   describe("Runtime", function() {
-    return describe("Variables", window.fashiontests.runtime.variables);
+    describe("Variables", window.fashiontests.runtime.variables);
+    return describe("Individual Properties", window.fashiontests.runtime.individual);
   });
 
 }).call(this);

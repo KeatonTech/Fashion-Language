@@ -123,7 +123,7 @@
 (function() {
   describe("Modules", function() {
     describe("@transition", window.fashiontests.modules.transition);
-    return describe("colors", window.fashiontests.modules.colors);
+    return describe("Colors", window.fashiontests.modules.colors);
   });
 
 }).call(this);

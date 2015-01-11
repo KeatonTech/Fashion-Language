@@ -16,18 +16,41 @@ window.fashiontests.runtime.simulateRuntime = (css,js) ->
 # Remove all traces of the test from window
 window.fashiontests.runtime.cleanup = ()->
 
-	# Remove the stylesheet
+	# Remove the normal stylesheet
 	sheet = document.getElementById window.fashion.cssId
-	sheet.parentNode.removeChild sheet
+	if sheet? then sheet.parentNode.removeChild sheet
+
+	# Remove the individual stylesheet
+	sheet = document.getElementById window.fashion.runtimeConfig.individualCSSID
+	if sheet? then sheet.parentNode.removeChild sheet
 
 	# Remove the JS stuff
 	window.FASHION = undefined
 	window.FSMIN = undefined
 	window.style = undefined
 
+	# Remove the test block
+	if tdiv = document.getElementById "FSTESTBLOCK"
+		document.body.removeChild tdiv
+
+	# Remove the DOM observer
+	if window.FSOBSERVER?
+		window.FSOBSERVER.disconnect()
+		window.FSOBSERVER = undefined
+
 
 # Get a CSS rule
-window.fashiontests.runtime.getRule = (id) ->
-	sheet = document.getElementById window.fashion.cssId
+window.fashiontests.runtime.getRule = (id, sheetId = window.fashion.cssId) ->
+	sheet = document.getElementById sheetId
 	rules = sheet.sheet.rules || sheet.sheet.cssRules
+	if id > rules.length then console.log "[FASHION] No rule at index #{id}"
 	return rules[id]
+
+
+# Create a testing block
+window.fashiontests.runtime.testDiv = (html) ->
+	testDiv = document.createElement "div"
+	testDiv.id = "FSTESTBLOCK"
+	testDiv.innerHTML = html
+	document.body.appendChild testDiv
+	return "FSTESTBLOCK"

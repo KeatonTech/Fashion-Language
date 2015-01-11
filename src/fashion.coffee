@@ -45,6 +45,9 @@ $wf = window.fashion = {
 
 	# Generated JS runtime
 	runtimeModules: []
+
+	# When page is ready to go
+	readyEvent: "fashion-ready"
 }
 
 # Add settings that will be sent to the runtime

@@ -12,6 +12,12 @@ $wf.addRuntimeModule "individualized", ["selectors", "elements", "stylesheet-dom
 		# Generate each selector
 		@regenerateIndividualSelector(id) for id,selector of FASHION.individual
 
+		# Use a mutation observer to watch for changes to the dom
+		@watchForDOMAddition()
+
+		# Publish function that lets fashion know to recompute the individual elements
+		window.FASHION.pageChanged = window.FASHION.domChanged = @pageChanged.bind(this)
+
 
 	# List elements for selector
 	updateSelectorElements: (selector) ->
@@ -98,6 +104,52 @@ $wf.addRuntimeModule "individualized", ["selectors", "elements", "stylesheet-dom
 		css = @CSSRuleForSelector selector, element.element, "##{id}"
 
 		# Add it to the individual sheet
-		FASHION.individualSheet.insertRule css, element.cssid		
+		FASHION.individualSheet.insertRule css, element.cssid
+
+
+	# Now for some fun stuff!
+	watchForDOMAddition: ()->
+		if window.FASHION_NO_OBSERVE is true then return
+		window.FSOBSERVER = new MutationObserver (mutations)->
+			if !window.FSOBSERVER? or !window.FASHION? or !FASHION.runtime.addedElements? or
+				window.FASHION_NO_OBSERVE is true then return
+
+			for mutation in mutations when mutation.addedNodes.length > 0
+				FASHION.runtime.addedElements mutation.addedNodes
+			return true
+
+		window.FSOBSERVER.observe(document.body, {childList: true, subtree: true});
+
+
+	# Re-query the page for each individual selector
+	# Optional addedElements property allows it to not look through every single object
+	pageChanged: (addedElements)->
+
+		# We have a special case for this
+		if addedElements? then return @addedElements(addedElements)
+
+		# Otherwise, build a list of added elements ourselves
+		addedElements = []
+		for id,selector of FASHION.individual
+			matchedElements = @elementsForSelector selector.elementsSelector
+			for element in matchedElements when !selector.elements[element.id]
+				addedElements.push element
+		@addedElements(addedElements)
+
+
+	# Elements added to the page
+	addedElements: (elements) ->
+		if !FASHION? then return
+		for element in elements
+			matches = element.matches || element.webkitMatchesSelector ||
+				element.mozMatchesSelector || element.msMatchesSelector
+
+			# Go through each individual selector that matches the element
+			for id,indObj of FASHION.individual when !indObj.elements[element.id]
+				if !element.matches indObj.name then continue
+				if !element.id then element.setAttribute('id', @generateRandomId())
+				indElement = {element: element, cssid: -1}
+				indObj.elements[element.id] = indElement
+				@regenerateElementSelector indObj, element.id, indElement
 
 

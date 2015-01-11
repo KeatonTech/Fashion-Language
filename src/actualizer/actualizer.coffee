@@ -46,6 +46,9 @@ window.fashion.$actualizer =
 		# Remove unnecessary module fields from the runtime data (keeps stuff clean)
 		$wfa.removeUnnecessaryModuleData runtimeData
 
+		# Dispatch an event once the full fashion page load is complete
+		parseTree.scripts.push "document.dispatchEvent(new Event('#{$wf.readyEvent}'));"
+
 		#
 		# STAGE 3: Generate output code in CSS and JS given the selectors and runtime data
 		# ----------------------------------------------------------------------------------
