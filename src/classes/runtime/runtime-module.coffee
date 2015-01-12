@@ -1,8 +1,8 @@
 # Stores a collection of functions that enable a chunk of functionality in generated code
 class RuntimeModule
-	constructor: (name, dependencies, functions) ->
+	constructor: (name, requires, functions) ->
 		@name = name
-		@dependencies = dependencies
+		@requires = requires
 		@functions = functions
 
 		@initializers = []

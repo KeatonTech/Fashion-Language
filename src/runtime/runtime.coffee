@@ -5,8 +5,8 @@ window.fashion.$runtimeModules = {}
 #@prepros-prepend ../classes/runtime/runtime-module.coffee
 
 # Function that registers a new runtime modules
-window.fashion.addRuntimeModule = (name, dependencies, functions) ->
-	window.fashion.$runtimeModules[name] = new RuntimeModule name, dependencies, functions
+window.fashion.addRuntimeModule = (name, requires, functions) ->
+	window.fashion.$runtimeModules[name] = new RuntimeModule name, requires, functions
 
 # Register shared functions
 $wf.addRuntimeModule "types", [],

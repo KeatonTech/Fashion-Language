@@ -37,11 +37,11 @@ window.fashion.$actualizer =
 		# Add bindings (selector dependents) for globals and functions to the runtime data
 		$wfa.addBindings runtimeData, jsSels, individualSels
 
-		# Figure out what runtime capabilities will be needed in the Javascript
-		capabilities = $wfa.determineRuntimeCapabilities runtimeData, parseTree.selectors
+		# Figure out what core runtime modules will be needed in the Javascript
+		$wfa.autoAddRequirements runtimeData, parseTree, parseTree.selectors
 
-		# Expand those capabilities into a full set of runtime functions
-		$wfa.addRuntimeFunctions runtimeData, parseTree, capabilities
+		# Expand those modules into a full set of runtime functions in the runtimeData
+		$wfa.addRuntimeFunctions runtimeData, parseTree
 
 		# Remove unnecessary module fields from the runtime data (keeps stuff clean)
 		$wfa.removeUnnecessaryModuleData runtimeData
@@ -107,7 +107,7 @@ window.fashion.$actualizer.createJS = (runtimeData, minifiedData, scripts) ->
 # @prepros-append ./bindings.coffee
 # @prepros-append ./runtime-data.coffee
 # @prepros-append ./create-css.coffee
-# @prepros-append ./capabilities.coffee
+# @prepros-append ./requires.coffee
 # @prepros-append ./load-hider.coffee
 # @prepros-append ./minifier/runtime-data.coffee
 

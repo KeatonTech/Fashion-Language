@@ -7,7 +7,7 @@ class Module
 		# Any runtime modules needed for this module
 		# These are things like "watchSelector" and "liveProperties",
 		# functionality built into Fashion that is often disabled for efficiency
-		@runtimeCapabilities = args.runtimeCapabilities || args.capabilities
+		@requires = args.requires || args.capabilities
 
 		# Add a watcher function, if possible
 		if args.watcherFunction 
@@ -84,7 +84,7 @@ class BlockModule extends Module
 			@runtimeObject = args.runtimeObject || args.runtime
 
 			# For adding things to the runtime
-			@runtimeCapabilities = args.runtimeCapabilities || args.capabilities
+			@requires = args.requires || args.capabilities
 
 
 # Adds a new CSS property to Fashion
@@ -125,7 +125,7 @@ class PropertyModule extends Module
 			@mode = args.mode || 0
 
 			# For adding things to the runtime
-			@runtimeCapabilities = args.runtimeCapabilities || args.capabilities
+			@requires = args.requires || args.capabilities
 
 # Make these accessible from the outside
 if !window.fashion.$class then window.fashion.$class = {}

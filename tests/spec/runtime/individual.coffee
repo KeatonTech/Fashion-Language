@@ -8,7 +8,7 @@ window.fashiontests.runtime.individual = ()->
 		window.fashiontests.runtime.simulateRuntime css, js
 
 	# Everybody do your share
-	beforeEach window.fashiontests.runtime.cleanup # Not sure why this fixes stuff but it does
+	beforeEach window.fashiontests.runtime.cleanup # Not sure why this fixes stuff
 	afterEach window.fashiontests.runtime.cleanup
 
 	# Helper functions

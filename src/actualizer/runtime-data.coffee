@@ -43,9 +43,8 @@ window.fashion.$actualizer.actualizeVariables = (parseTree, jsSelectors, individ
 # Remove unnecessary fields from included module objects
 window.fashion.$actualizer.removeUnnecessaryModuleData = (runtimeData) ->
 
-	for n, module of runtimeData.modules.blocks when module.runtimeCapabilities
-		if module.runtimeObject
-			runtimeData.modules.blocks[n] = module.runtimeObject
+	for n, module of runtimeData.modules.blocks when module.runtimeObject
+		runtimeData.modules.blocks[n] = module.runtimeObject
 			
 
 # Classes used in runtime code

@@ -16,6 +16,7 @@ class ParseTree
 		@selectors = []
 		@blocks = []
 		@scripts = []
+		@requires = []
 
 		# The components that need to be included in runtime
 		@dependencies = 
@@ -44,19 +45,36 @@ class ParseTree
 		newSelector.index = @selectors.length
 		@selectors.push newSelector
 
+	# Add runtime modules requirements
+	addRequirements: (newRequirements) -> 
+		if !newRequirements then return
+		for req in newRequirements when req? and req not in @requires
+			@requires.push req
+
 	# Similar sugar methods for blocks and scripts
 	addScript: (newScript) -> @scripts.push newScript
 	addBlock: (newBlock) -> @blocks.push newBlock
 
 	# Methods to add a dependency to the tree
 	addBlockDependency: (name, moduleObject) -> 
+		if !moduleObject then return
 		@dependencies.blocks[name] = moduleObject
+		@addRequirements moduleObject.requires
+
 	addGlobalDependency: (name, moduleObject) -> 
+		if !moduleObject then return
 		@dependencies.globals[name] = moduleObject
+		@addRequirements moduleObject.requires
+
 	addFunctionDependency: (name, moduleObject) -> 
+		if !moduleObject then return
 		@dependencies.functions[name] = moduleObject
+		@addRequirements moduleObject.requires
+
 	addPropertyDependency: (name, moduleObject) -> 
+		if !moduleObject then return
 		@dependencies.properties[name] = moduleObject
+		@addRequirements moduleObject.requires
 
 
 	# ITERATE

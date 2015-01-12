@@ -40,6 +40,11 @@ window.fashion.$processor.api =
 		parseTree.addScript script
 
 
+	# Add a runtime module dependency
+	requireModule: (parseTree, name)->
+		parseTree.addRequirements [name]
+
+
 	# Parse a value
 	parseValue: (parseTree, bindLink, value) ->
 		if !value or typeof value isnt "string" then return ""
