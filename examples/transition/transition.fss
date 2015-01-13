@@ -16,7 +16,7 @@ button {
 	display: block;
 	margin: 0 auto;
 	margin-top: 20px;
-	on-click: trigger("fade-in", 500ms);
+	on-click: trigger("fade-in", 700ms);
 }
 
 @transition fade-in {
@@ -35,14 +35,14 @@ button {
 	}
 	0% {
 		div {
-			opacity: [linear 50%] 1.0;
-			right: [ease-out 85%] 0px;
+			opacity: [linear 40%] 1.0;
+			right: [ease-out 55%] 0px;
 		}
 	}
-	50% {
+	30%-70% {
 		div p {
-			opacity: [linear 50%] 1.0;
-			right: [ease-out 50%] 0px;
+			opacity: [linear 30%] 1.0;
+			right: [ease-out 30%] 0px;
 		}
 	}
 }

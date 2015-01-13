@@ -3169,7 +3169,7 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
     return this.CSSSelectorTemplate(selectorName, cssProperties);
   }
 });
-$wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom"], {
+$wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom", "individualizedHelpers"], {
   $initializeIndividualProperties: function() {
     var id, selector, _ref, _ref1;
     FASHION.individualSheet = this.addStylesheet("" + FASHION.config.individualCSSID).sheet;
@@ -3255,24 +3255,6 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
       _results.push(this.regenerateElementSelector(selector, id, element));
     }
     return _results;
-  },
-  generateRandomId: function(length) {
-    var guid, i;
-    if (length == null) {
-      length = 20;
-    }
-    guid = ((function() {
-      var _i, _results;
-      _results = [];
-      for (i = _i = 0; 0 <= length ? _i <= length : _i >= length; i = 0 <= length ? ++_i : --_i) {
-        _results.push(Math.round(Math.random() * 36).toString(36));
-      }
-      return _results;
-    })()).join("");
-    return FASHION.config.idPrefix + guid;
-  },
-  elementsForSelector: function(selectorName) {
-    return Array.prototype.slice.call(document.querySelectorAll(selectorName));
   },
   regenerateElementSelector: function(selector, id, element) {
     var css;
@@ -3360,6 +3342,27 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
       }).call(this));
     }
     return _results;
+  }
+});
+
+$wf.addRuntimeModule("individualizedHelpers", [], {
+  generateRandomId: function(length) {
+    var guid, i;
+    if (length == null) {
+      length = 20;
+    }
+    guid = ((function() {
+      var _i, _results;
+      _results = [];
+      for (i = _i = 0; 0 <= length ? _i <= length : _i >= length; i = 0 <= length ? ++_i : --_i) {
+        _results.push(Math.round(Math.random() * 36).toString(36));
+      }
+      return _results;
+    })()).join("");
+    return FASHION.config.idPrefix + guid;
+  },
+  elementsForSelector: function(selectorName) {
+    return Array.prototype.slice.call(document.querySelectorAll(selectorName));
   }
 });
 $wf.addRuntimeModule("globals", ["selectors"], {
@@ -3854,6 +3857,9 @@ window.fashion.$blocks["transition"] = new BlockModule({
       lastAcc = segment.index;
       if (segment[2] && depth === 0) {
         currentKeyframe = segment[2];
+        if (segment[2].indexOf("-") > 0) {
+          this.requireModule("transitionRangeBlock");
+        }
         depth++;
         acc = "";
         lastAcc = segment[0].length + segment.index;
@@ -3917,7 +3923,7 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
         startTime = intStartTime + this.transitionTiming.start;
       }
       if (keyframe.indexOf("-") !== -1) {
-        addSelectors = this.transitionKeyframeRange(selectors, duration, transitionSheet.sheet, variables);
+        addSelectors = this.transitionKeyframeRange(keyframe, selectors, duration, transitionSheet.sheet, variables);
       } else {
         addSelectors = this.transitionKeyframeSingle(selectors, duration, transitionSheet.sheet, variables);
       }
@@ -3936,43 +3942,42 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
   },
   transitionKeyframeSingle: function(selectors, duration, tSheet, variables) {
     return function() {
-      var id, pSheet, properties, property, selName, selector, settleDelay, smoothProperties, tCSS, _i, _len;
-      settleDelay = this.transitionTiming.settle;
+      var id, pSheet, selector;
       pSheet = this.getStylesheet("FASHION-transition::properties-" + name);
       for (id in selectors) {
         selector = selectors[id];
-        properties = selector.properties;
-        smoothProperties = [];
-        for (_i = 0, _len = properties.length; _i < _len; _i++) {
-          property = properties[_i];
-          if (typeof property.value === 'object' && property.value.transition) {
-            smoothProperties.push(property);
-          }
-        }
-        tCSS = this.generateCSSTransitions.call(this, smoothProperties, duration, variables);
-        selName = this.evaluate(selector.name, 0, variables);
-        tSheet.insertRule("" + selName + " {" + tCSS + "}", tSheet.rules.length);
-        this.wait(settleDelay, ((function(_this) {
-          return function(selName, properties) {
-            return function() {
-              var pval, _j, _len1, _results;
-              _results = [];
-              for (_j = 0, _len1 = properties.length; _j < _len1; _j++) {
-                property = properties[_j];
-                pval = _this.evaluate(property.value, 0, variables);
-                _results.push(_this.setRuleOnSheet(pSheet, selName, property.name, pval));
-              }
-              return _results;
-            };
-          };
-        })(this))(selName, properties));
+        this.transitionSelector(selector, duration, tSheet, pSheet, variables);
       }
     };
   },
-  transitionKeyframeStatic: function(selectors, duration, tSheet, variables) {
-    return function() {
-      return console.log("[FASHION] The transition block does not support ranged keyframes yet");
-    };
+  transitionSelector: function(selector, duration, tSheet, pSheet, variables, selName) {
+    var properties, property, smoothProperties, tCSS, _i, _len;
+    console.log(arguments);
+    properties = selector.properties;
+    smoothProperties = [];
+    for (_i = 0, _len = properties.length; _i < _len; _i++) {
+      property = properties[_i];
+      if (typeof property.value === 'object' && property.value.transition) {
+        smoothProperties.push(property);
+      }
+    }
+    tCSS = this.generateCSSTransitions.call(this, smoothProperties, duration, variables);
+    selName = selName || this.evaluate(selector.name, 0, variables);
+    tSheet.insertRule("" + selName + " {" + tCSS + "}", tSheet.rules.length);
+    return this.wait(this.transitionTiming.settle, ((function(_this) {
+      return function(selName, properties) {
+        return function() {
+          var pval, _j, _len1, _results;
+          _results = [];
+          for (_j = 0, _len1 = properties.length; _j < _len1; _j++) {
+            property = properties[_j];
+            pval = _this.evaluate(property.value, 0, variables);
+            _results.push(_this.setRuleOnSheet(pSheet, selName, property.name, pval));
+          }
+          return _results;
+        };
+      };
+    })(this))(selName, properties));
   },
   generateCSSTransitions: function(properties, duration, variables) {
     var csstext, l, msLength, property, t, _i, _len;
@@ -3990,6 +3995,50 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
     csstext = csstext.substr(0, csstext.length - 1) + ";";
     csstext = [csstext, "-webkit-" + csstext, "-moz-" + csstext, "-ms-" + csstext].join('');
     return csstext;
+  }
+});
+
+$wf.addRuntimeModule("transitionRangeBlock", ["individualizedHelpers"], {
+  transitionKeyframeRange: function(keyframe, selectors, duration, tSheet, variables) {
+    return function() {
+      var element, endTime, order, pSheet, selElements, selName, selector, selectorId, slice, spanDuration, startTime, _results;
+      startTime = parseFloat(keyframe.split('-')[0]) / 100 * duration;
+      endTime = parseFloat(keyframe.split('-')[1]) / 100 * duration;
+      if (endTime <= startTime) {
+        return this.throwError("Range must start before it ends.");
+      }
+      spanDuration = endTime - startTime;
+      pSheet = this.getStylesheet("FASHION-transition::properties-" + name);
+      _results = [];
+      for (selectorId in selectors) {
+        selector = selectors[selectorId];
+        selName = this.evaluate(selector.name, 0, variables);
+        selElements = this.elementsForSelector(selName);
+        slice = spanDuration / selElements.length;
+        _results.push((function() {
+          var _results1;
+          _results1 = [];
+          for (order in selElements) {
+            element = selElements[order];
+            if (!element.id) {
+              element.setAttribute('id', this.generateRandomId());
+            }
+            _results1.push(this.wait(slice * order, ((function(_this) {
+              return function(selector, element) {
+                return function() {
+                  var addSelector, name;
+                  name = "#" + element.id;
+                  addSelector = _this.transitionSelector.bind(_this);
+                  return addSelector(selector, duration, tSheet, pSheet, variables, name);
+                };
+              };
+            })(this))(selector, element)));
+          }
+          return _results1;
+        }).call(this));
+      }
+      return _results;
+    };
   }
 });
 

@@ -30,6 +30,11 @@ window.fashion.$blocks["transition"] = new BlockModule
 			# Detect a keyframe value
 			if segment[2] and depth is 0
 				currentKeyframe = segment[2]
+
+				# Add support for ranged keyframes, if necessary
+				if segment[2].indexOf("-") > 0
+					@requireModule "transitionRangeBlock"
+
 				depth++
 				acc = ""
 				lastAcc = segment[0].length + segment.index
@@ -64,6 +69,7 @@ window.fashion.$blocks["transition"] = new BlockModule
 		transitions: {}
 
 
+# Runtime functions to run normal transitions
 $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"],
 
 	# Easily adjustable delays, may need to vary browser-by-browser
@@ -99,7 +105,7 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 
 			# Generate the magical function that'll be run later for each keyframe
 			if keyframe.indexOf("-") isnt -1
-				addSelectors = @transitionKeyframeRange(selectors, duration,
+				addSelectors = @transitionKeyframeRange(keyframe, selectors, duration,
 					transitionSheet.sheet, variables)
 			else
 				addSelectors = @transitionKeyframeSingle(selectors, duration,
@@ -118,43 +124,41 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 	# Add stuff for the each keyframe to the CSS
 	transitionKeyframeSingle: (selectors, duration, tSheet, variables) -> ()->
 
-		# Lets the CSS 'settle' so that newly added transitions will be used
-		settleDelay = @transitionTiming.settle
-
 		# Get the property sheet
 		# This used to get passed in, but moving it around the <head> confuses chrome
 		pSheet = @getStylesheet "FASHION-transition::properties-#{name}"
 
 		# Go through each selector
 		for id, selector of selectors
-			properties = selector.properties
-
-			# Separate out properties that need transitions applied to them
-			smoothProperties = [];
-			for property in properties
-				if typeof property.value is 'object' and property.value.transition
-					smoothProperties.push property
-
-			# Add the transition rule to the temporary sheet
-			tCSS = @generateCSSTransitions.call this, smoothProperties, duration, variables
-			selName = @evaluate selector.name, 0, variables
-			tSheet.insertRule "#{selName} {#{tCSS}}", tSheet.rules.length
-
-			# Wait for that to percolate and then add the smooth properties
-			@wait settleDelay, ((selName, properties) => ()=> 
-				for property in properties
-					pval = @evaluate property.value, 0, variables
-					@setRuleOnSheet pSheet, selName, property.name, pval
-
-			)(selName, properties)
+			@transitionSelector selector, duration, tSheet, pSheet, variables
 
 		# Make sure coffeescript doesn't try and return an array
 		return
 
 
-	# Add stuff for the each keyframe to the CSS
-	transitionKeyframeStatic: (selectors, duration, tSheet, variables) -> ()->
-		console.log "[FASHION] The transition block does not support ranged keyframes yet"
+	# Add properties for a single selector to the transition
+	transitionSelector: (selector, duration, tSheet, pSheet, variables, selName) ->
+		console.log arguments
+		properties = selector.properties
+
+		# Separate out properties that need transitions applied to them
+		smoothProperties = [];
+		for property in properties
+			if typeof property.value is 'object' and property.value.transition
+				smoothProperties.push property
+
+		# Add the transition rule to the temporary sheet
+		tCSS = @generateCSSTransitions.call this, smoothProperties, duration, variables
+		selName = selName || @evaluate selector.name, 0, variables
+		tSheet.insertRule "#{selName} {#{tCSS}}", tSheet.rules.length
+
+		# Wait for that to percolate and then add the smooth properties
+		@wait @transitionTiming.settle, ((selName, properties) => ()=> 
+			for property in properties
+				pval = @evaluate property.value, 0, variables
+				@setRuleOnSheet pSheet, selName, property.name, pval
+
+		)(selName, properties)
 
 
 	# Generate CSS3 transition properties
@@ -169,6 +173,47 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 		csstext = csstext.substr(0, csstext.length - 1) + ";"
 		csstext = [csstext, "-webkit-"+csstext, "-moz-"+csstext, "-ms-"+csstext].join('')
 		return csstext
+
+
+# Runtime functions to run transitions including keyframe ranges
+$wf.addRuntimeModule "transitionRangeBlock", ["individualizedHelpers"],
+
+	# Add stuff for the each keyframe to the CSS
+	transitionKeyframeRange: (keyframe, selectors, duration, tSheet, variables) -> ()->
+
+		# Figure out the actual duration we're working with
+		startTime = (parseFloat(keyframe.split('-')[0]) / 100 * duration)
+		endTime = (parseFloat(keyframe.split('-')[1]) / 100 * duration)
+		if endTime <= startTime then return @throwError "Range must start before it ends."
+		spanDuration = endTime - startTime
+
+		# Get the property sheet
+		# This used to get passed in, but moving it around the <head> confuses chrome
+		pSheet = @getStylesheet "FASHION-transition::properties-#{name}"
+
+		# Go through each selector
+		for selectorId, selector of selectors
+			selName = @evaluate selector.name, 0, variables
+
+			# Get the elements that apply to this selector
+			selElements = @elementsForSelector selName
+			slice = spanDuration / selElements.length
+
+			# Each one gets its very own transition applied to it!
+			for order, element of selElements
+				if !element.id then element.setAttribute('id', @generateRandomId())
+
+				# Delay each element based on its order in the sequence
+				# TODO: Allow for other orderings
+				@wait slice * order, ((selector, element) => () =>
+
+					# Perform the transition
+					name = "##{element.id}"
+					addSelector = @transitionSelector.bind this
+					addSelector selector, duration, tSheet, pSheet, variables, name
+
+				)(selector, element)
+		
 
 
 window.fashion.$functions["trigger"] = new FunctionModule

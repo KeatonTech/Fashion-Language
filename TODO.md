@@ -43,6 +43,7 @@
 * Caching on DOM properties, invalidated on DOM modification
 * Optimization to treat some scoped variables as normal CSS inheritance
 * Polyfills where necessary; guaranteed support back to IE 9, 'hinted' support to IE 8
+* Trigger properties should not require the whole 'individualized' module to be included
 
 ### Misc
 * Launch with Fashion website

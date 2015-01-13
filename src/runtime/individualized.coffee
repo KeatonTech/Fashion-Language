@@ -1,4 +1,5 @@
-$wf.addRuntimeModule "individualized", ["selectors", "elements", "stylesheet-dom"],
+$wf.addRuntimeModule "individualized", 
+["selectors", "elements", "stylesheet-dom", "individualizedHelpers"],
 
 	# Start up by listing each element that matches each individual selector
 	$initializeIndividualProperties: ()->
@@ -81,17 +82,6 @@ $wf.addRuntimeModule "individualized", ["selectors", "elements", "stylesheet-dom
 			@regenerateElementSelector(selector, id, element)
 
 
-	# Generate a random, unique element ID
-	generateRandomId: (length = 20)->
-		guid = (Math.round(Math.random()*36).toString(36) for i in [0..length]).join("")
-		return FASHION.config.idPrefix + guid
-
-
-	# Just a wrapper around query selector all, could be replaced by another thing
-	elementsForSelector: (selectorName) ->
-		Array.prototype.slice.call document.querySelectorAll selectorName
-
-
 	# Generate a specific selector on a specific element
 	regenerateElementSelector: (selector, id, element) ->
 
@@ -153,3 +143,14 @@ $wf.addRuntimeModule "individualized", ["selectors", "elements", "stylesheet-dom
 				@regenerateElementSelector indObj, element.id, indElement
 
 
+$wf.addRuntimeModule "individualizedHelpers", [],
+
+	# Generate a random, unique element ID
+	generateRandomId: (length = 20)->
+		guid = (Math.round(Math.random()*36).toString(36) for i in [0..length]).join("")
+		return FASHION.config.idPrefix + guid
+
+
+	# Just a wrapper around query selector all, could be replaced by another thing
+	elementsForSelector: (selectorName) ->
+		Array.prototype.slice.call document.querySelectorAll selectorName
