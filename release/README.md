@@ -1,4 +1,15 @@
-# Fashion 0.3.1
+# Fashion 0.3.2
+
+### Changes Since 0.3.1
+
+* @Transitions can have ranged keyframes, where matching objects come in sequentially
+* Fashion will watch for DOM changes in order to style all dynamically created objects
+* @Transitions can trigger other @transitions within keyframes
+* Properties marked as !important are now properly made dynamic in webkit
+* CSS3 Transition properties like duration and delay can now be linked to variables & expressions
+* Renamed 'capabilities' to 'requires' and moved them into the ParseTree, from the actualizer
+* Blocks without bodies are now supported
+* Unit tests for dynamic and individual selectors, at runtime
 
 ### Changes Since 0.3
 

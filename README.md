@@ -150,7 +150,7 @@ But wait, there's more! CSS3 provides the @keyframes block to define more comple
 			right: [ease-out 75%] 0px;
 		}
 	}
-	50% {
+	30% - 50% {
 		div p {opacity: [linear 50%] 1.0;}
 	}
 }
@@ -161,7 +161,24 @@ button {
 
 ```
 
-Notice that all of the durations are specified in terms of percentages, transitions are meant to easily scale faster or slower for easy tweaking later on. In this transition, the div would be fading from 0ms to 250ms and moving from 0ms to 375ms. The p's inside the div would start fading in at 250ms and finish at 500ms.
+Notice that all of the durations are specified in terms of percentages, transitions are meant to easily scale faster or slower for easy tweaking later on. In this transition, the div would be fading from 0ms to 250ms and moving from 0ms to 375ms. Paragraphs inside the div will come in sequentially, so that they don't appear to be one big block. The first paragraph will start fading in at 166ms (30%), the last one will start fading in at 250ms (50%). This simple feature can give your site a much more lively feeling.
+
+Transitions can also trigger other transitions. This allows you to create a modular system of transitions, for when you're ready to get *really* complicated with your site.
+
+```scss
+@transition change-page {
+	0% {
+		@trigger fade-out-existing-page 30%
+	}
+	30% {
+		@trigger change-colors 40%
+		@trigger change-background 60%
+	}
+	70% {
+		@trigger fade-in-new-page 30%
+	}
+}
+```
 
 
 ### Event Handling
