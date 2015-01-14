@@ -7,7 +7,8 @@ window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 			[\s]*(							# Padded with whitespace
 			\$([\w\-]+)\:[\s]*(.*?)			# Variable definitions
 			\s*(![A-z0-9\-]+?)?[;\n]| 		# Flags on variables, like !static
-			\@([\w\-]+)[\s]*(.*?)[\s]*\{| 	# Beginning of blocks
+			\@([\w\-]+)[\s]*				# Block header
+			(.*?)[\s]*[\{\n;]|				# Block arguments and body
 			(.*?)[\s]*?\{)|					# Beginning of selector
 			\{|\}							# Opening and closing brackets
 			)///g
@@ -26,13 +27,19 @@ window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 
 			# Parse out the arguments
 			if segment[7] then blockArgs = $wf.$parser.splitByTopLevelSpaces segment[7]
-			else blockArgs = []
+			else blockArgs = [] 
+
+			# Get the block's body, if it exists
+			hasBody = segment[0].indexOf("{") isnt -1
+			if hasBody
+				body = window.fashion.$parser.parseBlock fashionText, regex, startIndex
+			else body = ""
 
 			# Add the block object
 			parseTree.addBlock
 				type: segment[6],
 				arguments: blockArgs,
-				body: window.fashion.$parser.parseBlock fashionText, regex, startIndex
+				body: body
 
 			# Add the block dependency
 			parseTree.addBlockDependency segment[6], $wf.$blocks[segment[6]]
@@ -74,8 +81,8 @@ window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, las
 			selectorStack.pop()
 			bracketDepth--
 
-		# Pass in variable declarations.
-		else if segment[3] and segment[4]
+		# Pass in variable declarations and blocks
+		else if (segment[3] and segment[4]) or segment[6]
 			topSel.addToBody fashionText.substring(segment.index, lastIndex)
 
 		# We need to go deeper.
@@ -172,8 +179,10 @@ window.fashion.$parser.parseBlock = (fashionText, regex, startIndex) ->
 		# Simple enough.
 		if segment[0] is "}" then bracketDepth--
 		else if segment[0] is "{" then bracketDepth++
-		else if segment[6] then bracketDepth++ # Nested Block
 		else if segment[8] then bracketDepth++ # Nested Selector
+		else if segment[6] 
+			if segment[0].indexOf("{") isnt -1
+				bracketDepth++ # Nested Block
 
 	# Return the selectors
 	return fashionText.substring(startIndex, endIndex - 1).trim()

@@ -695,6 +695,25 @@
       expect(block.body).toBe("block body 3");
       return expect(block.type).toBe("block_type");
     });
+    it("should parse blocks without bodies, ending in semicolon", function() {
+      var block, result;
+      result = parse("@import 'test.fss';");
+      block = result.blocks[0];
+      expect(block["arguments"].length).toBe(1);
+      expect(block["arguments"][0]).toBe("'test.fss'");
+      expect(block.body).toBe("");
+      return expect(block.type).toBe("import");
+    });
+    it("should parse blocks without bodies, ending in a new line", function() {
+      var block, result;
+      result = parse("@trigger 'fade-out' 100ms\n");
+      block = result.blocks[0];
+      expect(block["arguments"].length).toBe(2);
+      expect(block["arguments"][0]).toBe("'fade-out'");
+      expect(block["arguments"][1]).toBe("100ms");
+      expect(block.body).toBe("");
+      return expect(block.type).toBe("trigger");
+    });
     it("should parse blocks with nested brackets", function() {
       var block, result;
       result = parse("@outer-block {\n	selector: {\n		property: 1;\n	}\n}");

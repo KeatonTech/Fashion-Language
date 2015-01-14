@@ -138,7 +138,6 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 
 	# Add properties for a single selector to the transition
 	transitionSelector: (selector, duration, tSheet, pSheet, variables, selName) ->
-		console.log arguments
 		properties = selector.properties
 
 		# Separate out properties that need transitions applied to them
@@ -156,6 +155,7 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 		@wait @transitionTiming.settle, ((selName, properties) => ()=> 
 			for property in properties
 				pval = @evaluate property.value, 0, variables
+				if property.important then pval += " !important"
 				@setRuleOnSheet pSheet, selName, property.name, pval
 
 		)(selName, properties)

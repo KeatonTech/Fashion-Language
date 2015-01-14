@@ -972,7 +972,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   sq = dq = bt = false;
   acc = "";
   ret = [];
-  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\`\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
+  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\"\'\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\`\"\'\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
   while (token = regex.exec(value)) {
     if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
       ret.push(acc);
@@ -1000,8 +1000,8 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   return ret;
 };
 window.fashion.$parser.parseSections = function(fashionText, parseTree) {
-  var blockArgs, regex, segment, startIndex;
-  regex = /([\s]*(\$([\w\-]+)\:[\s]*(.*?)\s*(![A-z0-9\-]+?)?[;\n]|\@([\w\-]+)[\s]*(.*?)[\s]*\{|(.*?)[\s]*?\{)|\{|\})/g;
+  var blockArgs, body, hasBody, regex, segment, startIndex;
+  regex = /([\s]*(\$([\w\-]+)\:[\s]*(.*?)\s*(![A-z0-9\-]+?)?[;\n]|\@([\w\-]+)[\s]*(.*?)[\s]*[\{\n;]|(.*?)[\s]*?\{)|\{|\})/g;
   while (segment = regex.exec(fashionText)) {
     if (segment.length < 8 || !segment[0]) {
       break;
@@ -1015,10 +1015,16 @@ window.fashion.$parser.parseSections = function(fashionText, parseTree) {
       } else {
         blockArgs = [];
       }
+      hasBody = segment[0].indexOf("{") !== -1;
+      if (hasBody) {
+        body = window.fashion.$parser.parseBlock(fashionText, regex, startIndex);
+      } else {
+        body = "";
+      }
       parseTree.addBlock({
         type: segment[6],
         "arguments": blockArgs,
-        body: window.fashion.$parser.parseBlock(fashionText, regex, startIndex)
+        body: body
       });
       parseTree.addBlockDependency(segment[6], $wf.$blocks[segment[6]]);
     } else if (segment[8]) {
@@ -1042,7 +1048,7 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
     if (segment[0] === "}") {
       selectorStack.pop();
       bracketDepth--;
-    } else if (segment[3] && segment[4]) {
+    } else if ((segment[3] && segment[4]) || segment[6]) {
       topSel.addToBody(fashionText.substring(segment.index, lastIndex));
     } else if (segment[8]) {
       name = $wf.$parser.nestSelector(topSel.rawName, segment[8]);
@@ -1122,10 +1128,12 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
       bracketDepth--;
     } else if (segment[0] === "{") {
       bracketDepth++;
-    } else if (segment[6]) {
-      bracketDepth++;
     } else if (segment[8]) {
       bracketDepth++;
+    } else if (segment[6]) {
+      if (segment[0].indexOf("{") !== -1) {
+        bracketDepth++;
+      }
     }
   }
   return fashionText.substring(startIndex, endIndex - 1).trim();
@@ -3820,7 +3828,6 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
   },
   transitionSelector: function(selector, duration, tSheet, pSheet, variables, selName) {
     var properties, property, smoothProperties, tCSS, _i, _len;
-    console.log(arguments);
     properties = selector.properties;
     smoothProperties = [];
     for (_i = 0, _len = properties.length; _i < _len; _i++) {
@@ -3840,6 +3847,9 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
           for (_j = 0, _len1 = properties.length; _j < _len1; _j++) {
             property = properties[_j];
             pval = _this.evaluate(property.value, 0, variables);
+            if (property.important) {
+              pval += " !important";
+            }
             _results.push(_this.setRuleOnSheet(pSheet, selName, property.name, pval));
           }
           return _results;

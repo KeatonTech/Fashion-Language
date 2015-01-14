@@ -2,7 +2,6 @@
 
 ### Features
 
-* Updated @transition block with support for keyframe ranges
 * Binding function, with DOM observers to update its value
 * @include block for loading additional .fss files at compile time
 * Allow ternaries (CS and JS formats) in expressions
@@ -19,6 +18,7 @@
 * @isMobile and @hasTouch globals
 
 ### Misc
+* Transitions should be smarter about cascading, overriding CSS when necessary
 * Make variables declared in @transition blocks take an isolated scope
 * 150 unit tests
 
