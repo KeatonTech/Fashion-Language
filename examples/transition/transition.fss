@@ -21,28 +21,35 @@ button {
 
 @transition fade-in {
 	start {
-		div {
-			opacity: 0.0;
+		div p {
+			opacity: 0;
 			position: relative;
-			right: 100px;
-
-			p {
-				opacity: 0;
-				position: relative;
-				right: 20px;
-			}
+			right: 20px;
 		}
 	}
 	0% {
-		div {
-			opacity: [linear 40%] 1.0;
-			right: [ease-out 55%] 0px;
-		}
+		@trigger 'fade-in-block' 55%
 	}
 	30%-70% {
 		div p {
 			opacity: [linear 30%] 1.0;
 			right: [ease-out 30%] 0px;
+		}
+	}
+}
+
+@transition fade-in-block {
+	start {
+		div {
+			opacity: 0.0;
+			position: relative;
+			right: 100px;
+		}
+	}
+	0% {
+		div {
+			opacity: [linear 66%] 1.0;
+			right: [ease-out 100%] 0px;
 		}
 	}
 }

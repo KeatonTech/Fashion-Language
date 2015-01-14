@@ -26,17 +26,20 @@ window.fashiontests.modules.transition = ()->
 		expect(transitions['my-transition']['50%']).toBeDefined()
 		expect(transitions['my-transition']['100%']).toBeDefined()
 
-		expect(transitions['my-transition']['start'][0].name).toBe("#item")
-		expect(transitions['my-transition']['start'][0].properties[0].name).toBe("opacity")
-		expect(transitions['my-transition']['start'][0].properties[0].value).toBe("0.0")
+		startSelector = transitions['my-transition']['start'].selectors[0]
+		expect(startSelector.name).toBe("#item")
+		expect(startSelector.properties[0].name).toBe("opacity")
+		expect(startSelector.properties[0].value).toBe("0.0")
 
-		expect(transitions['my-transition']['50%'][0].properties[0].name).toBe("opacity")
-		expect(transitions['my-transition']['50%'][0].properties[0].value).toBe("1.0")
+		midSelector = transitions['my-transition']['50%'].selectors[0]
+		expect(midSelector.properties[0].name).toBe("opacity")
+		expect(midSelector.properties[0].value).toBe("1.0")
 
-		expect(transitions['my-transition']['100%'][0].properties[0].name).toBe("opacity")
-		expect(transitions['my-transition']['100%'][0].properties[0].value).toBe("0.5")
-		expect(transitions['my-transition']['100%'][1].properties[0].name).toBe("display")
-		expect(transitions['my-transition']['100%'][1].properties[0].value).toBe("block")
+		endSelectors = transitions['my-transition']['100%'].selectors
+		expect(endSelectors[0].properties[0].name).toBe("opacity")
+		expect(endSelectors[0].properties[0].value).toBe("0.5")
+		expect(endSelectors[1].properties[0].name).toBe("display")
+		expect(endSelectors[1].properties[0].value).toBe("block")
 
 
 	it "should add CSS transitions where appropriate", ()->
@@ -53,7 +56,7 @@ window.fashiontests.modules.transition = ()->
 			""")
 
 		transitions = parseTree.dependencies.blocks.transition.runtimeObject.transitions
-		startProperty = transitions['my-transition']['start'][0].properties[0]
+		startProperty = transitions['my-transition']['start'].selectors[0].properties[0]
 		expect(startProperty.value.transition).toBeDefined()
 		expect(startProperty.value.transition.easing).toBe("ease-out")
 		expect(startProperty.value.transition.duration).toBe("100%")
@@ -80,8 +83,8 @@ window.fashiontests.modules.transition = ()->
 		expect(transitions['my-transition']['0%-50%']).toBeDefined()
 		expect(transitions['my-transition']['50% - 100%']).toBeDefined()
 
-		expect(transitions['my-transition']['0%-50%'][0].name).toBe(".class")
-		expect(transitions['my-transition']['50% - 100%'][0].name).toBe(".class2")
+		expect(transitions['my-transition']['0%-50%'].selectors[0].name).toBe(".class")
+		expect(transitions['my-transition']['50% - 100%'].selectors[0].name).toBe(".class2")
 
 
 	it "should be able to read variables defined outside", ()->
@@ -101,8 +104,8 @@ window.fashiontests.modules.transition = ()->
 			""")
 
 		transitions = parseTree.dependencies.blocks.transition.runtimeObject.transitions
-		startProperty = transitions['highlight']['0%'][0].properties[0]
-		endProperty = transitions['highlight']['100%'][0].properties[0]
+		startProperty = transitions['highlight']['0%'].selectors[0].properties[0]
+		endProperty = transitions['highlight']['100%'].selectors[0].properties[0]
 
 		# Make sure they're both scripts
 		expect(startProperty.value.script).toBeDefined()
@@ -129,11 +132,11 @@ window.fashiontests.modules.transition = ()->
 
 		transitions = parseTree.dependencies.blocks.transition.runtimeObject.transitions
 
-		expect(transitions['highlight']['0%'][0].name.script).toBeDefined()
-		expect(transitions['highlight']['100%'][0].name.script).toBeDefined()
+		expect(transitions['highlight']['0%'].selectors[0].name.script).toBeDefined()
+		expect(transitions['highlight']['100%'].selectors[0].name.script).toBeDefined()
 
-		expect(transitions['highlight']['0%'][0].properties[0].value).toBe("black")
-		expect(transitions['highlight']['100%'][0].properties[0].value).toBe("red")
+		expect(transitions['highlight']['0%'].selectors[0].properties[0].value).toBe "black"
+		expect(transitions['highlight']['100%'].selectors[0].properties[0].value).toBe "red"
 
 		expect(transitions['highlight']["$vars"]).toEqual(["itemId"])
 

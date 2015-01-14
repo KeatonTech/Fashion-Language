@@ -56,7 +56,7 @@ window.fashion.$blocks["transition"] = new BlockModule
 
 		# Parse each inner body
 		for keyframe, body of keyframes
-			transition[keyframe] = @parse(body).selectors
+			transition[keyframe] = @parse(body)
 
 		# Add to the runtime runtimeObject
 		@runtimeObject.transitions[name] = transition
@@ -94,31 +94,68 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 		@moveSheetToTop propertySheet
 
 		# Go through each keyframe
-		for keyframe, selectors of transition when keyframe[0] isnt '$'
+		for keyframe, parseTree of transition when keyframe[0] isnt '$'
 
-			# Determine what time, in milliseconds, the keyframe should start executing
-			if keyframe is "start" or keyframe is "begin" then startTime = 0
-			else if keyframe is "finish" then startTime = duration + @transitionTiming.start
-			else
-				intStartTime = (parseFloat(keyframe.split('-')[0]) / 100 * duration) 
-				startTime = intStartTime + @transitionTiming.start
+			# Set up timed triggers for other transitions
+			@transitionDelayTriggers duration, variables, keyframe, parseTree.blocks
 
-			# Generate the magical function that'll be run later for each keyframe
-			if keyframe.indexOf("-") isnt -1
-				addSelectors = @transitionKeyframeRange(keyframe, selectors, duration,
-					transitionSheet.sheet, variables)
-			else
-				addSelectors = @transitionKeyframeSingle(selectors, duration,
-					transitionSheet.sheet, variables)
-
-			# Wait until the limelight is on this keyframe
-			if startTime > 0
-				@wait startTime, addSelectors.bind(this)
-			else addSelectors.bind(this)()
-
+			# Set up timed function calls for modifying selectors
+			@transitionDelaySelectors(
+				duration, variables, keyframe, transitionSheet, parseTree.selectors)
+			
 		# Delete the sheet once we're done
 		d = duration + @transitionTiming.start + @transitionTiming.end
 		@wait d, ()=> @removeStylesheet transitionSheet
+
+
+	# Set up time delays for triggering other transitions
+	transitionDelayTriggers: (duration, variables, keyframe, blocks) ->
+		startTime = @transitionStartTime duration, keyframe
+
+		for block in blocks when block.type is "trigger"
+			[name, transDuration] = block.arguments
+
+			# Strip the quotes from the name, if necessary
+			if name[0] is "'" or name[0] is '"' or name[0] is "`"
+				name = name.substring 1, name.length - 1
+
+			# Convert the duration into a millisecond duration (from %, s, ms, or unitless)
+			if transDuration.indexOf('%') is transDuration.length - 1
+				transDuration = parseFloat(transDuration) / 100 * duration
+			else transDuration = @timeInMs transDuration			
+
+			# When the time comes, make it go
+			@wait startTime, @triggerTransition.bind this, name, transDuration, variables
+
+
+	# Set up time delays for selectors
+	transitionDelaySelectors: (duration, variables, keyframe, tSheet, selectors) ->
+
+		startTime = @transitionStartTime duration, keyframe
+
+		# Generate the magical function that'll be run later for each keyframe
+		if keyframe.indexOf("-") isnt -1
+			addSelectors = @transitionKeyframeRange(keyframe, selectors, duration,
+				tSheet.sheet, variables)
+		else
+			addSelectors = @transitionKeyframeSingle(selectors, duration,
+				tSheet.sheet, variables)
+
+		# Wait until the limelight is on this keyframe
+		if startTime > 0
+			@wait startTime, addSelectors.bind(this)
+		else addSelectors.bind(this)()
+
+
+	# Given a keyframe and a duration, what time should the transition start
+	transitionStartTime: (duration, keyframe) ->
+
+		# Determine what time, in milliseconds, the keyframe should start executing
+		if keyframe is "start" or keyframe is "begin" then return 0
+		else if keyframe is "finish" then return duration + @transitionTiming.start
+		else
+			intStartTime = (parseFloat(keyframe.split('-')[0]) / 100 * duration) 
+			return intStartTime + @transitionTiming.start
 
 
 	# Add stuff for the each keyframe to the CSS
@@ -215,7 +252,7 @@ $wf.addRuntimeModule "transitionRangeBlock", ["individualizedHelpers"],
 				)(selector, element)
 		
 
-
+# Trigger function, used inside of expressions and triggers
 window.fashion.$functions["trigger"] = new FunctionModule
 	output: $wf.$type.None
 	unit: ''
@@ -224,3 +261,12 @@ window.fashion.$functions["trigger"] = new FunctionModule
 		variables[k] = v.value for k,v of variables
 		triggerFunction = FASHION.runtime.triggerTransition
 		triggerFunction.call this, name.value, duration, variables
+
+
+# Trigger block, used inside transitions to trigger other transitions
+window.fashion.$blocks["trigger"] = new BlockModule
+	compile: (args, body) ->
+		if args.length is 0
+			@throwError "Must specify transition name and duration"
+		else if args.length is 1
+			@throwError "Must specify a duration"

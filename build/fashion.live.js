@@ -3760,7 +3760,7 @@ window.fashion.$blocks["transition"] = new BlockModule({
     }
     for (keyframe in keyframes) {
       body = keyframes[keyframe];
-      transition[keyframe] = this.parse(body).selectors;
+      transition[keyframe] = this.parse(body);
     }
     return this.runtimeObject.transitions[name] = transition;
   },
@@ -3776,7 +3776,7 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
     settle: 1
   },
   triggerTransition: function(name, duration, variables) {
-    var addSelectors, d, intStartTime, keyframe, propertySheet, selectors, startTime, transition, transitionSheet;
+    var d, keyframe, parseTree, propertySheet, transition, transitionSheet;
     duration = this.timeInMs(duration);
     transition = FASHION.modules.blocks.transition.transitions[name];
     if (transition == null) {
@@ -3786,28 +3786,12 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
     propertySheet = this.getStylesheet("FASHION-transition::properties-" + name);
     this.moveSheetToTop(propertySheet);
     for (keyframe in transition) {
-      selectors = transition[keyframe];
+      parseTree = transition[keyframe];
       if (!(keyframe[0] !== '$')) {
         continue;
       }
-      if (keyframe === "start" || keyframe === "begin") {
-        startTime = 0;
-      } else if (keyframe === "finish") {
-        startTime = duration + this.transitionTiming.start;
-      } else {
-        intStartTime = parseFloat(keyframe.split('-')[0]) / 100 * duration;
-        startTime = intStartTime + this.transitionTiming.start;
-      }
-      if (keyframe.indexOf("-") !== -1) {
-        addSelectors = this.transitionKeyframeRange(keyframe, selectors, duration, transitionSheet.sheet, variables);
-      } else {
-        addSelectors = this.transitionKeyframeSingle(selectors, duration, transitionSheet.sheet, variables);
-      }
-      if (startTime > 0) {
-        this.wait(startTime, addSelectors.bind(this));
-      } else {
-        addSelectors.bind(this)();
-      }
+      this.transitionDelayTriggers(duration, variables, keyframe, parseTree.blocks);
+      this.transitionDelaySelectors(duration, variables, keyframe, transitionSheet, parseTree.selectors);
     }
     d = duration + this.transitionTiming.start + this.transitionTiming.end;
     return this.wait(d, (function(_this) {
@@ -3815,6 +3799,53 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
         return _this.removeStylesheet(transitionSheet);
       };
     })(this));
+  },
+  transitionDelayTriggers: function(duration, variables, keyframe, blocks) {
+    var block, name, startTime, transDuration, _i, _len, _ref, _results;
+    startTime = this.transitionStartTime(duration, keyframe);
+    _results = [];
+    for (_i = 0, _len = blocks.length; _i < _len; _i++) {
+      block = blocks[_i];
+      if (!(block.type === "trigger")) {
+        continue;
+      }
+      _ref = block["arguments"], name = _ref[0], transDuration = _ref[1];
+      if (name[0] === "'" || name[0] === '"' || name[0] === "`") {
+        name = name.substring(1, name.length - 1);
+      }
+      if (transDuration.indexOf('%') === transDuration.length - 1) {
+        transDuration = parseFloat(transDuration) / 100 * duration;
+      } else {
+        transDuration = this.timeInMs(transDuration);
+      }
+      _results.push(this.wait(startTime, this.triggerTransition.bind(this, name, transDuration, variables)));
+    }
+    return _results;
+  },
+  transitionDelaySelectors: function(duration, variables, keyframe, tSheet, selectors) {
+    var addSelectors, startTime;
+    startTime = this.transitionStartTime(duration, keyframe);
+    if (keyframe.indexOf("-") !== -1) {
+      addSelectors = this.transitionKeyframeRange(keyframe, selectors, duration, tSheet.sheet, variables);
+    } else {
+      addSelectors = this.transitionKeyframeSingle(selectors, duration, tSheet.sheet, variables);
+    }
+    if (startTime > 0) {
+      return this.wait(startTime, addSelectors.bind(this));
+    } else {
+      return addSelectors.bind(this)();
+    }
+  },
+  transitionStartTime: function(duration, keyframe) {
+    var intStartTime;
+    if (keyframe === "start" || keyframe === "begin") {
+      return 0;
+    } else if (keyframe === "finish") {
+      return duration + this.transitionTiming.start;
+    } else {
+      intStartTime = parseFloat(keyframe.split('-')[0]) / 100 * duration;
+      return intStartTime + this.transitionTiming.start;
+    }
   },
   transitionKeyframeSingle: function(selectors, duration, tSheet, variables) {
     return function() {
@@ -3932,6 +3963,16 @@ window.fashion.$functions["trigger"] = new FunctionModule({
     }
     triggerFunction = FASHION.runtime.triggerTransition;
     return triggerFunction.call(this, name.value, duration, variables);
+  }
+});
+
+window.fashion.$blocks["trigger"] = new BlockModule({
+  compile: function(args, body) {
+    if (args.length === 0) {
+      return this.throwError("Must specify transition name and duration");
+    } else if (args.length === 1) {
+      return this.throwError("Must specify a duration");
+    }
   }
 });
 window.fashion.$globals = {
