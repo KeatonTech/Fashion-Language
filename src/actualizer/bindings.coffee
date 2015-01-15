@@ -15,10 +15,11 @@ window.fashion.$actualizer.bindSelectors = (runtimeData, selectors, sheet) ->
 
 	# Loopdie loopdie loop
 	for sid, selector of selectors
+		sid = parseInt(sid)
 
 		# Check to see if the selector is dynamic
 		if selector.name instanceof Expression
-			bindLink = [sheet, parseInt(sid)]
+			bindLink = [sheet, sid]
 			$wf.$actualizer.bindExpression runtimeData, selector.name, bindLink
 
 		# Go through each property
@@ -28,7 +29,7 @@ window.fashion.$actualizer.bindSelectors = (runtimeData, selectors, sheet) ->
 			if (property.mode & tmode) is tmode then continue
 
 			# Generate the bind link, an array with the necessary data for runtime
-			bindLink = [sheet, parseInt(sid), $wf.$actualizer.makeCamelCase property.name]
+			bindLink = [sheet, sid, $wf.$actualizer.makeCamelCase property.name]
 
 			# Go through pulling all the expressions out of the property value
 			if property.value instanceof Array

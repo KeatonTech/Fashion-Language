@@ -16,7 +16,7 @@ window.fashion.$actualizer.hideIndividualizedSelectors =
 	cssSelectors["hs"] = hideSel
 
 	# Figure out how many selectors there are so one can be added to the end
-	len = 0
+	len = $wf.styleHeaderRules
 	len++ for key, value of cssSelectors
 
 	# Add a script to remove this super selector at runtime

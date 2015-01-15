@@ -50,6 +50,8 @@ window.fashion.runtimeConfig = {
 
 window.fashion.styleHeader = "html {box-sizing: border-box;}\n*, *:before, *:after {box-sizing: inherit;border: none;}\n";
 
+window.fashion.styleHeaderRules = 2;
+
 window.fashion.addProperty = function(name, propertyModule, force) {
   if (force == null) {
     force = false;
@@ -2178,7 +2180,7 @@ window.fashion.$actualizer.splitIndividual = function(selectors) {
   var cssRule, cssSelector, cssSelectors, id, indMode, indRule, indSelector, indSelectors, pid, property, selector, _ref;
   cssSelectors = {};
   indSelectors = {};
-  cssRule = indRule = 0;
+  cssRule = indRule = $wf.styleHeaderRules;
   indMode = $wf.$runtimeMode.individual;
   for (id in selectors) {
     selector = selectors[id];
@@ -2245,8 +2247,9 @@ window.fashion.$actualizer.bindSelectors = function(runtimeData, selectors, shee
   _results = [];
   for (sid in selectors) {
     selector = selectors[sid];
+    sid = parseInt(sid);
     if (selector.name instanceof Expression) {
-      bindLink = [sheet, parseInt(sid)];
+      bindLink = [sheet, sid];
       $wf.$actualizer.bindExpression(runtimeData, selector.name, bindLink);
     }
     _results.push((function() {
@@ -2258,7 +2261,7 @@ window.fashion.$actualizer.bindSelectors = function(runtimeData, selectors, shee
         if ((property.mode & tmode) === tmode) {
           continue;
         }
-        bindLink = [sheet, parseInt(sid), $wf.$actualizer.makeCamelCase(property.name)];
+        bindLink = [sheet, sid, $wf.$actualizer.makeCamelCase(property.name)];
         if (property.value instanceof Array) {
           _results1.push((function() {
             var _i, _len, _ref1, _results2;
@@ -2669,7 +2672,7 @@ window.fashion.$actualizer.hideIndividualizedSelectors = function(cssSelectors, 
   hideSel = new Selector(joinedSelector, $wf.$runtimeMode["static"]);
   hideSel.addProperty(new Property("visibility", "hidden"));
   cssSelectors["hs"] = hideSel;
-  len = 0;
+  len = $wf.styleHeaderRules;
   for (key in cssSelectors) {
     value = cssSelectors[key];
     len++;

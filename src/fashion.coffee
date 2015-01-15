@@ -62,8 +62,11 @@ window.fashion.styleHeader =
 	"""
 	html {box-sizing: border-box;}
 	*, *:before, *:after {box-sizing: inherit;border: none;}
-	
+
 	"""
+
+# Number of rules in the header, used to offset indices
+window.fashion.styleHeaderRules = 2
 
 
 # Functions exposed by the Fashion compiler to allow for extension

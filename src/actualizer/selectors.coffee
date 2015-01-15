@@ -2,7 +2,7 @@
 # Returned lists are maps, so as to maintain the original indexes
 window.fashion.$actualizer.splitIndividual = (selectors) ->
 	cssSelectors = {}; indSelectors = {}
-	cssRule = indRule = 0
+	cssRule = indRule = $wf.styleHeaderRules
 	indMode = $wf.$runtimeMode.individual
 
 	for id, selector of selectors
