@@ -21,18 +21,21 @@ class Module
 class ReturnValueModule extends Module
 	constructor: (args) ->
 
-		# A promise that this module will return the specified data type
-		@type = args.type || args.output || args.outputType || $wf.$type.String
+		if typeof args is 'function' then @get = args
+		else
 
-		# A promise that this module will return the specified unit, if data type is Number
-		@unit = args.unit || ''
+			# A promise that this module will return the specified data type
+			@type = args.type || args.output || args.outputType || $wf.$type.String
 
-		# A function that retrieves the value of the object.
-		# Any arguments passed to the module will be passed to this.
-		@get = args.get || args.evaluate # ()-> return window.innerWidth
+			# A promise that this module will return the specified unit, if data is Number
+			@unit = args.unit || ''
 
-		# These can be dynamically recomputed based on a runtime mode
-		super args
+			# A function that retrieves the value of the object.
+			# Any arguments passed to the module will be passed to this.
+			@get = args.get || args.evaluate # ()-> return window.innerWidth
+
+			# These can be dynamically recomputed based on a runtime mode
+			super args
 
 # Adds a new global variable to Fashion.
 class GlobalModule extends ReturnValueModule

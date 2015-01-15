@@ -697,10 +697,14 @@ ReturnValueModule = (function(_super) {
   __extends(ReturnValueModule, _super);
 
   function ReturnValueModule(args) {
-    this.type = args.type || args.output || args.outputType || $wf.$type.String;
-    this.unit = args.unit || '';
-    this.get = args.get || args.evaluate;
-    ReturnValueModule.__super__.constructor.call(this, args);
+    if (typeof args === 'function') {
+      this.get = args;
+    } else {
+      this.type = args.type || args.output || args.outputType || $wf.$type.String;
+      this.unit = args.unit || '';
+      this.get = args.get || args.evaluate;
+      ReturnValueModule.__super__.constructor.call(this, args);
+    }
   }
 
   return ReturnValueModule;
@@ -794,6 +798,7 @@ window.fashion.$type = {
   String: 2,
   Color: 3,
   Element: 4,
+  Boolean: 5,
   KGeneric: 100,
   KDisplay: 101,
   KCenter: 102,
@@ -972,7 +977,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   sq = dq = bt = false;
   acc = "";
   ret = [];
-  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\"\'\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\`\"\'\s]+|\s+(\&\&|\|\|)\s+|\s|[^\(\)\"\'\`\s]+)/g;
+  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\"\'\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\`\"\'\s]+|\s+(\&\&|\|\|)\s+|\s+(==|!==)\s+|if\s+|\s+then\s+|\s+else\s+|\s|[^\(\)\"\'\`\s]+)/g;
   while (token = regex.exec(value)) {
     if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
       ret.push(acc);
@@ -1260,7 +1265,7 @@ window.fashion.$parser.parsePropertyValue = function(value, parseTree, allowExpr
 };
 
 window.fashion.$parser.identifyExpression = function() {
-  return /(([\s][\+\-\/\*\=][\s])|\s(\&\&|\|\|)\s|[\(\)\[\]]|\@|\$)/g;
+  return /(([\s][\+\-\/\*\=][\s])|\s(\&\&|\|\|)\s|if|\sthen\s|\selse\s|[\(\)\[\]]|\@|\$)/g;
 };
 
 window.fashion.$parser.parseSingleValue = function(value, parseTree, isVar) {
@@ -1275,16 +1280,20 @@ window.fashion.$parser.parseSingleValue = function(value, parseTree, isVar) {
   }
   return value;
 };
-window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, globals, top, suppressUnits) {
-  var bindings, contained, eObj, end, expander, expr, isSetter, length, matchParens, mode, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, tailingUnit, type, types, unit, units, _ref, _ref1;
+window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, globals, top, hideUnits, wrap) {
+  var bindings, contained, eObj, end, expander, expr, isSetter, length, makeExpression, matchCount, matchParens, mode, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, tailingUnit, type, types, unit, units, _ref, _ref1;
   if (top == null) {
     top = true;
   }
-  if (suppressUnits == null) {
-    suppressUnits = false;
+  if (hideUnits == null) {
+    hideUnits = false;
+  }
+  if (wrap == null) {
+    wrap = true;
   }
   expander = $wf.$parser.expressionExpander;
   matchParens = window.fashion.$parser.matchParenthesis;
+  makeExpression = $wf.$parser.makeExpression.bind(this, top, hideUnits, wrap);
   script = expString;
   mode = $wf.$runtimeMode["static"];
   bindings = new ExpressionBindings;
@@ -1296,9 +1305,11 @@ window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, g
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([^\s\)]*))/g;
+  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|(\#[0-9A-Fa-f]{3,6})|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([^\s\)]*)|if(.*?)then(.*?)else(.*)|if(.*?)then(.*)|\`(.*?)\`)/g;
   shouldBreak = false;
+  matchCount = 0;
   while (!shouldBreak && (section = regex.exec(expString))) {
+    matchCount++;
     eObj = void 0;
     start = section.index;
     length = section[0].length;
@@ -1313,8 +1324,10 @@ window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, g
     } else if (section[6]) {
       eObj = expander.globalVariable(section[6], globals, parseTree);
     } else if (section[7]) {
-      eObj = expander.numberWithUnit(section[7]);
-    } else if (section[10]) {
+      eObj = expander.hexColor(section[7]);
+    } else if (section[8]) {
+      eObj = expander.numberWithUnit(section[8]);
+    } else if (section[11]) {
       _ref = matchParens(regex, expString, end), contained = _ref.body, tailingUnit = _ref.unit;
       if (!contained) {
         contained = expString.substring(end, expString.length - 1);
@@ -1324,7 +1337,16 @@ window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, g
       if (tailingUnit) {
         length += tailingUnit.length;
       }
-      eObj = expander["function"](section[10], contained, tailingUnit, parseTree, funcs, globals);
+      eObj = expander["function"](section[11], contained, tailingUnit, arguments);
+    }
+    if (section[13]) {
+      eObj = expander.ternary(section[13], section[14], section[15], arguments, top);
+    }
+    if (section[16]) {
+      eObj = expander.ternary(section[16], section[17], void 0, arguments, top);
+    }
+    if (section[18]) {
+      eObj = expander.constant(section[18]);
     }
     if (!eObj) {
       continue;
@@ -1341,21 +1363,41 @@ window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, g
     types.push(eObj.type === void 0 ? $wf.$type.Unknown : eObj.type);
     units.push(eObj.unit || '');
   }
+  if (matchCount === 0) {
+    if (!expString.match(/[^0-9\-\.\s]/)) {
+      return makeExpression(expString, $wf.$type.Number, '', void 0, 0);
+    } else if (expString.toLowerCase() === "true" || expString.toLowerCase() === "false") {
+      return makeExpression(expString, $wf.$type.Boolean, '', void 0, 0);
+    } else {
+      expString = JSON.stringify(expString.trim());
+      return makeExpression(expString, $wf.$type.String, '', void 0, 0);
+    }
+  }
   _ref1 = $wf.$parser.determineExpressionType(types, units, expString), type = _ref1.type, unit = _ref1.unit;
   if (isSetter) {
     unit = void 0;
   }
-  script = $wf.$parser.wrapExpressionScript(script, top, type, unit, suppressUnits);
-  expr = new Expression(script, type, unit, bindings, mode);
+  expr = makeExpression(script, type, unit, bindings, mode);
   if (top) {
     expr.generate();
   }
   return expr;
 };
 
-window.fashion.$parser.wrapExpressionScript = function(script, top, type, unit, suppressUnits) {
-  if (top) {
-    if (!suppressUnits && unit && typeof unit === "string") {
+window.fashion.$parser.makeExpression = function(top, hideUnits, wrap, script, type, unit, bind, mode) {
+  script = $wf.$parser.wrapExpressionScript(top, hideUnits, wrap, script, type, unit);
+  return new Expression(script, type, unit, bind, mode);
+};
+
+window.fashion.$parser.wrapExpressionScript = function(top, hideUnits, wrap, script, type, unit) {
+  if (!wrap) {
+    if (!hideUnits && unit && typeof unit === "string") {
+      return "(" + script + ") + '" + unit + "'";
+    } else {
+      return "" + script;
+    }
+  } else if (top) {
+    if (!hideUnits && unit && typeof unit === "string") {
       return "return (" + script + ") + '" + unit + "'";
     } else {
       return "return " + script;
@@ -1381,7 +1423,7 @@ window.fashion.$parser.matchParenthesis = function(regex, string, index) {
       acc += string.substr(lastIndex, section.index - lastIndex);
       return {
         body: acc,
-        unit: section[11]
+        unit: section[12]
       };
     } else {
       acc += string.substr(lastIndex, (section.index - lastIndex) + section[0].length);
@@ -1430,6 +1472,12 @@ window.fashion.$parser.determineExpressionType = function(types, units, expressi
 };
 
 window.fashion.$parser.expressionExpander = {
+  constant: function(match) {
+    return new Expression(match, $wf.$type.Unknown, "", void 0, 0);
+  },
+  hexColor: function(match) {
+    return new Expression(JSON.stringify(match), $wf.$type.Color, "", void 0, 0);
+  },
   localVariable: function(name, parseTree, isSetter) {
     var bindings, isIndividual, isIndividualized, mode, script, selector, selectors, type, unit, vObj, vars;
     if (isSetter == null) {
@@ -1504,8 +1552,9 @@ window.fashion.$parser.expressionExpander = {
     }
     return new Expression(script, type, unit, false, $wf.$runtimeMode.individual);
   },
-  "function": function(name, argumentsString, inputUnit, parseTree, funcs, globals) {
-    var arg, argComponents, args, bindings, expr, expressions, fObj, mode, namedArgs, objectProp, script, scripts, unit, vars, _i, _j, _len, _len1;
+  "function": function(name, argumentsString, inputUnit, parseArgs) {
+    var arg, argComponents, args, bindings, expr, expressions, fObj, funcs, globals, mode, namedArgs, objectProp, ogstring, parseTree, script, scripts, unit, vars, _i, _j, _len, _len1;
+    ogstring = parseArgs[0], parseTree = parseArgs[1], funcs = parseArgs[2], globals = parseArgs[3];
     vars = parseTree.variables;
     fObj = funcs[name];
     if (!fObj) {
@@ -1555,6 +1604,30 @@ window.fashion.$parser.expressionExpander = {
     parseTree.addFunctionDependency(name, fObj);
     script = "f['" + name + "'].get.call(" + (scripts.join(',')) + ")";
     return new Expression(script, fObj.type, inputUnit || unit, bindings, mode);
+  },
+  ternary: function(ifExp, trueExp, falseExp, parseArgs, top) {
+    var bindings, funcs, globals, mode, ogstring, parse, parseTree, script;
+    ogstring = parseArgs[0], parseTree = parseArgs[1], funcs = parseArgs[2], globals = parseArgs[3];
+    bindings = new ExpressionBindings;
+    mode = 0;
+    parse = function(arg) {
+      var e;
+      e = window.fashion.$parser.parseExpression(arg, parseTree, funcs, globals, false, true, false);
+      bindings.extend(e.bindings);
+      mode |= e.mode;
+      return e;
+    };
+    ifExp = parse(ifExp.trim());
+    trueExp = parse(trueExp.trim());
+    falseExp = parse(falseExp.trim());
+    if (trueExp.type !== falseExp.type) {
+      return console.log("[FASHION] Ternary results must return the same type");
+    }
+    if (trueExp.unit !== falseExp.unit) {
+      return console.log("[FASHION] Ternary results must return the same unit");
+    }
+    script = "(" + ifExp.script + " ? " + trueExp.script + " : " + falseExp.script + ")";
+    return new Expression(script, trueExp.type, trueExp.unit, bindings, mode);
   }
 };
 window.fashion.$parser.addVariable = function(parseTree, name, value, flag, scope) {

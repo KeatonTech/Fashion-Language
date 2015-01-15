@@ -383,9 +383,10 @@
 }).call(this);
 (function() {
   window.fashiontests.parser.expressions = function() {
-    var $wf, parse;
+    var $wf, FunctionModule, parse;
     $wf = window.fashion;
     parse = window.fashion.$parser.parse;
+    FunctionModule = window.fashion.$class.FunctionModule;
     it("should allow variables in expressions", function() {
       var expression, pExpression, result, v;
       result = parse("$fullHeight: 30px;\ndiv {\n	height: $fullHeight / 3;\n\n	p {\n		height: $fullHeight / 3 - 4;\n	}\n}");
@@ -645,7 +646,7 @@
       expressionResult = expression.evaluate(locals, globals, $wf.$functions);
       return expect(expressionResult).toBe("155px");
     });
-    return it("should deal with multiple parenthesis in expressions", function() {
+    it("should deal with multiple parenthesis in expressions", function() {
       var expression, expressionResult, globals, result;
       result = parse("div {\n	width: max(100px, min(0px, @width))\n}");
       globals = {
@@ -658,6 +659,56 @@
       expression = result.selectors[0].properties[0].value;
       expressionResult = expression.evaluate((function() {}), globals, $wf.$functions);
       return expect(expressionResult).toBe("100px");
+    });
+    it("should pass through CSS hex colors", function() {
+      var expression, expressionResult, result;
+      $wf.addFunction("test", new FunctionModule(function(colorVal) {
+        console.log(colorVal);
+        return expect(colorVal.type).toBe($wf.$type.Color);
+      }));
+      result = parse("div {\n	color: test(#f00)\n}");
+      expression = result.selectors[0].properties[0].value;
+      expressionResult = expression.evaluate((function() {}), (function() {}), $wf.$functions);
+      return delete $wf.$functions['test'];
+    });
+    it("should parse ternary operations", function() {
+      var expression, expressionResult, result;
+      result = parse("$selected: true;\ndiv {\n	color: if $selected then red else blue;\n}");
+      expression = result.selectors[0].properties[0].value;
+      expressionResult = expression.evaluate((function() {
+        return {
+          value: true
+        };
+      }));
+      return expect(expressionResult).toBe("red");
+    });
+    it("should parse ternary operations with equality expressions", function() {
+      var expression, expressionResult, result;
+      result = parse("$selected: true;\ndiv {\n	color: if $selected == false then #f00 else #00f;\n}");
+      expression = result.selectors[0].properties[0].value;
+      expressionResult = expression.evaluate((function() {
+        return {
+          value: true
+        };
+      }));
+      return expect(expressionResult).toBe("#00f");
+    });
+    return it("should parse ternary as function arguments", function() {
+      var expression, expressionResult, result;
+      result = parse("$selected: true;\ndiv {\n	width: max(if $selected then 200px else 100px, 150px);\n}");
+      expression = result.selectors[0].properties[0].value;
+      expressionResult = expression.evaluate((function() {
+        return {
+          value: true
+        };
+      }), 0, $wf.$functions);
+      expect(expressionResult).toBe("200px");
+      expressionResult = expression.evaluate((function() {
+        return {
+          value: false
+        };
+      }), 0, $wf.$functions);
+      return expect(expressionResult).toBe("150px");
     });
   };
 

@@ -2,6 +2,7 @@ window.fashiontests.parser.expressions = ()->
 
 	$wf = window.fashion
 	parse = window.fashion.$parser.parse
+	FunctionModule = window.fashion.$class.FunctionModule
 
 	it "should allow variables in expressions", ()->
 		result = parse("""
@@ -299,3 +300,65 @@ window.fashiontests.parser.expressions = ()->
 		expressionResult = expression.evaluate (()->), globals, $wf.$functions
 		expect(expressionResult).toBe("100px")
 
+
+	it "should pass through CSS hex colors", ()->
+
+		# Test function
+		$wf.addFunction "test", new FunctionModule (colorVal) ->
+			console.log colorVal
+			expect(colorVal.type).toBe($wf.$type.Color)
+
+		result = parse( """
+						div {
+							color: test(#f00)
+						}
+						""")
+
+		expression = result.selectors[0].properties[0].value
+		expressionResult = expression.evaluate (()->), (()->), $wf.$functions
+
+		# Clean up
+		delete $wf.$functions['test']
+
+
+	it "should parse ternary operations", ()->
+		result = parse( """
+						$selected: true;
+						div {
+							color: if $selected then red else blue;
+						}
+						""")
+
+		expression = result.selectors[0].properties[0].value
+		expressionResult = expression.evaluate (()->value: true)
+		expect(expressionResult).toBe("red")
+
+
+	it "should parse ternary operations with equality expressions", ()->
+		result = parse( """
+						$selected: true;
+						div {
+							color: if $selected == false then #f00 else #00f;
+						}
+						""")
+
+		expression = result.selectors[0].properties[0].value
+		expressionResult = expression.evaluate (()->value: true)
+		expect(expressionResult).toBe("#00f")
+
+
+	it "should parse ternary as function arguments", ()->
+		result = parse( """
+						$selected: true;
+						div {
+							width: max(if $selected then 200px else 100px, 150px);
+						}
+						""")
+
+		expression = result.selectors[0].properties[0].value
+
+		expressionResult = expression.evaluate (()->value: true), 0, $wf.$functions
+		expect(expressionResult).toBe("200px")
+
+		expressionResult = expression.evaluate (()->value: false), 0, $wf.$functions
+		expect(expressionResult).toBe("150px")

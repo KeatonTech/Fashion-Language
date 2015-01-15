@@ -66,6 +66,9 @@ window.fashion.$parser.splitByTopLevelSpaces = (value) ->
 			|[\+\-\/\*\=])		# Match the operator (x{+}y)
 			)+[^\`\"\'\s]+		# Match the end of an operation or repeat (x + {y})
 			|\s+(\&\&|\|\|)\s+ 	# Match AND and OR
+			|\s+(==|!==)\s+ 	# Match equality and inequality
+			|if\s+|\s+then\s+	# Match ternary operators
+			|\s+else\s+			# Match the optional else condition of ternaries
 			|\s|				# Split on these spaces
 			[^\(\)\"\'\`\s]+	# Get the stuff in between to accumulate it
 			)///g

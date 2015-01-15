@@ -7,6 +7,7 @@ window.fashion.$type =
 	String:		2
 	Color: 		3
 	Element:	4
+	Boolean:	5
 
 	# Constant Valued Types (display, text-align)
 	KGeneric: 	100
