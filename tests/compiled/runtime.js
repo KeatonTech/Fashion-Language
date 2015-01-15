@@ -68,10 +68,13 @@
     getRule = window.fashiontests.runtime.getRule;
     beforeEach(function() {
       window.fsStyleHeader = $wf.styleHeader;
-      return $wf.styleHeader = "";
+      $wf.styleHeader = "";
+      window.fsStyleHeaderRules = $wf.styleHeaderRules;
+      return $wf.styleHeaderRules = 0;
     });
     afterEach(function() {
-      return $wf.styleHeader = window.fsStyleHeader;
+      $wf.styleHeader = window.fsStyleHeader;
+      return $wf.styleHeaderRules = window.fsStyleHeaderRules;
     });
     it('should watch for changes to the variable object', function() {
       testFSS("$color: blue;");

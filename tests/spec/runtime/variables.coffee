@@ -17,9 +17,12 @@ window.fashiontests.runtime.variables = ()->
 	beforeEach ()->
 		window.fsStyleHeader = $wf.styleHeader
 		$wf.styleHeader = ""
+		window.fsStyleHeaderRules = $wf.styleHeaderRules
+		$wf.styleHeaderRules = 0
 
 	afterEach ()->
 		$wf.styleHeader = window.fsStyleHeader
+		$wf.styleHeaderRules = window.fsStyleHeaderRules
 
 
 	it 'should watch for changes to the variable object', ()->
