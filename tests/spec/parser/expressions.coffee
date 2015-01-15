@@ -305,7 +305,6 @@ window.fashiontests.parser.expressions = ()->
 
 		# Test function
 		$wf.addFunction "test", new FunctionModule (colorVal) ->
-			console.log colorVal
 			expect(colorVal.type).toBe($wf.$type.Color)
 
 		result = parse( """

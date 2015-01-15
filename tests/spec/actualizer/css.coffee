@@ -7,6 +7,15 @@ window.fashiontests.actualizer.css = ()->
 	prefixes = window.fashion.$actualizer.cssPrefixes
 
 
+	# The style header interferes with a lot of these tests
+	beforeEach ()->
+		window.fsStyleHeader = $wf.styleHeader
+		$wf.styleHeader = ""
+
+	afterEach ()->
+		$wf.styleHeader = window.fsStyleHeader
+
+
 	it 'should generate CSS identical to the input for static files', () ->
 		{css} = actualize process parse """
 			body {
@@ -171,3 +180,12 @@ window.fashiontests.actualizer.css = ()->
 		cssString += "}\n"
 
 		expect(css).toBe(cssString)
+
+
+	it 'should apply a constant header to the CSS', ()->
+		$wf.styleHeader = window.fsStyleHeader
+		{css} = actualize process parse """
+			$not: empty;
+			"""
+
+		expect(css).toBe($wf.styleHeader)

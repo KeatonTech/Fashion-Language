@@ -218,6 +218,13 @@
       return window.fashion.$actualizer.actualize(parseTree, 0);
     };
     prefixes = window.fashion.$actualizer.cssPrefixes;
+    beforeEach(function() {
+      window.fsStyleHeader = $wf.styleHeader;
+      return $wf.styleHeader = "";
+    });
+    afterEach(function() {
+      return $wf.styleHeader = window.fsStyleHeader;
+    });
     it('should generate CSS identical to the input for static files', function() {
       var css, cssString;
       css = actualize(process(parse("body {\n	background-color: blue;\n	width: 100%;\n	content: \"body string\";\n}"))).css;
@@ -284,7 +291,7 @@
       cssString += "}\n";
       return expect(css).toBe(cssString);
     });
-    return it('should generate the CSS for dynamic transitions', function() {
+    it('should generate the CSS for dynamic transitions', function() {
       var css, cssString, prefix, _i, _len;
       css = actualize(process(parse("$duration: 314ms;\nbody {\n	background-color: [linear $duration] blue;\n}"))).css;
       cssString = 'body {background-color: blue;';
@@ -294,6 +301,12 @@
       }
       cssString += "}\n";
       return expect(css).toBe(cssString);
+    });
+    return it('should apply a constant header to the CSS', function() {
+      var css;
+      $wf.styleHeader = window.fsStyleHeader;
+      css = actualize(process(parse("$not: empty;"))).css;
+      return expect(css).toBe($wf.styleHeader);
     });
   };
 
@@ -530,7 +543,6 @@
       js = actualize(process(parse("$padding: 10px;\n$width: 1000px - 2 * $padding;\ndiv {\n	width: $width;\n}"))).js;
       window.FASHION = {};
       eval(js);
-      console.log(FASHION.variables);
       expect(FASHION.variables["padding"].dependents.length).toBe(1);
       return expect(FASHION.variables["padding"].dependents[0]).toEqual(['v', 'width', '0']);
     });

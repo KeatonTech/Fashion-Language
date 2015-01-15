@@ -240,7 +240,6 @@ window.fashiontests.actualizer.js = ()->
 		window.FASHION = {}
 		eval(js)
 
-		console.log FASHION.variables
 		expect(FASHION.variables["padding"].dependents.length).toBe(1);
 		expect(FASHION.variables["padding"].dependents[0]).toEqual(['v','width','0']);
 

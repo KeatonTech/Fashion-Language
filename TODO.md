@@ -4,10 +4,8 @@
 
 * Binding function, with DOM observers to update its value
 * @include block for loading additional .fss files at compile time
-* Allow ternaries (CS and JS formats) in expressions
 * Full support for scoped variables - treated as individualized properties.
 * Compiler flag to generate multiple files instead of inlining
-* Transitions can trigger other transitions
 * Simplified module API, or at least shortcuts into the existing one
 
 ### Modules

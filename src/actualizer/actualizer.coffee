@@ -55,7 +55,7 @@ window.fashion.$actualizer =
 		#
 		
 		# Create the CSS file as a string
-		css = $wfa.createCSS runtimeData, cssSels
+		css = $wf.styleHeader + $wfa.createCSS runtimeData, cssSels
 
 		# Convert the runtime data into a more compressed format for transport
 		miniRuntimeData = $wfa.minifier.runtimeData runtimeData

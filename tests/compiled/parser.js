@@ -663,7 +663,6 @@
     it("should pass through CSS hex colors", function() {
       var expression, expressionResult, result;
       $wf.addFunction("test", new FunctionModule(function(colorVal) {
-        console.log(colorVal);
         return expect(colorVal.type).toBe($wf.$type.Color);
       }));
       result = parse("div {\n	color: test(#f00)\n}");

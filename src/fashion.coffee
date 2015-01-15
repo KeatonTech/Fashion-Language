@@ -57,8 +57,13 @@ window.fashion.runtimeConfig =
 	individualCSSID: "FASHION-individual"
 	cssId: window.fashion.cssId
 
-# Coffeescript helpers
-wait = (d,f)-> setTimeout(f,d)
+# CSS that appears at the beginning of each Fashion file
+window.fashion.styleHeader = 
+	"""
+	html {box-sizing: border-box;}
+	*, *:before, *:after {box-sizing: inherit;border: none;}
+	
+	"""
 
 
 # Functions exposed by the Fashion compiler to allow for extension
@@ -123,4 +128,9 @@ window.fashion.addBlock = (name, blockModule, force = false) ->
 
 window.fashion.addBlocks = (obj, force = false) ->
 	window.fashion.addBlock(k,v,force) for k,v in obj
+
+
+# Coffeescript helpers, used all over the place in Fashion
+
+wait = (d,f)-> setTimeout(f,d)
 	

@@ -48,9 +48,7 @@ window.fashion.runtimeConfig = {
   cssId: window.fashion.cssId
 };
 
-wait = function(d, f) {
-  return setTimeout(f, d);
-};
+window.fashion.styleHeader = "html {box-sizing: border-box;}\n*, *:before, *:after {box-sizing: inherit;border: none;}\n";
 
 window.fashion.addProperty = function(name, propertyModule, force) {
   if (force == null) {
@@ -154,6 +152,10 @@ window.fashion.addBlocks = function(obj, force) {
     _results.push(window.fashion.addBlock(k, v, force));
   }
   return _results;
+};
+
+wait = function(d, f) {
+  return setTimeout(f, d);
 };
 
 /*
@@ -1265,7 +1267,7 @@ window.fashion.$parser.parsePropertyValue = function(value, parseTree, allowExpr
 };
 
 window.fashion.$parser.identifyExpression = function() {
-  return /(([\s][\+\-\/\*\=][\s])|\s(\&\&|\|\|)\s|if\s|\sthen\s|\selse\s|[\(\)\[\]]|\@|\$)/g;
+  return /(([\s][\+\-\/\*\=][\s])|\s(\&\&|\|\|)\s|if\s.*?\sthen\s|\selse\s|[\(\)\[\]]|\@|\$)/g;
 };
 
 window.fashion.$parser.parseSingleValue = function(value, parseTree, isVar) {
@@ -2150,7 +2152,7 @@ window.fashion.$actualizer = {
     $wfa.addRuntimeFunctions(runtimeData, parseTree);
     $wfa.removeUnnecessaryModuleData(runtimeData);
     parseTree.scripts.push("document.dispatchEvent(new Event('" + $wf.readyEvent + "'));");
-    css = $wfa.createCSS(runtimeData, cssSels);
+    css = $wf.styleHeader + $wfa.createCSS(runtimeData, cssSels);
     miniRuntimeData = $wfa.minifier.runtimeData(runtimeData);
     js = $wfa.createJS(runtimeData, miniRuntimeData, parseTree.scripts);
     return {

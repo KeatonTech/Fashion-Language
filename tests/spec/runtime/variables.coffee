@@ -13,6 +13,14 @@ window.fashiontests.runtime.variables = ()->
 	# Helper functions
 	getRule = window.fashiontests.runtime.getRule
 
+	# The style header interferes with a lot of these tests
+	beforeEach ()->
+		window.fsStyleHeader = $wf.styleHeader
+		$wf.styleHeader = ""
+
+	afterEach ()->
+		$wf.styleHeader = window.fsStyleHeader
+
 
 	it 'should watch for changes to the variable object', ()->
 		testFSS """
