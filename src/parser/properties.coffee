@@ -121,7 +121,7 @@ window.fashion.$parser.identifyExpression = () ->
 	///(
 	([\s][\+\-\/\*\=][\s])|	# Operator with a space around it: dead givaway
 	\s(\&\&|\|\|)\s|		# AND and OR
-	if|\sthen\s|\selse\s| 	# Ternary operators
+	if\s|\sthen\s|\selse\s| # Ternary operators
 	[\(\)\[\]]|				# Parenthesis and brackets: definitely
 	\@|\$ 					# Variables and globals
 	)///g

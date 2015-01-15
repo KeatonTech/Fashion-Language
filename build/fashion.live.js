@@ -977,7 +977,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   sq = dq = bt = false;
   acc = "";
   ret = [];
-  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\"\'\s]+(\s+[\+\-\/\*\=]\s+|[\+\-\/\*\=]))+[^\`\"\'\s]+|\s+(\&\&|\|\|)\s+|\s+(==|!==)\s+|if\s+|\s+then\s+|\s+else\s+|\s|[^\(\)\"\'\`\s]+)/g;
+  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\"\'\s]+(\s+[\+\-\/\*\=]\s+|[\+\/\*\=]))+[^\`\"\'\s]+|\s+(\&\&|\|\|)\s+|\s+(==|!==)\s+|if\s+|\s+then\s+|\s+else\s+|\s|[^\(\)\"\'\`\s]+)/g;
   while (token = regex.exec(value)) {
     if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
       ret.push(acc);
@@ -1265,7 +1265,7 @@ window.fashion.$parser.parsePropertyValue = function(value, parseTree, allowExpr
 };
 
 window.fashion.$parser.identifyExpression = function() {
-  return /(([\s][\+\-\/\*\=][\s])|\s(\&\&|\|\|)\s|if|\sthen\s|\selse\s|[\(\)\[\]]|\@|\$)/g;
+  return /(([\s][\+\-\/\*\=][\s])|\s(\&\&|\|\|)\s|if\s|\sthen\s|\selse\s|[\(\)\[\]]|\@|\$)/g;
 };
 
 window.fashion.$parser.parseSingleValue = function(value, parseTree, isVar) {
@@ -1305,7 +1305,7 @@ window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, g
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|(\#[0-9A-Fa-f]{3,6})|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([^\s\)]*)|if(.*?)then(.*?)else(.*)|if(.*?)then(.*)|\`(.*?)\`)/g;
+  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|(\#[0-9A-Fa-f]{3,6})|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([^\s\)]*)|if(.*?)then(.*?)else(.*)|if(.*?)then(.*)|[`'"](.*?)[`'"])/g;
   shouldBreak = false;
   matchCount = 0;
   while (!shouldBreak && (section = regex.exec(expString))) {
@@ -1346,7 +1346,7 @@ window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, g
       eObj = expander.ternary(section[16], section[17], void 0, arguments, top);
     }
     if (section[18]) {
-      eObj = expander.constant(section[18]);
+      eObj = expander.string(section[18]);
     }
     if (!eObj) {
       continue;
@@ -1472,8 +1472,8 @@ window.fashion.$parser.determineExpressionType = function(types, units, expressi
 };
 
 window.fashion.$parser.expressionExpander = {
-  constant: function(match) {
-    return new Expression(match, $wf.$type.Unknown, "", void 0, 0);
+  string: function(match) {
+    return new Expression(JSON.stringify(match), $wf.$type.Unknown, "", void 0, 0);
   },
   hexColor: function(match) {
     return new Expression(JSON.stringify(match), $wf.$type.Color, "", void 0, 0);

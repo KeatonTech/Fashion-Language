@@ -48,7 +48,7 @@ window.fashion.$parser.parseExpression =
 			if(.*?)then(.*?)		# Coffeescript-style ternary operator
 			else(.*)|				# With else
 			if(.*?)then(.*)|		# Without else
-			\`(.*?)\`				# Raw value passthrough (prevents string coersion)
+			[`'"](.*?)[`'"]			# String value passthrough (prevents double quoting)
 			)///g
 	
 	# Handle each piece
@@ -107,7 +107,7 @@ window.fashion.$parser.parseExpression =
 
 		# Passthrough a CSS/JS constant
 		if section[18]
-			eObj = expander.constant section[18]
+			eObj = expander.string section[18]
 
 
 
@@ -224,8 +224,8 @@ window.fashion.$parser.determineExpressionType = (types, units, expression) ->
 window.fashion.$parser.expressionExpander =
 
 	# Expand css/js constants
-	constant: (match) ->
-		return new Expression match, $wf.$type.Unknown, "", undefined, 0		
+	string: (match) ->
+		return new Expression JSON.stringify(match), $wf.$type.Unknown, "", undefined, 0		
 
 	# Expand css hex colors
 	hexColor: (match) ->
