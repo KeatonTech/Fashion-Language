@@ -12,7 +12,6 @@
 * Revamped 'pin' property based on data binding, respects relative-to
 * Parallax property and background-parallax property
 * Fit property (replicating background-size)
-* Gradient properties (possibly prefixed with background-)
 * @isMobile and @hasTouch globals
 
 ### Misc

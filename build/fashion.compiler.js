@@ -3926,6 +3926,76 @@ $wf.$extend(window.fashion.$properties, new ((function() {
   return _Class;
 
 })()));
+$wf.$parser.parseColorStops = function(colorValues) {
+  var color, id, stop, value, _results;
+  _results = [];
+  for (id in colorValues) {
+    value = colorValues[id];
+    color = "";
+    stop = 100 * (id / (colorValues.length - 1));
+    if (value.length === 2) {
+      color = value[0], stop = value[1];
+    } else {
+      color = value[0];
+    }
+    _results.push(color + " " + stop + "%");
+  }
+  return _results;
+};
+
+$wf.$extend(window.fashion.$properties, {
+  "gradient-vertical": new PropertyModule({
+    replace: true,
+    compile: function(values) {
+      var colorStops, grd;
+      colorStops = $wf.$parser.parseColorStops(values);
+      grd = "-webkit-linear-gradient(top, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "-moz-linear-gradient(top, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "-ms-linear-gradient(top, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "-o-linear-gradient(top, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "linear-gradient(to bottom, " + (colorStops.join(',')) + ")";
+      return this.setProperty("background", grd);
+    }
+  }),
+  "gradient-horizontal": new PropertyModule({
+    replace: true,
+    compile: function(values) {
+      var colorStops, grd;
+      colorStops = $wf.$parser.parseColorStops(values);
+      grd = "-webkit-linear-gradient(left, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "-moz-linear-gradient(left, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "-ms-linear-gradient(left, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "-o-linear-gradient(left, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "linear-gradient(to right, " + (colorStops.join(',')) + ")";
+      return this.setProperty("background", grd);
+    }
+  }),
+  "gradient-radial": new PropertyModule({
+    replace: true,
+    compile: function(values) {
+      var colorStops, grd;
+      colorStops = $wf.$parser.parseColorStops(values);
+      grd = "-webkit-radial-gradient(center, ellipse cover, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "-moz-radial-gradient(center, ellipse cover, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "-ms-radial-gradient(center, ellipse cover, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "-o-radial-gradient(center, ellipse cover, " + (colorStops.join(',')) + ")";
+      this.setProperty("background", grd);
+      grd = "radial-gradient(ellipse at center, " + (colorStops.join(',')) + ")";
+      return this.setProperty("background", grd);
+    }
+  })
+});
 window.fashion.$blocks = {};
 window.fashion.$blocks["transition"] = new BlockModule({
   capabilities: ["transitionBlock"],

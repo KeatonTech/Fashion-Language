@@ -98,6 +98,35 @@ div {
 
 Functions are bound to variables dynamically, not just evaluated once and thrown out. That means if you change the style.color variable at any time in your javascript, they'll all be re-evaluated for your new color. Fashion automatically includes any code needed to run these functions on your site, without including any unnecessary bloat. This means perfectly dynamic sites with super fast load times!
 
+### Event Handling
+
+Here's the part where we start to break some totally new ground. Fashion is more than just a fancy stylesheet, it's also a layer between your HTML and your Javascript. Gone are the days of tying your event handling code to specific CSS selectors, now you can use Fashion to link specific selectors to specific functions.
+
+```scss
+.button.submit {
+	on-click: submit(@self.parent)
+}
+```
+
+@self is a variable that refers to the current HTML object, in this case the one that was clicked. Now if you put a button inside a form and give it a class of "submit button", clicking it would automatically call the submit function on that form. You can tell Fashion about new functions of your own design by calling window.fashion.addFunction.
+
+This same technique can be used to create things like navigation menus with absolutely no Javascript.
+
+```scss
+$item: option-one;
+$selectionColor: red;
+
+li {
+	on-click: $item = @self.id;
+}
+
+li#$item {
+	background-color: $selectionColor;
+}
+```
+
+NOTE: This functionality will soon be improved by adding scoped variables, so you could add multiple of these per page. Things like iFrame src properties will also allow you to actually implement the navigation part.
+
 ### Transitions & Animations
 
 The web is an increasingly animated place. Far beyond the geocities gifs of yesteryear, animations on the modern web can visually guide users around a website and provide context for interactions. CSS3 introduced syntax for GPU-accelerated transitions, which tend to work pretty well. The only downside is that the syntax is cumbersome and needs to be browser-prefixed, which might lead some developers to forego transitions in places where they would be helpful. Fashion provides some new syntactic sugar to combat this.
@@ -180,35 +209,26 @@ Transitions can also trigger other transitions. This allows you to create a modu
 }
 ```
 
+### More Goodies
 
-### Event Handling
-
-Here's the part where we start to break some totally new ground. Fashion is more than just a fancy stylesheet, it's also a layer between your HTML and your Javascript. Gone are the days of tying your event handling code to specific CSS selectors, now you can use Fashion to link specific selectors to specific functions.
+Fashion also has some built-in modules that, while certainly not essential, make CSS way more fun to use. For example, say you want to set some text in Avenir and make it bold and italic. Shouldn't that be the easiest thing you ever do? Unfortunately, in CSS this involves memorizing some pretty random properties. Is it text-decoration or font-decoration? Which one is italic again? Don't worry about it anymore.
 
 ```scss
-.button.submit {
-	on-click: submit(@self.parent)
+h3 {
+	text-style: 'Avenir' 18pt bold italic sans-serif;
 }
 ```
 
-@self is a variable that refers to the current HTML object, in this case the one that was clicked. Now if you put a button inside a form and give it a class of "submit button", clicking it would automatically call the submit function on that form. You can tell Fashion about new functions of your own design by calling window.fashion.addFunction.
-
-This same technique can be used to create things like navigation menus with absolutely no Javascript.
+What about CSS's gradient syntax? Not only is it horribly overcomplicated to do simple stuff, you have to do it slightly differently in each browser. Most people rely on an online generator, but that makes it much more difficult to tweak after the fact. For simple gradients (vertical, horizontal, and radial centered), Fashion provides a shortcut.
 
 ```scss
-$item: option-one;
-$selectionColor: red;
-
-li {
-	on-click: $item = @self.id;
-}
-
-li#$item {
-	background-color: $selectionColor;
+div.exciting {
+	gradient-horizontal: blue, yellow 65%, red;
 }
 ```
 
-NOTE: This functionality will soon be improved by adding scoped variables, so you could add multiple of these per page. Things like iFrame src properties will also allow you to actually implement the navigation part.
+The 'stop' for each color is optional. If you just list a bunch of colors, Fashion will assume they're all equally spaced. If you add percentages, Fashion will use those instead. In the future, additional properties like gradient-center and gradient-angle will allow even more customization.
+
 
 ##### More coming soon, see MANIFESTO.md for future features
 
