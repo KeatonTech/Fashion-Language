@@ -3,6 +3,7 @@ window.fashiontests.actualizer.components = ()->
 	$wf = window.fashion
 	actualizer = $wf.$actualizer
 	rm = window.fashion.$runtimeMode
+	combine = window.fashion.$shared.combineSelectors
 
 
 	it "should accurately split properties", ()->
@@ -128,3 +129,81 @@ window.fashiontests.actualizer.components = ()->
 		expect(culled[1]).toEqual([2,0])
 
 	###
+
+	it "should combine selectors with IDs", ()->
+
+		r = combine "#test", "div article .class"
+		c = r.split ","
+
+		# 6 Possibilities
+		expect(c.length).toBe 6
+
+		# Different Levels
+		expect(c).toContain "div article #test .class"
+		expect(c).toContain "div #test article .class"
+		expect(c).toContain "#test div article .class"
+
+		# Same Level
+		expect(c).toContain "div article #test.class"
+		expect(c).toContain "div article#test .class"
+		expect(c).toContain "div#test article .class"
+
+
+	it "should cull anything before the ID", ()->
+
+		r = combine "span #test", "div article .class"
+		c = r.split ","
+
+		# Same 6 Possibilities as last time
+		expect(c.length).toBe 6
+
+
+	it "should combine selectors with other multi-component selectors", ()->
+
+		r = combine ".outerClass .innerClass", "div article"
+		c = r.split ","
+
+		# 8 Valid combinations in CSS
+		expect(c.length).toBe 8
+		expect(c).toContain "div .outerClass article.innerClass"
+		expect(c).toContain "div.outerClass article.innerClass"
+		expect(c).toContain "div .outerClass .innerClass article"
+		expect(c).toContain "div.outerClass .innerClass article"
+		expect(c).toContain ".outerClass div article.innerClass"
+		expect(c).toContain ".outerClass div .innerClass article"
+		expect(c).toContain ".outerClass div.innerClass article"
+		expect(c).toContain ".outerClass .innerClass div article"
+
+
+	it "should combine comma-separated ID selectors", ()->
+
+		r = combine "#l1, #l2", "#r1, #r2"
+		c = r.split ","
+
+		# Same 6 Possibilities as last time
+		expect(c.length).toBe 4
+		expect(c).toContain "#l1 #r1"
+		expect(c).toContain "#l1 #r2"
+		expect(c).toContain "#l2 #r1"
+		expect(c).toContain "#l2 #r2"
+
+
+	it "should combine comma-separated selectors", ()->
+
+		r = combine "#l1, #l2", "div, p"
+		c = r.split ","
+
+		# Same 6 Possibilities as last time
+		expect(c.length).toBe 8
+
+		# Different levels
+		expect(c).toContain "#l1 div"
+		expect(c).toContain "#l1 p"
+		expect(c).toContain "#l2 div"
+		expect(c).toContain "#l2 p"
+
+		# Same level
+		expect(c).toContain "div#l1"
+		expect(c).toContain "p#l1"
+		expect(c).toContain "div#l2"
+		expect(c).toContain "p#l2"

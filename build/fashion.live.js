@@ -221,6 +221,21 @@ window.fashion.$combine = function() {
   }
   return ret;
 };
+
+window.fashion.$buildArray = function() {
+  var arr, arrays, ret, _i, _len;
+  arrays = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+  ret = [];
+  for (_i = 0, _len = arrays.length; _i < _len; _i++) {
+    arr = arrays[_i];
+    if (arr instanceof Array) {
+      ret.push.apply(ret, arr);
+    } else if (arr) {
+      ret.push(arr);
+    }
+  }
+  return ret;
+};
 window.fashion.$dom = {
   addElementToHead: function(element) {
     var head;
@@ -1934,6 +1949,125 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
     return addSuffix(evaluateSingleValue(valueObject), isImportant);
   }
 };
+window.fashion.$shared.combineSelectors = function(outer, inner, cap) {
+  var acc, c, i, ic, icomp, interSels, o, oc, ocomp, recursiveInterleave, s, selectors, trimBeforeId, x, _i, _j, _k, _len, _len1, _len2;
+  if (cap == null) {
+    cap = 10;
+  }
+  trimBeforeId = function(selectorComponents) {
+    var i, _i, _ref;
+    if (selectorComponents.length === 0) {
+      return selectorComponents;
+    }
+    for (i = _i = _ref = selectorComponents.length - 1; _ref <= 0 ? _i <= 0 : _i >= 0; i = _ref <= 0 ? ++_i : --_i) {
+      if (selectorComponents[i][0][0] === "#") {
+        return selectorComponents.slice(i);
+      }
+    }
+    return selectorComponents;
+  };
+  recursiveInterleave = function(oc, ic) {
+    var fi, fs, i, left, results, right, selFoot, _i, _j, _len, _ref, _ref1;
+    if ((oc == null) || oc.length === 0) {
+      return [ic];
+    }
+    if ((ic == null) || ic.length === 0) {
+      return [oc];
+    }
+    results = [];
+    for (i = _i = 0, _ref = oc.length; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+      left = oc.slice(0, i);
+      right = oc.slice(i);
+      _ref1 = recursiveInterleave(right, ic.slice(1));
+      for (_j = 0, _len = _ref1.length; _j < _len; _j++) {
+        selFoot = _ref1[_j];
+        results.push($wf.$buildArray(left, [ic[0]], selFoot));
+        if (selFoot[0] && ic[0]) {
+          if (selFoot[0][1] === ic[0][1]) {
+            continue;
+          }
+          if (selFoot[0][1] === 2 || ic[0][1] === 2) {
+            continue;
+          }
+          fi = ic[0][0];
+          fs = selFoot[0][0];
+          if ((fi[0] === "#" && fs[0] !== "#") || fi[0] === ".") {
+            selFoot[0] = [fs + fi, 2];
+            results.push($wf.$buildArray(left, selFoot));
+          } else if ((fs[0] === "#" && fi[0] !== "#") || fs[0] === ".") {
+            selFoot[0] = [fi + fs, 2];
+            results.push($wf.$buildArray(left, selFoot));
+          }
+        }
+      }
+    }
+    return results;
+  };
+  ocomp = (function() {
+    var _i, _len, _ref, _results;
+    _ref = outer.split(",");
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      c = _ref[_i];
+      _results.push((function() {
+        var _j, _len1, _ref1, _results1;
+        _ref1 = c.trim().split(" ");
+        _results1 = [];
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          x = _ref1[_j];
+          _results1.push([x, 0]);
+        }
+        return _results1;
+      })());
+    }
+    return _results;
+  })();
+  icomp = (function() {
+    var _i, _len, _ref, _results;
+    _ref = inner.split(",");
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      c = _ref[_i];
+      _results.push((function() {
+        var _j, _len1, _ref1, _results1;
+        _ref1 = c.trim().split(" ");
+        _results1 = [];
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          x = _ref1[_j];
+          _results1.push([x, 1]);
+        }
+        return _results1;
+      })());
+    }
+    return _results;
+  })();
+  selectors = [];
+  for (_i = 0, _len = ocomp.length; _i < _len; _i++) {
+    oc = ocomp[_i];
+    for (_j = 0, _len1 = icomp.length; _j < _len1; _j++) {
+      ic = icomp[_j];
+      oc = trimBeforeId(oc);
+      ic = trimBeforeId(ic);
+      interSels = recursiveInterleave(oc, ic);
+      for (_k = 0, _len2 = interSels.length; _k < _len2; _k++) {
+        s = interSels[_k];
+        if (s[s.length - 1][1] === 0) {
+          continue;
+        }
+        acc = "";
+        for (i in s) {
+          o = s[i];
+          if (i > 0) {
+            acc += " ";
+          }
+          acc += o[0];
+        }
+        selectors.push(acc);
+      }
+    }
+  }
+  return selectors.join(",");
+};
 var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 window.fashion.$shared.determineType = function(value, types, constants) {
@@ -3632,6 +3766,29 @@ $wf.$extend(window.fashion.$functions, new ((function() {
     };
     for (_i = 0, _len = transformFunction.length; _i < _len; _i++) {
       name = transformFunction[_i];
+      this[name] = new FunctionModule({
+        mode: $wf.$runtimeMode["static"],
+        output: $wf.$type.String,
+        "evaluate": genericPassthrough(name)
+      });
+    }
+  }
+
+  return _Class;
+
+})()));
+
+$wf.$extend(window.fashion.$functions, new ((function() {
+  function _Class() {
+    var genericPassthrough, gradientFunctions, name, _i, _len;
+    gradientFunctions = ["-webkit-linear-gradient", "-moz-linear-gradient", "-ms-linear-gradient", "-o-linear-gradient", "linear-gradient", "-webkit-radial-gradient", "-moz-radial-gradient", "-ms-radial-gradient", "-o-radial-gradient", "radial-gradient"];
+    genericPassthrough = function(name) {
+      var body;
+      body = "var a = arguments;\nvar s = \"" + name + "(\";\nfor(var i = 0; i < a.length; i++){\n	s += a[i].value;\n	if(i<a.length-1)s += \",\";\n}\nreturn s + \")\";";
+      return new Function(body);
+    };
+    for (_i = 0, _len = gradientFunctions.length; _i < _len; _i++) {
+      name = gradientFunctions[_i];
       this[name] = new FunctionModule({
         mode: $wf.$runtimeMode["static"],
         output: $wf.$type.String,

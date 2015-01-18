@@ -70,10 +70,11 @@
 }).call(this);
 (function() {
   window.fashiontests.actualizer.components = function() {
-    var $wf, actualizer, rm;
+    var $wf, actualizer, combine, rm;
     $wf = window.fashion;
     actualizer = $wf.$actualizer;
     rm = window.fashion.$runtimeMode;
+    combine = window.fashion.$shared.combineSelectors;
     it("should accurately split properties", function() {
       var combinedMode, css, individual, selectors, _ref;
       combinedMode = rm.individual | rm.triggered;
@@ -126,7 +127,7 @@
       expect(individual[0].properties[0].name).toBe("t1p2");
       return expect(individual[2].properties[0].name).toBe("t3p1");
     });
-    return it("should convert CSS property names to JS", function() {
+    it("should convert CSS property names to JS", function() {
       var convert;
       convert = actualizer.makeCamelCase;
       expect(convert()).toBe("");
@@ -205,6 +206,62 @@
     		expect(culled[0]).toEqual([0,0])
     		expect(culled[1]).toEqual([2,0])
      */
+    it("should combine selectors with IDs", function() {
+      var c, r;
+      r = combine("#test", "div article .class");
+      c = r.split(",");
+      expect(c.length).toBe(6);
+      expect(c).toContain("div article #test .class");
+      expect(c).toContain("div #test article .class");
+      expect(c).toContain("#test div article .class");
+      expect(c).toContain("div article #test.class");
+      expect(c).toContain("div article#test .class");
+      return expect(c).toContain("div#test article .class");
+    });
+    it("should cull anything before the ID", function() {
+      var c, r;
+      r = combine("span #test", "div article .class");
+      c = r.split(",");
+      return expect(c.length).toBe(6);
+    });
+    it("should combine selectors with other multi-component selectors", function() {
+      var c, r;
+      r = combine(".outerClass .innerClass", "div article");
+      c = r.split(",");
+      expect(c.length).toBe(8);
+      expect(c).toContain("div .outerClass article.innerClass");
+      expect(c).toContain("div.outerClass article.innerClass");
+      expect(c).toContain("div .outerClass .innerClass article");
+      expect(c).toContain("div.outerClass .innerClass article");
+      expect(c).toContain(".outerClass div article.innerClass");
+      expect(c).toContain(".outerClass div .innerClass article");
+      expect(c).toContain(".outerClass div.innerClass article");
+      return expect(c).toContain(".outerClass .innerClass div article");
+    });
+    it("should combine comma-separated ID selectors", function() {
+      var c, r;
+      r = combine("#l1, #l2", "#r1, #r2");
+      c = r.split(",");
+      expect(c.length).toBe(4);
+      expect(c).toContain("#l1 #r1");
+      expect(c).toContain("#l1 #r2");
+      expect(c).toContain("#l2 #r1");
+      return expect(c).toContain("#l2 #r2");
+    });
+    return it("should combine comma-separated selectors", function() {
+      var c, r;
+      r = combine("#l1, #l2", "div, p");
+      c = r.split(",");
+      expect(c.length).toBe(8);
+      expect(c).toContain("#l1 div");
+      expect(c).toContain("#l1 p");
+      expect(c).toContain("#l2 div");
+      expect(c).toContain("#l2 p");
+      expect(c).toContain("div#l1");
+      expect(c).toContain("p#l1");
+      expect(c).toContain("div#l2");
+      return expect(c).toContain("p#l2");
+    });
   };
 
 }).call(this);
