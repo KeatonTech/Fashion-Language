@@ -1949,11 +1949,8 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
     return addSuffix(evaluateSingleValue(valueObject), isImportant);
   }
 };
-window.fashion.$shared.combineSelectors = function(outer, inner, cap) {
-  var acc, c, i, ic, icomp, interSels, o, oc, ocomp, recursiveInterleave, s, selectors, trimBeforeId, x, _i, _j, _k, _len, _len1, _len2;
-  if (cap == null) {
-    cap = 10;
-  }
+window.fashion.$shared.combineSelectors = function(outer, inner) {
+  var acc, c, componentArrayJoin, didSlice, existingSel, hasDuplicate, i, ic, icomp, interSels, oc, ocomp, prefix, recursiveInterleave, s, selectors, trimBeforeId, x, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref;
   trimBeforeId = function(selectorComponents) {
     var i, _i, _ref;
     if (selectorComponents.length === 0) {
@@ -1982,26 +1979,43 @@ window.fashion.$shared.combineSelectors = function(outer, inner, cap) {
       for (_j = 0, _len = _ref1.length; _j < _len; _j++) {
         selFoot = _ref1[_j];
         results.push($wf.$buildArray(left, [ic[0]], selFoot));
-        if (selFoot[0] && ic[0]) {
-          if (selFoot[0][1] === ic[0][1]) {
-            continue;
-          }
-          if (selFoot[0][1] === 2 || ic[0][1] === 2) {
-            continue;
-          }
-          fi = ic[0][0];
-          fs = selFoot[0][0];
-          if ((fi[0] === "#" && fs[0] !== "#") || fi[0] === ".") {
-            selFoot[0] = [fs + fi, 2];
-            results.push($wf.$buildArray(left, selFoot));
-          } else if ((fs[0] === "#" && fi[0] !== "#") || fs[0] === ".") {
-            selFoot[0] = [fi + fs, 2];
-            results.push($wf.$buildArray(left, selFoot));
-          }
+        if (!selFoot[0] || !ic[0]) {
+          continue;
+        }
+        if (selFoot[0][1] === ic[0][1]) {
+          continue;
+        }
+        if (selFoot[0][0] === ic[0][0]) {
+          selFoot[0][1] = 2;
+          results.push($wf.$buildArray(left, selFoot));
+        }
+        if (selFoot[0][1] === 2 || ic[0][1] === 2) {
+          continue;
+        }
+        fi = ic[0][0];
+        fs = selFoot[0][0];
+        if ((fi[0] === "#" && fs[0] !== "#") || fi[0] === "." || fi[0] === "[") {
+          selFoot[0] = [fs + fi, 2];
+          results.push($wf.$buildArray(left, selFoot));
+        } else if ((fs[0] === "#" && fi[0] !== "#") || fs[0] === "." || fs[0] === "[") {
+          selFoot[0] = [fi + fs, 2];
+          results.push($wf.$buildArray(left, selFoot));
         }
       }
     }
     return results;
+  };
+  componentArrayJoin = function(arr) {
+    var acc, i, o;
+    acc = "";
+    for (i in arr) {
+      o = arr[i];
+      if (i > 0) {
+        acc += " ";
+      }
+      acc += o[0];
+    }
+    return acc;
   };
   ocomp = (function() {
     var _i, _len, _ref, _results;
@@ -2046,21 +2060,39 @@ window.fashion.$shared.combineSelectors = function(outer, inner, cap) {
     oc = ocomp[_i];
     for (_j = 0, _len1 = icomp.length; _j < _len1; _j++) {
       ic = icomp[_j];
+      didSlice = false;
+      for (i = _k = 0, _ref = Math.min(oc.length, ic.length); 0 <= _ref ? _k < _ref : _k > _ref; i = 0 <= _ref ? ++_k : --_k) {
+        if (oc[i][0] !== ic[i][0]) {
+          prefix = oc.slice(0, i);
+          oc = oc.slice(i);
+          ic = ic.slice(i);
+          didSlice = true;
+          break;
+        }
+      }
+      if (!didSlice) {
+        selectors.push(componentArrayJoin(ic));
+        continue;
+      }
       oc = trimBeforeId(oc);
       ic = trimBeforeId(ic);
       interSels = recursiveInterleave(oc, ic);
-      for (_k = 0, _len2 = interSels.length; _k < _len2; _k++) {
-        s = interSels[_k];
+      for (_l = 0, _len2 = interSels.length; _l < _len2; _l++) {
+        s = interSels[_l];
         if (s[s.length - 1][1] === 0) {
           continue;
         }
-        acc = "";
-        for (i in s) {
-          o = s[i];
-          if (i > 0) {
-            acc += " ";
+        acc = componentArrayJoin($wf.$buildArray(prefix, s));
+        hasDuplicate = false;
+        for (_m = 0, _len3 = selectors.length; _m < _len3; _m++) {
+          existingSel = selectors[_m];
+          if (acc === existingSel) {
+            hasDuplicate = true;
+            break;
           }
-          acc += o[0];
+        }
+        if (hasDuplicate) {
+          continue;
         }
         selectors.push(acc);
       }

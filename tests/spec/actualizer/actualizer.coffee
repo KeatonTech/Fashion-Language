@@ -4,6 +4,9 @@ describe "Actualizer", ()->
 	describe "CSS Transitions", window.fashiontests.actualizer.transitions
 
 	# Test the CSS generator
+	describe "CSS Selector Combiner", window.fashiontests.actualizer.combiner
+
+	# Test the CSS generator
 	describe "CSS Generator", window.fashiontests.actualizer.css
 
 	# Test the Javascript generator
@@ -21,4 +24,5 @@ describe "Actualizer", ()->
 #@prepros-prepend ./components.coffee
 #@prepros-prepend ./css.coffee
 #@prepros-prepend ./minifier.coffee
+#@prepros-prepend ./combiner.coffee
 #@prepros-prepend ./js.coffee
