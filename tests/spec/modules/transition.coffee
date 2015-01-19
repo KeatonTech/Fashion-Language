@@ -112,8 +112,8 @@ window.fashiontests.modules.transition = ()->
 		expect(endProperty.value.script).toBeDefined()
 
 		# Make sure bindings didn't get into the original parse tree
-		expect(startProperty.value.bindings.variables[0]).toBe("offColor")
-		expect(endProperty.value.bindings.variables[0]).toBe("onColor")
+		expect(startProperty.value.bindings.variables[0]).toEqual(["offColor",0])
+		expect(endProperty.value.bindings.variables[0]).toEqual(["onColor",0])
 
 
 	it "should be able to read variables defined inside", ()->

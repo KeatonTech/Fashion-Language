@@ -65,12 +65,13 @@ window.fashion.$actualizer.bindVariables = (runtimeData) ->
 window.fashion.$actualizer.bindExpression = (runtimeData, expression, bindLink) ->
 
 	# Add variable bindings
-	for varName in expression.bindings.variables
+	for varBind in expression.bindings.variables
+		[varName, varScope] = varBind
 		vObj = runtimeData.variables[varName]
 		if !vObj
 			console.log "[FASHION] Could not bind to nonexistent variable: '#{varName}'"
 		else
-			vObj.addDependent bindLink
+			vObj.addDependent bindLink, varScope
 
 	# Add global bindings
 	for globalName in expression.bindings.globals

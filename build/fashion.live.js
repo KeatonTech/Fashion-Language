@@ -1534,10 +1534,9 @@ window.fashion.$parser.expressionExpander = {
     if (isSetter) {
       script = "v('" + name + "'," + (JSON.stringify(scope)) + ",e).value =";
     } else {
-      bindings = new ExpressionBindings("variable", name);
+      bindings = new ExpressionBindings("variable", [name, scope]);
       script = "v('" + name + "'," + (JSON.stringify(scope)) + ",e).value";
     }
-    console.log(script);
     return new Expression(script, type, unit, bindings, mode);
   },
   globalVariable: function(name, globals, parseTree) {
@@ -2514,15 +2513,16 @@ window.fashion.$actualizer.bindVariables = function(runtimeData) {
 };
 
 window.fashion.$actualizer.bindExpression = function(runtimeData, expression, bindLink) {
-  var gObj, globalName, vObj, varName, _i, _j, _len, _len1, _ref, _ref1, _results;
+  var gObj, globalName, vObj, varBind, varName, varScope, _i, _j, _len, _len1, _ref, _ref1, _results;
   _ref = expression.bindings.variables;
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    varName = _ref[_i];
+    varBind = _ref[_i];
+    varName = varBind[0], varScope = varBind[1];
     vObj = runtimeData.variables[varName];
     if (!vObj) {
       console.log("[FASHION] Could not bind to nonexistent variable: '" + varName + "'");
     } else {
-      vObj.addDependent(bindLink);
+      vObj.addDependent(bindLink, varScope);
     }
   }
   _ref1 = expression.bindings.globals;
@@ -2590,7 +2590,7 @@ RuntimeVariable = (function() {
     this.mode = mode || $wf.$runtimeMode["static"];
     this.scopes = [];
     this.values = {};
-    this.dependents = [];
+    this.dependents = {};
     this["default"] = void 0;
   }
 
@@ -2603,11 +2603,14 @@ RuntimeVariable = (function() {
     }
   };
 
-  RuntimeVariable.prototype.addDependent = function(bindLink) {
-    if (__indexOf.call(this.dependents, bindLink) >= 0) {
+  RuntimeVariable.prototype.addDependent = function(bindLink, scope) {
+    if (this.dependents[scope] == null) {
+      this.dependents[scope] = [];
+    }
+    if (__indexOf.call(this.dependents[scope], bindLink) >= 0) {
       return;
     }
-    return this.dependents.push(bindLink);
+    return this.dependents[scope].push(bindLink);
   };
 
   return RuntimeVariable;
@@ -3174,7 +3177,10 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
   updateDependencies: function(varName) {
     var bindLink, vObj, _i, _len, _ref, _results;
     vObj = FASHION.variables[varName];
-    _ref = vObj.dependents;
+    if (vObj.dependents[0] == null) {
+      return;
+    }
+    _ref = vObj.dependents[0];
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       bindLink = _ref[_i];

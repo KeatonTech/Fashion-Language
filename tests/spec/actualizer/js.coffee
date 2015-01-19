@@ -152,8 +152,8 @@ window.fashiontests.actualizer.js = ()->
 		window.FASHION = {}
 		eval(js)
 
-		expect(FASHION.variables["padding"].dependents[0]).toEqual(['s',0,'padding'])
-		expect(FASHION.variables["padding"].dependents[1]).toEqual(['s',1,'padding'])
+		expect(FASHION.variables["padding"].dependents[0][0]).toEqual(['s',0,'padding'])
+		expect(FASHION.variables["padding"].dependents[0][1]).toEqual(['s',1,'padding'])
 
 
 	it 'should properly map selector variable bindings to the separated CSS selectors', () ->
@@ -171,7 +171,7 @@ window.fashiontests.actualizer.js = ()->
 		eval(js)
 
 		# Make sure it's linked up right
-		expect(FASHION.variables["id"].dependents[0]).toEqual(['s',1])
+		expect(FASHION.variables["id"].dependents[0][0]).toEqual(['s',1])
 
 
 	it 'should leave out static variables', () ->
@@ -205,7 +205,7 @@ window.fashiontests.actualizer.js = ()->
 		window.FASHION = {}
 		eval(js)
 
-		expect(FASHION.variables["clickSet"].dependents.length).toBe(0);
+		expect(FASHION.variables["clickSet"].dependents[0]).not.toBeDefined()
 
 
 	it 'should properly map variable bindings to the individual CSS selectors', () ->
@@ -224,11 +224,11 @@ window.fashiontests.actualizer.js = ()->
 		window.FASHION = {}
 		eval(js)
 
-		expect(FASHION.variables["padding"].dependents[0]).toEqual(['s',0,'padding'])
-		expect(FASHION.variables["padding"].dependents[1]).toEqual(['i',1,'paddingLeft'])
+		expect(FASHION.variables["padding"].dependents[0][0]).toEqual(['s',0,'padding'])
+		expect(FASHION.variables["padding"].dependents[0][1]).toEqual(['i',1,'paddingLeft'])
 
 
-	it 'should not bind variables to other variables', () ->
+	it 'should bind variables to other variables', () ->
 		{js} = actualize process parse """
 			$padding: 10px;
 			$width: 1000px - 2 * $padding;
@@ -240,8 +240,8 @@ window.fashiontests.actualizer.js = ()->
 		window.FASHION = {}
 		eval(js)
 
-		expect(FASHION.variables["padding"].dependents.length).toBe(1);
-		expect(FASHION.variables["padding"].dependents[0]).toEqual(['v','width','0']);
+		expect(FASHION.variables["padding"].dependents[0].length).toBe(1);
+		expect(FASHION.variables["padding"].dependents[0][0]).toEqual(['v','width','0']);
 
 
 	it 'should properly map global bindings to the separated CSS selectors', () ->

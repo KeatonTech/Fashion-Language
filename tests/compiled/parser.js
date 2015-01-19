@@ -52,7 +52,7 @@
       return expect(rgbaExpression(0, 0, $wf.$functions)).toEqual("rgba(200,100,50,0.5)");
     });
     it("should allow variables to rely on other variables", function() {
-      var result, v;
+      var link, result, v;
       result = parse("$main: 10px;\n$copy: $main;");
       expect(result.variables["main"][0]["value"]).toEqual(10);
       expect(result.variables["copy"][0]["value"].script).toBeDefined();
@@ -76,10 +76,11 @@
       expect(result.variables["copy"][0]["type"]).toEqual(type.Number);
       expect(result.variables["main"][0]["unit"]).toEqual(unit.Number.px);
       expect(result.variables["copy"][0]["unit"]).toEqual(unit.Number.px);
-      return expect(result.variables["copy"][0]["value"].bindings.variables[0]).toBe("main");
+      link = result.variables["copy"][0]["value"].bindings;
+      return expect(link.variables[0]).toEqual(["main", 0]);
     });
     it("should allow variables to be expressions", function() {
-      var result, v;
+      var link, result, v;
       result = parse("$main: 10px;\n$offset: 3px;\n$height: $main / 2 + $offset;");
       expect(result.variables["main"][0]["value"]).toEqual(10);
       expect(result.variables["offset"][0]["value"]).toEqual(3);
@@ -107,8 +108,9 @@
         }
       };
       expect(result.variables["height"][0]["value"].evaluate(v)).toBe(15);
-      expect(result.variables["height"][0]["value"].bindings.variables[0]).toBe("main");
-      return expect(result.variables["height"][0]["value"].bindings.variables[1]).toBe("offset");
+      link = result.variables["height"][0]["value"].bindings;
+      expect(link.variables[0]).toEqual(["main", 0]);
+      return expect(link.variables[1]).toEqual(["offset", 0]);
     });
     it("should allow variables within selectors", function() {
       var result;
@@ -185,7 +187,7 @@
         }
       };
       expect(nameExpression.evaluate(v)).toBe(".content");
-      return expect(nameExpression.bindings.variables[0]).toBe("contentDiv");
+      return expect(nameExpression.bindings.variables[0]).toEqual(["contentDiv", 0]);
     });
     it("should allow variables to be part of selectors", function() {
       var nameExpression, result, v;
@@ -205,8 +207,8 @@
         }
       };
       expect(nameExpression.evaluate(v)).toBe(".content h3 p");
-      expect(nameExpression.bindings.variables[0]).toBe("contentDiv");
-      return expect(nameExpression.bindings.variables[1]).toBe("contentSub");
+      expect(nameExpression.bindings.variables[0]).toEqual(["contentDiv", 0]);
+      return expect(nameExpression.bindings.variables[1]).toEqual(["contentSub", 0]);
     });
     it("should allow nested selectors inside of variable selectors", function() {
       var result, v;
@@ -219,8 +221,8 @@
       };
       expect(result.selectors[0].name.evaluate(v)).toBe(".content");
       expect(result.selectors[1].name.evaluate(v)).toBe(".content h3");
-      expect(result.selectors[0].name.bindings.variables[0]).toBe("contentDiv");
-      return expect(result.selectors[1].name.bindings.variables[0]).toBe("contentDiv");
+      expect(result.selectors[0].name.bindings.variables[0]).toEqual(["contentDiv", 0]);
+      return expect(result.selectors[1].name.bindings.variables[0]).toEqual(["contentDiv", 0]);
     });
     it("should allow nested variable selectors", function() {
       var result, v;
@@ -232,7 +234,7 @@
         };
       };
       expect(result.selectors[1].name.evaluate(v)).toBe("div .content");
-      return expect(result.selectors[1].name.bindings.variables[0]).toBe("contentDiv");
+      return expect(result.selectors[1].name.bindings.variables[0]).toEqual(["contentDiv", 0]);
     });
     it("should properly nest comma separated selectors", function() {
       var result;
@@ -415,8 +417,8 @@
       };
       expect(expression.evaluate(v)).toBe("20px");
       expect(pExpression.evaluate(v)).toBe("16px");
-      expect(expression.bindings.variables[0]).toBe("fullHeight");
-      return expect(pExpression.bindings.variables[0]).toBe("fullHeight");
+      expect(expression.bindings.variables[0]).toEqual(["fullHeight", 0]);
+      return expect(pExpression.bindings.variables[0]).toEqual(["fullHeight", 0]);
     });
     it("should allow untyped variables in expressions", function() {
       var expression, result, v;
@@ -436,7 +438,7 @@
         };
       };
       expect(expression.evaluate(v)).toBe("3px");
-      return expect(expression.bindings.variables[0]).toBe("heightDivisor");
+      return expect(expression.bindings.variables[0]).toEqual(["heightDivisor", 0]);
     });
     it("should allow scoped variables in expressions", function() {
       var expression, result, v;
@@ -449,7 +451,7 @@
         };
       };
       expect(expression.evaluate(v)).toBe("pink");
-      return expect(expression.bindings.variables[0]).toBe("color");
+      return expect(expression.bindings.variables[0]).toEqual(["color", "div.class"]);
     });
     it("should parse functions with no arguments", function() {
       var expression, expressionResult, result;

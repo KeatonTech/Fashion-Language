@@ -59,8 +59,8 @@
       endProperty = transitions['highlight']['100%'].selectors[0].properties[0];
       expect(startProperty.value.script).toBeDefined();
       expect(endProperty.value.script).toBeDefined();
-      expect(startProperty.value.bindings.variables[0]).toBe("offColor");
-      return expect(endProperty.value.bindings.variables[0]).toBe("onColor");
+      expect(startProperty.value.bindings.variables[0]).toEqual(["offColor", 0]);
+      return expect(endProperty.value.bindings.variables[0]).toEqual(["onColor", 0]);
     });
     return it("should be able to read variables defined inside", function() {
       var parseTree, transitions;

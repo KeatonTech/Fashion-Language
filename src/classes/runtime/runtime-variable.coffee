@@ -10,7 +10,7 @@ class RuntimeVariable
 
 		@scopes = []
 		@values = {}
-		@dependents = []
+		@dependents = {}
 
 		@default = undefined
 
@@ -23,6 +23,7 @@ class RuntimeVariable
 		# Adding a selector scope
 		else @scopes.push name
 
-	addDependent: (bindLink) ->
-		if bindLink in @dependents then return
-		@dependents.push bindLink
+	addDependent: (bindLink, scope) ->
+		if !@dependents[scope]? then @dependents[scope] = []
+		if bindLink in @dependents[scope] then return
+		@dependents[scope].push bindLink

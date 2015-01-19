@@ -59,6 +59,6 @@ window.fashiontests.actualizer.transitions = ()->
 			property = properties[parseInt(id) + 1]
 			expect(property.name).toBe("#{prefix}transition")
 			expect(property.value[0][0]).toBe("background-color")
-			expect(property.value[0][1].bindings.variables[0]).toBe("duration")
+			expect(property.value[0][1].bindings.variables[0]).toEqual(["duration",0])
 			expect(property.value[0][2]).toBe("linear")
 			expect(property.mode).toBe($wf.$runtimeMode.dynamic)

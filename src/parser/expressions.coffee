@@ -259,11 +259,10 @@ window.fashion.$parser.expressionExpander =
 
 		else
 			# Link this variable in the parse tree
-			bindings = new ExpressionBindings "variable", name
+			bindings = new ExpressionBindings "variable", [name, scope]
 			script = "v('#{name}',#{JSON.stringify scope},e).value"
 
 		# Has to account for the fact that variables can also be expressions
-		console.log script
 		return new Expression script, type, unit, bindings, mode
 
 

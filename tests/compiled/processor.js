@@ -53,7 +53,7 @@ window.fashiontests.processor.blocks = function() {
     expect(parseTree.selectors[0].properties[0].name).toBe("border");
     expect(parseTree.selectors[0].properties[0].value[0].script).toBeDefined();
     val = parseTree.selectors[0].properties[0].value[0];
-    return expect(val.bindings.variables[0]).toBe("borderWidth");
+    return expect(val.bindings.variables[0]).toEqual(["borderWidth", 0]);
   });
   it("should be able to parse its body as a full fashion document", function() {
     var compileSpy, parseTree;

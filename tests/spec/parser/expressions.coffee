@@ -33,8 +33,8 @@ window.fashiontests.parser.expressions = ()->
 		expect(pExpression.evaluate(v)).toBe("16px")
 
 		# Test the backlink
-		expect(expression.bindings.variables[0]).toBe("fullHeight")
-		expect(pExpression.bindings.variables[0]).toBe("fullHeight")
+		expect(expression.bindings.variables[0]).toEqual(["fullHeight",0])
+		expect(pExpression.bindings.variables[0]).toEqual(["fullHeight",0])
 
 
 	it "should allow untyped variables in expressions", ()->
@@ -57,7 +57,7 @@ window.fashiontests.parser.expressions = ()->
 		expect(expression.evaluate(v)).toBe("3px")
 
 		# Test the backlink
-		expect(expression.bindings.variables[0]).toBe("heightDivisor")
+		expect(expression.bindings.variables[0]).toEqual(["heightDivisor",0])
 
 
 	it "should allow scoped variables in expressions", ()->
@@ -77,7 +77,7 @@ window.fashiontests.parser.expressions = ()->
 		expect(expression.evaluate(v)).toBe("pink")
 
 		# Test the backlink
-		expect(expression.bindings.variables[0]).toBe("color")
+		expect(expression.bindings.variables[0]).toEqual(["color","div.class"])
 
 
 	it "should parse functions with no arguments", ()->

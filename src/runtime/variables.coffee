@@ -46,9 +46,10 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 	# Set a top-level variable
 	updateDependencies: (varName) ->
 		vObj = FASHION.variables[varName]
+		if !vObj.dependents[0]? then return
 
-		# Update all of the dependents
-		for bindLink in vObj.dependents
+		# Update all of the dependents for the top level scope
+		for bindLink in vObj.dependents[0]
 
 			# If the dependency is a variable, go through and update all its stuff
 			if bindLink[0] is "v"

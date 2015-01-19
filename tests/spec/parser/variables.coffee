@@ -94,7 +94,8 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["copy"][0]["unit"]).toEqual(unit.Number.px);
 
 		# Check link
-		expect(result.variables["copy"][0]["value"].bindings.variables[0]).toBe("main")
+		link = result.variables["copy"][0]["value"].bindings
+		expect(link.variables[0]).toEqual(["main",0])
 		
 
 	it "should allow variables to be expressions", ()->
@@ -115,8 +116,9 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["height"][0]["value"].evaluate(v)).toBe(15);
 
 		# Check link
-		expect(result.variables["height"][0]["value"].bindings.variables[0]).toBe("main")
-		expect(result.variables["height"][0]["value"].bindings.variables[1]).toBe("offset")
+		link = result.variables["height"][0]["value"].bindings
+		expect(link.variables[0]).toEqual(["main",0])
+		expect(link.variables[1]).toEqual(["offset",0])
 
 
 	it "should allow variables within selectors", ()->

@@ -59,7 +59,7 @@
         property = properties[parseInt(id) + 1];
         expect(property.name).toBe("" + prefix + "transition");
         expect(property.value[0][0]).toBe("background-color");
-        expect(property.value[0][1].bindings.variables[0]).toBe("duration");
+        expect(property.value[0][1].bindings.variables[0]).toEqual(["duration", 0]);
         expect(property.value[0][2]).toBe("linear");
         _results.push(expect(property.mode).toBe($wf.$runtimeMode.dynamic));
       }
@@ -506,15 +506,15 @@
       js = actualize(process(parse("$padding: 10px;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding: $padding;\n}"))).js;
       window.FASHION = {};
       eval(js);
-      expect(FASHION.variables["padding"].dependents[0]).toEqual(['s', 0, 'padding']);
-      return expect(FASHION.variables["padding"].dependents[1]).toEqual(['s', 1, 'padding']);
+      expect(FASHION.variables["padding"].dependents[0][0]).toEqual(['s', 0, 'padding']);
+      return expect(FASHION.variables["padding"].dependents[0][1]).toEqual(['s', 1, 'padding']);
     });
     it('should properly map selector variable bindings to the separated CSS selectors', function() {
       var js;
       js = actualize(process(parse("$id: test;\nbody {\n	color: blue;\n}\n#$id {\n	color: white;\n}"))).js;
       window.FASHION = {};
       eval(js);
-      return expect(FASHION.variables["id"].dependents[0]).toEqual(['s', 1]);
+      return expect(FASHION.variables["id"].dependents[0][0]).toEqual(['s', 1]);
     });
     it('should leave out static variables', function() {
       var js;
@@ -528,23 +528,23 @@
       js = actualize(process(parse("$clickProperty: 10px;\n$clickSet: 10px;\ndiv {\n	on-click: set(\"clickProperty\", $clickSet, 0);\n}"))).js;
       window.FASHION = {};
       eval(js);
-      return expect(FASHION.variables["clickSet"].dependents.length).toBe(0);
+      return expect(FASHION.variables["clickSet"].dependents[0]).not.toBeDefined();
     });
     it('should properly map variable bindings to the individual CSS selectors', function() {
       var js;
       js = actualize(process(parse("$padding: 10px;\ndiv {\n	padding: $padding;\n	color: white;\n}\np {\n	pin: center;\n	padding-left: @self.left + $padding;\n}"))).js;
       window.FASHION = {};
       eval(js);
-      expect(FASHION.variables["padding"].dependents[0]).toEqual(['s', 0, 'padding']);
-      return expect(FASHION.variables["padding"].dependents[1]).toEqual(['i', 1, 'paddingLeft']);
+      expect(FASHION.variables["padding"].dependents[0][0]).toEqual(['s', 0, 'padding']);
+      return expect(FASHION.variables["padding"].dependents[0][1]).toEqual(['i', 1, 'paddingLeft']);
     });
-    it('should not bind variables to other variables', function() {
+    it('should bind variables to other variables', function() {
       var js;
       js = actualize(process(parse("$padding: 10px;\n$width: 1000px - 2 * $padding;\ndiv {\n	width: $width;\n}"))).js;
       window.FASHION = {};
       eval(js);
-      expect(FASHION.variables["padding"].dependents.length).toBe(1);
-      return expect(FASHION.variables["padding"].dependents[0]).toEqual(['v', 'width', '0']);
+      expect(FASHION.variables["padding"].dependents[0].length).toBe(1);
+      return expect(FASHION.variables["padding"].dependents[0][0]).toEqual(['v', 'width', '0']);
     });
     it('should properly map global bindings to the separated CSS selectors', function() {
       var js;
