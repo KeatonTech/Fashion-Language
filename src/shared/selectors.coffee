@@ -5,7 +5,7 @@
 # This function may sometimes generate too much CSS to be actually practical, in which case
 # the system will revert to using the previously mentioned Javascript method.
 
-window.fashion.$shared.combineSelectors = (outer, inner) ->
+window.fashion.$shared.combineSelectors = (outer, inner, cap = 10) ->
 
 	# Removes any selector component that comes before an ID
 	trimBeforeId = (selectorComponents) ->
@@ -76,7 +76,6 @@ window.fashion.$shared.combineSelectors = (outer, inner) ->
 			acc += o[0]
 		return acc
 
-
 	# Split the selectors into 2D arrays
 	ocomp = ([x,0] for x in c.trim().split(" ") for c in outer.split(","))
 	icomp = ([x,1] for x in c.trim().split(" ") for c in inner.split(","))
@@ -105,6 +104,9 @@ window.fashion.$shared.combineSelectors = (outer, inner) ->
 			# (or, shouldn't matter, we won't let bad programmers prevent optimization)
 			oc = trimBeforeId oc
 			ic = trimBeforeId ic
+
+			# Protect against overly complex situations that may result in a crash
+			if oc.length * ic.length > cap then return false
 
 			# Add the last component back in
 			interSels = recursiveInterleave(oc, ic)

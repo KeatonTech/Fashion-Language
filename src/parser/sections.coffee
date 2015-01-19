@@ -113,9 +113,22 @@ window.fashion.$parser.nestSelector = (outer, inner) ->
 		for istring in inner.split ","
 			istring = istring.trim()
 
-			# Properties prefixed with '&' are part of the same object
+			# Selectors prefixed with '&' are part of the same object
 			if istring[0] is "&"
 				acc.push ostring + istring.substr(1);
+
+			# Selectors prefixed with '^' use Fashion's selector combination algoritm
+			# This means 'any element that matches this selector and has a parent matching
+			# the parent selector, or itself matches the parent selector'
+			else if istring[0] is "^"
+				combined = $wf.$shared.combineSelectors ostring, istring.substr(1)
+				if !combined
+					console.log "[FASHION] Could not combine selectors."
+					console.log ostring, istring.substr(1)
+					acc.push ostring + " " + istring
+				else acc.push combined
+
+			# Otherwise, selectors are assumed to be direct children
 			else
 				acc.push ostring + " " + istring
 

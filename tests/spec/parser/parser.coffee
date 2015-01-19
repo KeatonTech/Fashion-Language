@@ -8,6 +8,10 @@ describe "Parser", ()->
 	describe "Selectors", window.fashiontests.parser.selectors
 
 
+	# Test combined nested selectors
+	describe "CSS Selector Combiner", window.fashiontests.parser.combiner
+
+
 	# Test the blocks parser
 	describe "Blocks", window.fashiontests.parser.blocks
 
@@ -25,3 +29,4 @@ describe "Parser", ()->
 #@prepros-prepend ./properties.coffee
 #@prepros-prepend ./expressions.coffee
 #@prepros-prepend ./blocks.coffee
+#@prepros-prepend ./combiner.coffee

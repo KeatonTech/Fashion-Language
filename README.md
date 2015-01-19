@@ -229,6 +229,26 @@ div.exciting {
 
 The 'stop' for each color is optional. If you just list a bunch of colors, Fashion will assume they're all equally spaced. If you add percentages, Fashion will use those instead. In the future, additional properties like gradient-center and gradient-angle will allow even more customization.
 
+Fashion uses selector nesting for more than just syntactic sugar, it defines the scope of variables. This is very intuitive syntax for programmers, but can sometimes lead to some trouble. For example, say you're writing a website that shows a grid of articles, each with a highlight color. In the 'hot' section, the highlight color is used on the background, in all the other sections it's just used for a border. Normally, you might have to make two entirely different blocks to define this behavior, but Fashion has an easier solution.
+
+```scss
+article {
+	$highlight: green;
+
+	.box {
+		border: 1px solid $highlight;
+	}
+
+	^#hot .box {
+		background-color: $highlight;
+	}
+}
+```
+
+**NOTE:** Scoped variables are not yet fully supported through all of Fashion, so this particular example will not work until the next release.
+
+The '^' character semantically means "Anything that matches this selector and has a parent that matches the parent selector, or itself matches the parent selector". This allows you to nest multipart selectors (something like "#content .header h2") where not all of the parts have to be children of the parent selector. In the example above, #hot does not have to be a child of an article tag.
+
 
 ##### More coming soon, see MANIFESTO.md for future features
 

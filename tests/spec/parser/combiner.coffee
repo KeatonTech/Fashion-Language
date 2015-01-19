@@ -1,6 +1,8 @@
 # Test the selector combiner
-window.fashiontests.actualizer.combiner = ()->
+window.fashiontests.parser.combiner = ()->
 
+	$wf = window.fashion
+	parse = window.fashion.$parser.parse
 	combine = window.fashion.$shared.combineSelectors
 
 	it "should combine selectors with IDs", ()->
@@ -140,3 +142,30 @@ window.fashiontests.actualizer.combiner = ()->
 		expect(c.length).toBe 2
 		expect(c).toContain "div article [type='text/x-fashion']"
 		expect(c).toContain "div article[type='text/x-fashion']"
+
+
+	it "should intentionally fail on overly large selectors", ()->
+
+		r = combine "a b c d e f g", "h i j k, l m, n"
+		expect(r).toBe false
+
+
+	it "should use the algorithm on selectors prefixed with '^'", ()->
+
+		result = parse("""
+						.navigation {
+							^#header .navItem:hover {
+								background-color: red;
+							}
+							^#sidebar .navItem:hover {
+								background-color: blue;
+							}
+						}
+						""")
+
+		# Check the name and order
+		selComponents = result.selectors[1].name.split(",")
+		expect(selComponents).toContain("#header .navigation .navItem:hover")
+
+		selComponents = result.selectors[2].name.split(",")
+		expect(selComponents).toContain("#sidebar .navigation .navItem:hover")

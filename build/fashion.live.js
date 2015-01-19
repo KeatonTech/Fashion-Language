@@ -1085,7 +1085,7 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
 };
 
 window.fashion.$parser.nestSelector = function(outer, inner) {
-  var acc, istring, ostring, _i, _j, _len, _len1, _ref, _ref1;
+  var acc, combined, istring, ostring, _i, _j, _len, _len1, _ref, _ref1;
   acc = [];
   if (!outer) {
     return inner;
@@ -1103,6 +1103,15 @@ window.fashion.$parser.nestSelector = function(outer, inner) {
       istring = istring.trim();
       if (istring[0] === "&") {
         acc.push(ostring + istring.substr(1));
+      } else if (istring[0] === "^") {
+        combined = $wf.$shared.combineSelectors(ostring, istring.substr(1));
+        if (!combined) {
+          console.log("[FASHION] Could not combine selectors.");
+          console.log(ostring, istring.substr(1));
+          acc.push(ostring + " " + istring);
+        } else {
+          acc.push(combined);
+        }
       } else {
         acc.push(ostring + " " + istring);
       }
@@ -1949,8 +1958,11 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
     return addSuffix(evaluateSingleValue(valueObject), isImportant);
   }
 };
-window.fashion.$shared.combineSelectors = function(outer, inner) {
+window.fashion.$shared.combineSelectors = function(outer, inner, cap) {
   var acc, c, componentArrayJoin, didSlice, existingSel, hasDuplicate, i, ic, icomp, interSels, oc, ocomp, prefix, recursiveInterleave, s, selectors, trimBeforeId, x, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref;
+  if (cap == null) {
+    cap = 10;
+  }
   trimBeforeId = function(selectorComponents) {
     var i, _i, _ref;
     if (selectorComponents.length === 0) {
@@ -2076,6 +2088,9 @@ window.fashion.$shared.combineSelectors = function(outer, inner) {
       }
       oc = trimBeforeId(oc);
       ic = trimBeforeId(ic);
+      if (oc.length * ic.length > cap) {
+        return false;
+      }
       interSels = recursiveInterleave(oc, ic);
       for (_l = 0, _len2 = interSels.length; _l < _len2; _l++) {
         s = interSels[_l];

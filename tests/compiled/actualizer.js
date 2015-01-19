@@ -422,123 +422,6 @@
 
 }).call(this);
 (function() {
-  window.fashiontests.actualizer.combiner = function() {
-    var combine;
-    combine = window.fashion.$shared.combineSelectors;
-    it("should combine selectors with IDs", function() {
-      var c, r;
-      r = combine("#test", "div article .class");
-      c = r.split(",");
-      expect(c.length).toBe(6);
-      expect(c).toContain("div article #test .class");
-      expect(c).toContain("div #test article .class");
-      expect(c).toContain("#test div article .class");
-      expect(c).toContain("div article #test.class");
-      expect(c).toContain("div article#test .class");
-      return expect(c).toContain("div#test article .class");
-    });
-    it("should cull anything before the ID", function() {
-      var c, r;
-      r = combine("span #test", "div article .class");
-      c = r.split(",");
-      return expect(c.length).toBe(6);
-    });
-    it("should combine selectors with other multi-component selectors", function() {
-      var c, r;
-      r = combine(".outerClass .innerClass", "div article");
-      c = r.split(",");
-      expect(c.length).toBe(8);
-      expect(c).toContain("div .outerClass article.innerClass");
-      expect(c).toContain("div.outerClass article.innerClass");
-      expect(c).toContain("div .outerClass .innerClass article");
-      expect(c).toContain("div.outerClass .innerClass article");
-      expect(c).toContain(".outerClass div article.innerClass");
-      expect(c).toContain(".outerClass div .innerClass article");
-      expect(c).toContain(".outerClass div.innerClass article");
-      return expect(c).toContain(".outerClass .innerClass div article");
-    });
-    it("should combine comma-separated ID selectors", function() {
-      var c, r;
-      r = combine("#l1, #l2", "#r1, #r2");
-      c = r.split(",");
-      expect(c.length).toBe(4);
-      expect(c).toContain("#l1 #r1");
-      expect(c).toContain("#l1 #r2");
-      expect(c).toContain("#l2 #r1");
-      return expect(c).toContain("#l2 #r2");
-    });
-    it("should combine comma-separated selectors", function() {
-      var c, r;
-      r = combine("#l1, #l2", "div, p");
-      c = r.split(",");
-      expect(c.length).toBe(8);
-      expect(c).toContain("#l1 div");
-      expect(c).toContain("#l1 p");
-      expect(c).toContain("#l2 div");
-      expect(c).toContain("#l2 p");
-      expect(c).toContain("div#l1");
-      expect(c).toContain("p#l1");
-      expect(c).toContain("div#l2");
-      return expect(c).toContain("p#l2");
-    });
-    it("should pull out common prefixes", function() {
-      var c, r;
-      r = combine("body #container div", "body #container .class");
-      c = r.split(",");
-      expect(c.length).toBe(2);
-      expect(c).toContain("body #container div .class");
-      return expect(c).toContain("body #container div.class");
-    });
-    it("should correctly handle parent/child relationships", function() {
-      var c, r;
-      r = combine("body #container div", "body #container div p .class");
-      c = r.split(",");
-      expect(c.length).toBe(1);
-      return expect(c).toContain("body #container div p .class");
-    });
-    it("should correctly handle partial parent/child relationships", function() {
-      var c, r;
-      r = combine("body #container div, body #container p", "body #container div .class");
-      c = r.split(",");
-      expect(c.length).toBe(4);
-      expect(c).toContain("body #container div .class");
-      expect(c).toContain("body #container p div .class");
-      expect(c).toContain("body #container div p .class");
-      return expect(c).toContain("body #container div p.class");
-    });
-    it("should deal with identical selector components", function() {
-      var c, i, o, r, _i, _ref, _results;
-      r = combine("body .class div", "#container .class p");
-      c = r.split(",");
-      expect(c.indexOf(".class.class")).toBe(-1);
-      _results = [];
-      for (o = _i = 0, _ref = c.length; 0 <= _ref ? _i <= _ref : _i >= _ref; o = 0 <= _ref ? ++_i : --_i) {
-        _results.push((function() {
-          var _j, _ref1, _results1;
-          _results1 = [];
-          for (i = _j = o, _ref1 = c.length; o <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = o <= _ref1 ? ++_j : --_j) {
-            if (i === o) {
-              continue;
-            }
-            _results1.push(expect(c[o] === c[i]).toBe(false));
-          }
-          return _results1;
-        })());
-      }
-      return _results;
-    });
-    return it("should correctly handle CSS3 attribute selectors", function() {
-      var c, r;
-      r = combine("div article", "[type='text/x-fashion']");
-      c = r.split(",");
-      expect(c.length).toBe(2);
-      expect(c).toContain("div article [type='text/x-fashion']");
-      return expect(c).toContain("div article[type='text/x-fashion']");
-    });
-  };
-
-}).call(this);
-(function() {
   window.fashiontests.actualizer.js = function() {
     var $wf, actualize, parse, process;
     $wf = window.fashion;
@@ -685,7 +568,6 @@
 (function() {
   describe("Actualizer", function() {
     describe("CSS Transitions", window.fashiontests.actualizer.transitions);
-    describe("CSS Selector Combiner", window.fashiontests.actualizer.combiner);
     describe("CSS Generator", window.fashiontests.actualizer.css);
     describe("Components", window.fashiontests.actualizer.components);
     describe("JS Minifier", window.fashiontests.actualizer.minifier);
