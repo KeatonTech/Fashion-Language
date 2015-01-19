@@ -230,3 +230,20 @@ window.fashiontests.parser.selectors = ()->
 		expect(result.selectors[0].name).toBe("div,article")
 		expect(result.selectors[1].name).toBe("div a,div:hover,article a,article:hover")
 
+
+	it "should remember the parent of nested selectors", ()->
+		result = parse("""
+						.level1 {
+							div[l='2'] {
+								#level3 {
+									width: 100px;
+								}
+							}
+						}
+						""")
+
+		# Check the name and order
+		expect(result.selectors[2].name).toBe(".level1 div[l='2'] #level3")
+		expect(result.selectors[2].parent.name).toBe(".level1 div[l='2']")
+		expect(result.selectors[2].parent.parent.name).toBe(".level1")
+

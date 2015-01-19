@@ -60,6 +60,26 @@ window.fashiontests.parser.expressions = ()->
 		expect(expression.bindings.variables[0]).toBe("heightDivisor")
 
 
+	it "should allow scoped variables in expressions", ()->
+		result = parse( """
+						div.class {
+							$color: pink;
+							color: $color;
+						}
+						""")
+
+		expression = result.selectors[0].properties[0].value
+
+		# Test the expression
+		v = (name, scope) -> 
+			expect(scope).toBe("div.class")
+			return value: "pink"
+		expect(expression.evaluate(v)).toBe("pink")
+
+		# Test the backlink
+		expect(expression.bindings.variables[0]).toBe("color")
+
+
 	it "should parse functions with no arguments", ()->
 		result = parse( """
 						div {

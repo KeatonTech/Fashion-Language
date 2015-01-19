@@ -489,10 +489,11 @@ window.fashion.$class.Variable = Variable;
 var Selector;
 
 Selector = (function() {
-  function Selector(name, mode) {
+  function Selector(name, mode, nestParent) {
     this.rawName = this.name = name;
     this.properties = [];
     this.index = -1;
+    this.parent = nestParent;
     if (mode) {
       this.mode = mode;
     } else if (name instanceof Expression) {
@@ -1076,7 +1077,7 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
       topSel.addToBody(fashionText.substring(segment.index, lastIndex));
     } else if (segment[8]) {
       name = $wf.$parser.nestSelector(topSel.rawName, segment[8]);
-      selectors.push($wf.$parser.createSelector(parseTree, name));
+      selectors.push($wf.$parser.createSelector(parseTree, name, topSel));
       selectorStack.push(selectors.length - 1);
       bracketDepth++;
     }
@@ -1120,9 +1121,9 @@ window.fashion.$parser.nestSelector = function(outer, inner) {
   return acc.join(",");
 };
 
-window.fashion.$parser.createSelector = function(parseTree, name) {
+window.fashion.$parser.createSelector = function(parseTree, name, nestParent) {
   var bindings, dmode, expander, foundVar, lastIndex, regex, script, selector, trimmed, vExpr;
-  selector = new Selector(name);
+  selector = new Selector(name, void 0, nestParent);
   parseTree.addSelector(selector);
   if (name.indexOf("$") === -1) {
     return selector;
@@ -1181,10 +1182,10 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
     if (property.length < 7) {
       continue;
     }
-    value = $wf.$parser.parsePropertyValues(property[6], parseTree);
+    value = $wf.$parser.parsePropertyValues(property[6], parseTree, selector);
     name = property[1];
     if (name[0] === "$") {
-      $wf.$parser.parseScopedVariable(name, value, property, selector.name, parseTree);
+      $wf.$parser.parseScopedVariable(name, value, property, selector, parseTree);
       continue;
     }
     if (property[3]) {
@@ -1223,7 +1224,7 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
   return _results;
 };
 
-window.fashion.$parser.parseScopedVariable = function(name, value, property, scope, parseTree) {
+window.fashion.$parser.parseScopedVariable = function(name, value, property, scopeSel, parseTree) {
   if (typeof value === 'array' && typeof value[0] === 'array') {
     throw new Error("Variable declaration '" + name + "' cannot have comma separated values");
   }
@@ -1233,15 +1234,15 @@ window.fashion.$parser.parseScopedVariable = function(name, value, property, sco
   if (property[7]) {
     throw new Error("Variable declaration '" + name + "' cannot be !important");
   }
-  return $wf.$parser.addVariable(parseTree, name, value, property[7], scope);
+  return $wf.$parser.addVariable(parseTree, name, value, property[7], scopeSel);
 };
 
-window.fashion.$parser.parsePropertyValues = function(value, parseTree) {
+window.fashion.$parser.parsePropertyValues = function(value, parseTree, selector) {
   var i, item, ret, split;
   if (value.indexOf(',') !== -1) {
     split = window.fashion.$parser.splitByTopLevelCommas(value);
     if (split.length === 1) {
-      return window.fashion.$parser.parsePropertyValue(split[0], parseTree);
+      return window.fashion.$parser.parsePropertyValue(split[0], parseTree, selector);
     } else {
       ret = [];
       for (i in split) {
@@ -1250,16 +1251,16 @@ window.fashion.$parser.parsePropertyValues = function(value, parseTree) {
       }
       for (i in split) {
         item = split[i];
-        ret[i] = window.fashion.$parser.parsePropertyValue(item, parseTree, true, true);
+        ret[i] = window.fashion.$parser.parsePropertyValue(item, parseTree, selector, true, true);
       }
       return ret;
     }
   } else {
-    return window.fashion.$parser.parsePropertyValue(value, parseTree);
+    return window.fashion.$parser.parsePropertyValue(value, parseTree, selector);
   }
 };
 
-window.fashion.$parser.parsePropertyValue = function(value, parseTree, allowExpression, forceArray) {
+window.fashion.$parser.parsePropertyValue = function(value, parseTree, selector, allowExpression, forceArray) {
   var parts, v, val, vals, _i, _len;
   if (allowExpression == null) {
     allowExpression = true;
@@ -1270,14 +1271,14 @@ window.fashion.$parser.parsePropertyValue = function(value, parseTree, allowExpr
   if (forceArray || (typeof value === "string" && value.indexOf(" ") !== -1)) {
     parts = $wf.$parser.splitByTopLevelSpaces(value);
     if (!forceArray && parts.length === 1) {
-      return window.fashion.$parser.parseSingleValue(value, parseTree);
+      return window.fashion.$parser.parseSingleValue(value, parseTree, selector);
     }
     vals = (function() {
       var _i, _len, _results;
       _results = [];
       for (_i = 0, _len = parts.length; _i < _len; _i++) {
         v = parts[_i];
-        _results.push($wf.$parser.parseSingleValue(v, parseTree));
+        _results.push($wf.$parser.parseSingleValue(v, parseTree, selector));
       }
       return _results;
     })();
@@ -1288,7 +1289,7 @@ window.fashion.$parser.parsePropertyValue = function(value, parseTree, allowExpr
     }
     return vals;
   } else {
-    return window.fashion.$parser.parseSingleValue(value, parseTree);
+    return window.fashion.$parser.parseSingleValue(value, parseTree, selector);
   }
 };
 
@@ -1296,7 +1297,7 @@ window.fashion.$parser.identifyExpression = function() {
   return /(([\s][\+\-\/\*\=][\s])|\s(\&\&|\|\|)\s|if\s.*?\sthen\s|\selse\s|[\(\)\[\]]|\@|\$)/g;
 };
 
-window.fashion.$parser.parseSingleValue = function(value, parseTree, isVar) {
+window.fashion.$parser.parseSingleValue = function(value, parseTree, selector, isVar) {
   if (isVar == null) {
     isVar = false;
   }
@@ -1304,11 +1305,11 @@ window.fashion.$parser.parseSingleValue = function(value, parseTree, isVar) {
     return value;
   }
   if (value.match($wf.$parser.identifyExpression())) {
-    return window.fashion.$parser.parseExpression(value, parseTree, window.fashion.$functions, window.fashion.$globals, true, isVar);
+    return window.fashion.$parser.parseExpression(value, parseTree, selector, window.fashion.$functions, window.fashion.$globals, true, isVar);
   }
   return value;
 };
-window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, globals, top, hideUnits, wrap) {
+window.fashion.$parser.parseExpression = function(expString, parseTree, selector, funcs, globals, top, hideUnits, wrap) {
   var bindings, contained, eObj, end, expander, expr, isSetter, length, makeExpression, matchCount, matchParens, mode, regex, replaceInScript, script, scriptOffset, section, shouldBreak, start, tailingUnit, type, types, unit, units, _ref, _ref1;
   if (top == null) {
     top = true;
@@ -1343,12 +1344,12 @@ window.fashion.$parser.parseExpression = function(expString, parseTree, funcs, g
     length = section[0].length;
     end = start + length;
     if (section[2]) {
-      eObj = expander.localVariable(section[2], parseTree, true);
+      eObj = expander.localVariable(section[2], parseTree, selector, true);
       isSetter = true;
     } else if (section[3]) {
       eObj = expander.relativeObject(section[3], section[4]);
     } else if (section[5]) {
-      eObj = expander.localVariable(section[5], parseTree);
+      eObj = expander.localVariable(section[5], parseTree, selector);
     } else if (section[6]) {
       eObj = expander.globalVariable(section[6], globals, parseTree);
     } else if (section[7]) {
@@ -1506,34 +1507,37 @@ window.fashion.$parser.expressionExpander = {
   hexColor: function(match) {
     return new Expression(JSON.stringify(match), $wf.$type.Color, "", void 0, 0);
   },
-  localVariable: function(name, parseTree, isSetter) {
-    var bindings, isIndividual, isIndividualized, mode, script, selector, selectors, type, unit, vObj, vars;
+  localVariable: function(name, parseTree, selector, isSetter) {
+    var bindings, mode, scope, scopeMatch, scopes, script, type, unit, vars, _ref, _ref1;
     if (isSetter == null) {
       isSetter = false;
     }
     vars = parseTree.variables;
-    selectors = vars[name];
-    if (!selectors) {
+    scopes = vars[name];
+    if (!scopes) {
       return console.log("[FASHION] Variable $" + name + " does not exist.");
     }
-    isIndividual = false;
-    type = unit = mode = -1;
-    for (selector in selectors) {
-      vObj = selectors[selector];
-      if (selector !== 0) {
-        isIndividualized = false;
+    scopeMatch = false;
+    while (selector != null) {
+      if (scopes[selector.name] != null) {
+        scope = selector.name;
+        _ref = scopes[selector.name], type = _ref.type, unit = _ref.unit, mode = _ref.mode;
+        scopeMatch = true;
+        break;
       }
-      type = vObj.type;
-      unit = vObj.unit;
-      mode = vObj.mode;
+      selector = selector.parent;
+    }
+    if (!scopeMatch) {
+      scope = 0;
+      _ref1 = scopes[0] || scopes['0'], type = _ref1.type, unit = _ref1.unit, mode = _ref1.mode;
     }
     if (isSetter) {
-      script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value =";
+      script = "v('" + name + "'," + (JSON.stringify(scope)) + ",e).value =";
     } else {
       bindings = new ExpressionBindings("variable", name);
-      script = "v('" + name + "'" + (isIndividual ? ',e' : '') + ").value";
+      script = "v('" + name + "'," + (JSON.stringify(scope)) + ",e).value";
     }
-    mode = isIndividual ? mode | $wf.$runtimeMode.individual : mode;
+    console.log(script);
     return new Expression(script, type, unit, bindings, mode);
   },
   globalVariable: function(name, globals, parseTree) {
@@ -1581,8 +1585,8 @@ window.fashion.$parser.expressionExpander = {
     return new Expression(script, type, unit, false, $wf.$runtimeMode.individual);
   },
   "function": function(name, argumentsString, inputUnit, parseArgs) {
-    var arg, argComponents, args, bindings, expr, expressions, fObj, funcs, globals, mode, namedArgs, objectProp, ogstring, parseTree, script, scripts, unit, vars, _i, _j, _len, _len1;
-    ogstring = parseArgs[0], parseTree = parseArgs[1], funcs = parseArgs[2], globals = parseArgs[3];
+    var arg, argComponents, args, bindings, expr, expressions, fObj, funcs, globals, mode, namedArgs, objectProp, ogstring, parseTree, script, scripts, selector, unit, vars, _i, _j, _len, _len1;
+    ogstring = parseArgs[0], parseTree = parseArgs[1], selector = parseArgs[2], funcs = parseArgs[3], globals = parseArgs[4];
     vars = parseTree.variables;
     fObj = funcs[name];
     if (!fObj) {
@@ -1596,10 +1600,10 @@ window.fashion.$parser.expressionExpander = {
         arg = args[_i];
         if (argComponents = arg.match(/([a-zA-Z0-9\-\'\"]+)\s*\:\s*(.*)/)) {
           objectProp = "'" + argComponents[1] + "': ";
-          objectProp += window.fashion.$parser.parseExpression(argComponents[2], parseTree, funcs, globals, 0).script;
+          objectProp += window.fashion.$parser.parseExpression(argComponents[2], parseTree, selector, funcs, globals, 0).script;
           namedArgs.push(objectProp);
         } else {
-          expressions.push(window.fashion.$parser.parseExpression(arg, parseTree, funcs, globals, false));
+          expressions.push(window.fashion.$parser.parseExpression(arg, parseTree, selector, funcs, globals, false));
         }
       }
       if (namedArgs.length > 0) {
@@ -1634,13 +1638,13 @@ window.fashion.$parser.expressionExpander = {
     return new Expression(script, fObj.type, inputUnit || unit, bindings, mode);
   },
   ternary: function(ifExp, trueExp, falseExp, parseArgs, top) {
-    var bindings, funcs, globals, mode, ogstring, parse, parseTree, script;
-    ogstring = parseArgs[0], parseTree = parseArgs[1], funcs = parseArgs[2], globals = parseArgs[3];
+    var bindings, funcs, globals, mode, ogstring, parse, parseTree, script, selector;
+    ogstring = parseArgs[0], parseTree = parseArgs[1], selector = parseArgs[2], funcs = parseArgs[3], globals = parseArgs[4];
     bindings = new ExpressionBindings;
     mode = 0;
     parse = function(arg) {
       var e;
-      e = window.fashion.$parser.parseExpression(arg, parseTree, funcs, globals, false, true, false);
+      e = window.fashion.$parser.parseExpression(arg, parseTree, selector, funcs, globals, false, true, false);
       bindings.extend(e.bindings);
       mode |= e.mode;
       return e;
@@ -1658,10 +1662,10 @@ window.fashion.$parser.expressionExpander = {
     return new Expression(script, trueExp.type, trueExp.unit, bindings, mode);
   }
 };
-window.fashion.$parser.addVariable = function(parseTree, name, value, flag, scope) {
+window.fashion.$parser.addVariable = function(parseTree, name, value, flag, scopeSelector) {
   var type, typedValue, unit, unittedValue, val, variableObject;
-  value = $wf.$parser.parseSingleValue(value, parseTree, true);
-  variableObject = new Variable(name, value, scope);
+  value = $wf.$parser.parseSingleValue(value, parseTree, scopeSelector, true);
+  variableObject = new Variable(name, value, scopeSelector != null ? scopeSelector.name : void 0);
   if (flag === "!static") {
     variableObject.mode = $wf.$runtimeMode["static"];
   }

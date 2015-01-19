@@ -258,11 +258,18 @@
       };
       return expect(result.selectors[1].name.evaluate(v)).toBe("div .content,div .stuff");
     });
-    return it("should properly nest comma separated selectors with an &", function() {
+    it("should properly nest comma separated selectors with an &", function() {
       var result;
       result = parse("div,article {\n	a, &:hover {\n		color: red;\n	}\n}");
       expect(result.selectors[0].name).toBe("div,article");
       return expect(result.selectors[1].name).toBe("div a,div:hover,article a,article:hover");
+    });
+    return it("should remember the parent of nested selectors", function() {
+      var result;
+      result = parse(".level1 {\n	div[l='2'] {\n		#level3 {\n			width: 100px;\n		}\n	}\n}");
+      expect(result.selectors[2].name).toBe(".level1 div[l='2'] #level3");
+      expect(result.selectors[2].parent.name).toBe(".level1 div[l='2']");
+      return expect(result.selectors[2].parent.parent.name).toBe(".level1");
     });
   };
 
@@ -430,6 +437,19 @@
       };
       expect(expression.evaluate(v)).toBe("3px");
       return expect(expression.bindings.variables[0]).toBe("heightDivisor");
+    });
+    it("should allow scoped variables in expressions", function() {
+      var expression, result, v;
+      result = parse("div.class {\n	$color: pink;\n	color: $color;\n}");
+      expression = result.selectors[0].properties[0].value;
+      v = function(name, scope) {
+        expect(scope).toBe("div.class");
+        return {
+          value: "pink"
+        };
+      };
+      expect(expression.evaluate(v)).toBe("pink");
+      return expect(expression.bindings.variables[0]).toBe("color");
     });
     it("should parse functions with no arguments", function() {
       var expression, expressionResult, result;

@@ -5,8 +5,8 @@
 # Recursively convert an expression string into a parse tree
 # NOTE(keatontech): Yes, this is a very long function that violates the 40 line rule.
 # I'm accepting suggestions for how to fix that.
-window.fashion.$parser.parseExpression = 
-(expString, parseTree, funcs, globals, top = true, hideUnits = false, wrap = true) ->
+window.fashion.$parser.parseExpression = (expString, parseTree, selector, funcs, globals, 
+top = true, hideUnits = false, wrap = true) ->
 
 	expander = $wf.$parser.expressionExpander
 	matchParens = window.fashion.$parser.matchParenthesis
@@ -61,7 +61,7 @@ window.fashion.$parser.parseExpression =
 
 		# Sets a local variable (top-level or scoped)
 		if section[2]
-			eObj = expander.localVariable section[2], parseTree, true
+			eObj = expander.localVariable section[2], parseTree, selector, true
 			isSetter = true
 
 		# @self, @this or @parent objects
@@ -69,7 +69,7 @@ window.fashion.$parser.parseExpression =
 
 		# Local variable (top-level or scoped)
 		else if section[5]
-			eObj = expander.localVariable section[5], parseTree
+			eObj = expander.localVariable section[5], parseTree, selector
 
 		# Global variable
 		else if section[6]
@@ -231,32 +231,39 @@ window.fashion.$parser.expressionExpander =
 	hexColor: (match) ->
 		return new Expression JSON.stringify(match), $wf.$type.Color, "", undefined, 0	
 
-	# Expand local variables
-	localVariable: (name, parseTree, isSetter = false) ->
-		vars = parseTree.variables
-		selectors = vars[name]
-		if !selectors then return console.log "[FASHION] Variable $#{name} does not exist."
 
-		# Anything with a non-top-level variable needs to be individualized
-		isIndividual = false
-		type = unit = mode = -1
-		for selector, vObj of selectors
-			if selector isnt 0 then isIndividualized = false
-			type = vObj.type
-			unit = vObj.unit
-			mode = vObj.mode
+	# Expand local variables
+	localVariable: (name, parseTree, selector, isSetter = false) ->
+		vars = parseTree.variables
+		scopes = vars[name]
+		if !scopes then return console.log "[FASHION] Variable $#{name} does not exist."
+
+		# Go up the selector chain trying to find a scope match
+		scopeMatch = false
+		while selector?
+			if scopes[selector.name]?
+				scope = selector.name
+				{type,unit,mode} = scopes[selector.name]
+				scopeMatch = true
+				break
+			selector = selector.parent
+
+		# No scope found use global scope
+		if !scopeMatch
+			scope = 0
+			{type,unit,mode} = scopes[0] || scopes['0']
 
 		if isSetter 
 			# Setters do not need to be linked. This setter just uses a straight up equals
-			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value ="
+			script = "v('#{name}',#{JSON.stringify scope},e).value ="
 
 		else
 			# Link this variable in the parse tree
 			bindings = new ExpressionBindings "variable", name
-			script = "v('#{name}'#{if isIndividual then ',e' else ''}).value"
+			script = "v('#{name}',#{JSON.stringify scope},e).value"
 
 		# Has to account for the fact that variables can also be expressions
-		mode = if isIndividual then mode | $wf.$runtimeMode.individual else mode
+		console.log script
 		return new Expression script, type, unit, bindings, mode
 
 
@@ -314,7 +321,7 @@ window.fashion.$parser.expressionExpander =
 
 	# Expand functions, which involves expanding any arguments of theirs into expressions
 	function: (name, argumentsString, inputUnit, parseArgs) ->
-		[ogstring, parseTree, funcs, globals] = parseArgs
+		[ogstring, parseTree, selector, funcs, globals] = parseArgs
 		vars = parseTree.variables
 
 		# Make sure the function actually exists before continuing on
@@ -332,13 +339,13 @@ window.fashion.$parser.expressionExpander =
 				if argComponents = arg.match /([a-zA-Z0-9\-\'\"]+)\s*\:\s*(.*)/
 					objectProp = "'#{argComponents[1]}': "
 					objectProp += window.fashion.$parser.parseExpression(
-						argComponents[2], parseTree, funcs, globals, 0).script
+						argComponents[2], parseTree, selector, funcs, globals, 0).script
 					namedArgs.push objectProp
 
 				# Normal argument
 				else
 					expressions.push window.fashion.$parser.parseExpression(
-						arg, parseTree, funcs, globals, false)
+						arg, parseTree, selector, funcs, globals, false)
 
 			# Add the named arguments as an object at the end
 			if namedArgs.length > 0 then expressions.push script: "{#{namedArgs.join(',')}}"
@@ -369,14 +376,14 @@ window.fashion.$parser.expressionExpander =
 
 	# Expand ternary operators
 	ternary: (ifExp, trueExp, falseExp, parseArgs, top) ->
-		[ogstring, parseTree, funcs, globals] = parseArgs
+		[ogstring, parseTree, selector, funcs, globals] = parseArgs
 		bindings = new ExpressionBindings
 		mode = 0
 
 		# Expand all the arguments
 		parse = (arg) -> 
 			e = window.fashion.$parser.parseExpression(
-				arg, parseTree, funcs, globals, false, true, false)
+				arg, parseTree, selector, funcs, globals, false, true, false)
 			bindings.extend e.bindings
 			mode |= e.mode
 			return e

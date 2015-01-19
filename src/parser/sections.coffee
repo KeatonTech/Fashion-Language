@@ -92,7 +92,7 @@ window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, las
 			name = $wf.$parser.nestSelector topSel.rawName, segment[8]
 
 			# Add this selector
-			selectors.push($wf.$parser.createSelector(parseTree, name))
+			selectors.push($wf.$parser.createSelector(parseTree, name, topSel))
 			selectorStack.push selectors.length - 1
 
 			# Selector segments include a bracket
@@ -136,10 +136,10 @@ window.fashion.$parser.nestSelector = (outer, inner) ->
 
 
 # Make a new selector and parse the variables out of its name, if necessary
-window.fashion.$parser.createSelector = (parseTree, name) ->
+window.fashion.$parser.createSelector = (parseTree, name, nestParent) ->
 
 	# Create the selector and add it to the parse tree
-	selector = new Selector(name)
+	selector = new Selector(name, undefined, nestParent)
 	parseTree.addSelector selector
 
 	# If there are no variables, return here

@@ -1,11 +1,11 @@
 # Adds a variable object
-window.fashion.$parser.addVariable = (parseTree, name, value, flag, scope) ->
+window.fashion.$parser.addVariable = (parseTree, name, value, flag, scopeSelector) ->
 
 	# Parse the value into an expression if necessary
-	value = $wf.$parser.parseSingleValue(value, parseTree, true)
+	value = $wf.$parser.parseSingleValue(value, parseTree, scopeSelector, true)
 
 	# Make a variable object
-	variableObject = new Variable name, value, scope
+	variableObject = new Variable name, value, scopeSelector?.name
 	if flag is "!static" then variableObject.mode = $wf.$runtimeMode.static
 	parseTree.addVariable variableObject
 

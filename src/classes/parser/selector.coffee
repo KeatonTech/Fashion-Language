@@ -2,10 +2,11 @@
 class Selector
 
 	# Create a selector object, which is really pretty boring
-	constructor: (name, mode) -> 
+	constructor: (name, mode, nestParent) -> 
 		@rawName = @name = name
 		@properties = []
 		@index = -1
+		@parent = nestParent
 
 		# Selectors with variables in the name are dynamic
 		if mode then @mode = mode
