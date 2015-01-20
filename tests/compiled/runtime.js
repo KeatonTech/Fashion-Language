@@ -208,8 +208,56 @@
 
 }).call(this);
 (function() {
+  window.fashiontests.runtime.scoped = function() {
+    var $wf, getIndRule, getStaticRule, testDiv, testFSS;
+    $wf = window.fashion;
+    testFSS = function(fss) {
+      var css, js, _ref;
+      _ref = $wf.$actualizer.actualize($wf.$processor.process($wf.$parser.parse(fss))), css = _ref.css, js = _ref.js;
+      return window.fashiontests.runtime.simulateRuntime(css, js);
+    };
+    beforeEach(window.fashiontests.runtime.cleanup);
+    afterEach(window.fashiontests.runtime.cleanup);
+    getStaticRule = window.fashiontests.runtime.getRule;
+    getIndRule = function(rule) {
+      return window.fashiontests.runtime.getRule(rule, $wf.runtimeConfig.individualCSSID);
+    };
+    testDiv = window.fashiontests.runtime.testDiv;
+    beforeEach(function() {
+      window.fsStyleHeader = $wf.styleHeader;
+      $wf.styleHeader = "";
+      window.fsStyleHeaderRules = $wf.styleHeaderRules;
+      return $wf.styleHeaderRules = 0;
+    });
+    afterEach(function() {
+      $wf.styleHeader = window.fsStyleHeader;
+      return $wf.styleHeaderRules = window.fsStyleHeaderRules;
+    });
+    it("should override variables based on scope", function() {
+      var id;
+      id = testDiv("<div class=\"nestedItem\"></div>\n<div class=\"outsideItem\"></div>");
+      testFSS("$color: red;\n.nestedItem {\n	$color: blue;\n	background-color: $color;\n}\n.outsideItem {\n	background-color: $color;\n}");
+      expect(getIndRule(0).style.backgroundColor).toBe("blue");
+      return expect(getStaticRule(0).style.backgroundColor).toBe("red");
+    });
+    return it("should be able to change variables for specific elements", function() {
+      var element, id;
+      id = testDiv("<div class=\"item\" id=\"testColorChange\"></div>\n<div class=\"item\" id=\"testColorNotChange\"></div>");
+      testFSS("$color: red;\n.item {\n	$color: blue;\n	background-color: $color;\n}");
+      expect(getIndRule(0).style.backgroundColor).toBe("blue");
+      expect(getIndRule(1).style.backgroundColor).toBe("blue");
+      element = document.getElementById("testColorChange");
+      FASHION.setElementVariable(element, "color", "rgb(200, 100, 50)");
+      expect(getIndRule(0).style.backgroundColor).toBe("rgb(200, 100, 50)");
+      return expect(getIndRule(1).style.backgroundColor).toBe("blue");
+    });
+  };
+
+}).call(this);
+(function() {
   describe("Runtime", function() {
     describe("Variables", window.fashiontests.runtime.variables);
+    describe("Scoped Variables", window.fashiontests.runtime.scoped);
     return describe("Individual Properties", window.fashiontests.runtime.individual);
   });
 

@@ -1,5 +1,5 @@
 window.fashion.$shared.getVariable =
-(variables, globals, funcs, runtime, varName, elem) ->
+(variables, globals, funcs, runtime, varName, scope, elem) ->
 	vObj = variables[varName]
 	if !vObj
 		console.log "[FASHION] Could not find variable '#{varName}'"
@@ -12,8 +12,17 @@ window.fashion.$shared.getVariable =
 	if vObj[0] then return vObj[0]
 
 	# Scoped variables
-	if vObj.scope and vObj.scope.length > 0
-		@throwError "Scoped variables are not yet supported"
+	if scope and scope isnt 0
+		if !vObj.values[scope]
+			@throwError "$#{varName} does not have a value for scope '#{scope}'"
+
+		if elem?
+			scopeVal = @getScopeOverride(elem, varName, scope) || vObj.values[scope]
+		else scopeVal = vObj.values[scope]
+
+		if scopeVal.evaluate
+			return value: @evaluate vObj.default, variables, globals, funcs, runtime, elem
+		else return value: scopeVal
 
 	# Top-level variables
 	else if vObj.default isnt undefined
@@ -40,8 +49,8 @@ window.fashion.$shared.evaluate =
 
 		# Create a variable lookup function
 		varObjects = []
-		varLookup = (varName, element) => 
-			vObj = @getVariable variables, globals, funcs, runtime, varName, element
+		varLookup = (varName, scope, element) => 
+			vObj = @getVariable variables, globals, funcs, runtime, varName, scope, element
 			varObjects.push {name: varName, object: vObj, value: vObj.value}
 			return vObj
 
@@ -59,7 +68,8 @@ window.fashion.$shared.evaluate =
 				val = valueObject.evaluate varLookup, globals, funcs, runtime, elmLookup
 			catch e
 				console.log "[FASHION] Could not evaluate: #{valueObject.evaluate}"
-				return console.log e
+				console.log e
+				return console.log e.stack
 
 			if valueObject.important is true then isImportant = true
 

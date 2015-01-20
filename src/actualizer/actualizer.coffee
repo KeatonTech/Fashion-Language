@@ -90,6 +90,7 @@ window.fashion.$actualizer.createJS = (runtimeData, minifiedData, scripts) ->
 		config: runtimeData.config,
 		modules: runtimeData.modules,
 		runtime: runtimeData.runtime,
+		elements: {},
 		selectors: {}, individual: {}, variables: {}
 	}};
 	FSEXPAND = #{$wf.$stringify $wf.$actualizer.minifier.expandRuntimeData};

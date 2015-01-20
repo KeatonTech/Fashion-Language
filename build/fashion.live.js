@@ -1522,6 +1522,7 @@ window.fashion.$parser.expressionExpander = {
       if (scopes[selector.name] != null) {
         scope = selector.name;
         _ref = scopes[selector.name], type = _ref.type, unit = _ref.unit, mode = _ref.mode;
+        mode |= $wf.$runtimeMode.individual;
         scopeMatch = true;
         break;
       }
@@ -1821,8 +1822,8 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
   return parseTree;
 };
 window.fashion.$shared = {};
-window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime, varName, elem) {
-  var vObj;
+window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime, varName, scope, elem) {
+  var scopeVal, vObj;
   vObj = variables[varName];
   if (!vObj) {
     console.log("[FASHION] Could not find variable '" + varName + "'");
@@ -1838,8 +1839,24 @@ window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime
   if (vObj[0]) {
     return vObj[0];
   }
-  if (vObj.scope && vObj.scope.length > 0) {
-    return this.throwError("Scoped variables are not yet supported");
+  if (scope && scope !== 0) {
+    if (!vObj.values[scope]) {
+      this.throwError("$" + varName + " does not have a value for scope '" + scope + "'");
+    }
+    if (elem != null) {
+      scopeVal = this.getScopeOverride(elem, varName, scope) || vObj.values[scope];
+    } else {
+      scopeVal = vObj.values[scope];
+    }
+    if (scopeVal.evaluate) {
+      return {
+        value: this.evaluate(vObj["default"], variables, globals, funcs, runtime, elem)
+      };
+    } else {
+      return {
+        value: scopeVal
+      };
+    }
   } else if (vObj["default"] !== void 0) {
     if (vObj["default"].evaluate) {
       return {
@@ -1872,9 +1889,9 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         return valueObject;
       }
       varObjects = [];
-      varLookup = function(varName, element) {
+      varLookup = function(varName, scope, element) {
         var vObj;
-        vObj = _this.getVariable(variables, globals, funcs, runtime, varName, element);
+        vObj = _this.getVariable(variables, globals, funcs, runtime, varName, scope, element);
         varObjects.push({
           name: varName,
           object: vObj,
@@ -1897,7 +1914,8 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         } catch (_error) {
           e = _error;
           console.log("[FASHION] Could not evaluate: " + valueObject.evaluate);
-          return console.log(e);
+          console.log(e);
+          return console.log(e.stack);
         }
         if (valueObject.important === true) {
           isImportant = true;
@@ -2355,6 +2373,7 @@ window.fashion.$actualizer.createJS = function(runtimeData, minifiedData, script
     config: runtimeData.config,
     modules: runtimeData.modules,
     runtime: runtimeData.runtime,
+    elements: {},
     selectors: {},
     individual: {},
     variables: {}
@@ -2779,13 +2798,13 @@ window.fashion.$runtimeCapability = {
 };
 
 window.fashion.$actualizer.autoAddRequirements = function(runtimeData, parseTree) {
-  var add, variable, _i, _len, _ref;
+  var add, name, variable, _ref;
   add = parseTree.addRequirements.bind(parseTree);
   if (JSON.stringify(runtimeData.variables) !== "{}") {
     add([$wf.$runtimeCapability.variables]);
     _ref = runtimeData.variables;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      variable = _ref[_i];
+    for (name in _ref) {
+      variable = _ref[name];
       if (variable.scopes.length > 0) {
         add([$wf.$runtimeCapability.scopedVariables]);
       }
@@ -2954,7 +2973,7 @@ window.fashion.$actualizer.minifier = {
     return ["e", exprObj.mode, exprObj.type, exprObj.unit, exprObj.setter, exprObj.script];
   },
   variable: function(varObj) {
-    var $wfam, defaultVal, r, v, values, _i, _len, _ref;
+    var $wfam, defaultVal, hasValues, r, sel, vObj, values, _ref;
     $wfam = window.fashion.$actualizer.minifier;
     if (!varObj || !(varObj instanceof RuntimeVariable)) {
       return;
@@ -2964,19 +2983,21 @@ window.fashion.$actualizer.minifier = {
     } else {
       defaultVal = varObj["default"];
     }
-    values = [];
+    values = {};
+    hasValues = false;
     _ref = varObj.values;
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      v = _ref[_i];
-      if (v instanceof Expression) {
-        values.push($wfam.expression(v));
+    for (sel in _ref) {
+      vObj = _ref[sel];
+      hasValues = true;
+      if (vObj instanceof Expression) {
+        values[sel] = $wfam.expression(vObj);
       } else {
-        values.push(v);
+        values[sel] = vObj;
       }
     }
     r = ["v", varObj.name, varObj.type, varObj.unit, varObj.mode, defaultVal, varObj.dependents];
-    if (varObj.scopes) {
-      r.push.apply(r, [varObj.scopes, values]);
+    if (hasValues) {
+      r.push(values);
     }
     return r;
   }
@@ -3017,8 +3038,7 @@ window.fashion.$actualizer.minifier.expandRuntimeData = function(minData, expand
         mode: v[4],
         "default": expand(v[5]),
         dependents: v[6],
-        scopes: v[7],
-        values: expand(v[8])
+        values: expand(v[7])
       };
     }
   };
@@ -3141,14 +3161,11 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
   variableValue: function(varName, element) {
     return this.getVariable(FASHION.variables, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, varName, element).value;
   },
-  setVariable: function(varName, value, element) {
-    if (element === void 0) {
-      return this.setTopLevelVariable(varName, value);
-    }
-    return console.log("Scoped variable setting coming soon");
-  },
-  setTopLevelVariable: function(varName, value) {
+  setVariable: function(varName, value, scope) {
     var vObj;
+    if (scope == null) {
+      scope = 0;
+    }
     vObj = FASHION.variables[varName];
     if (!vObj) {
       return this.throwError("Variable '$" + varName + "' does not exist");
@@ -3171,16 +3188,22 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
     		if unittedValue.value then vObj.default = unittedValue.value
     		else vObj.value = value
      */
-    vObj["default"] = value;
-    return this.updateDependencies(varName);
+    vObj.values[scope] = value;
+    if (!scope || scope === 0) {
+      vObj["default"] = value;
+    }
+    return this.updateDependencies(varName, scope);
   },
-  updateDependencies: function(varName) {
+  updateDependencies: function(varName, scope) {
     var bindLink, vObj, _i, _len, _ref, _results;
+    if (scope == null) {
+      scope = 0;
+    }
     vObj = FASHION.variables[varName];
-    if (vObj.dependents[0] == null) {
+    if (vObj.dependents[scope] == null) {
       return;
     }
-    _ref = vObj.dependents[0];
+    _ref = vObj.dependents[scope];
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       bindLink = _ref[_i];
@@ -3286,7 +3309,7 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
       if (!module.apply) {
         return;
       }
-      module.apply(element, propertyObject.value, evalFunction);
+      module.apply.call(FASHION.runtime, element, propertyObject.value, evalFunction);
       if (module.replace) {
         return;
       }
@@ -3453,14 +3476,13 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
     return this.addedElements(addedElements);
   },
   addedElements: function(elements) {
-    var element, id, indElement, indObj, matches, _i, _len, _results;
+    var element, id, indElement, indObj, _i, _len, _results;
     if (typeof FASHION === "undefined" || FASHION === null) {
       return;
     }
     _results = [];
     for (_i = 0, _len = elements.length; _i < _len; _i++) {
       element = elements[_i];
-      matches = element.matches || element.webkitMatchesSelector || element.mozMatchesSelector || element.msMatchesSelector;
       _results.push((function() {
         var _ref, _results1;
         _ref = FASHION.individual;
@@ -3470,7 +3492,7 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
           if (!(!indObj.elements[element.id])) {
             continue;
           }
-          if (!element.matches(indObj.name)) {
+          if (!this.matches(element, indObj.name)) {
             continue;
           }
           if (!element.id) {
@@ -3491,6 +3513,17 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
 });
 
 $wf.addRuntimeModule("individualizedHelpers", [], {
+  matches: function(element, selector) {
+    var prefixedFunction;
+    if (typeof element === 'function') {
+      element = element();
+    }
+    prefixedFunction = element.matches || element.webkitMatchesSelector || element.mozMatchesSelector || element.msMatchesSelector;
+    if (!prefixedFunction) {
+      return false;
+    }
+    return prefixedFunction.call(element, selector);
+  },
   generateRandomId: function(length) {
     var guid, i;
     if (length == null) {
@@ -3558,7 +3591,7 @@ $wf.addRuntimeModule("elements", [], {
         if (element == null) {
           return;
         }
-        if ((property == null) && (keyword != null)) {
+        if (property == null) {
           return element;
         }
         if (property.indexOf("parent") === 0) {
@@ -3574,9 +3607,28 @@ $wf.addRuntimeModule("elements", [], {
         if (property === "height") {
           return element.clientHeight;
         }
-        return element.getAttribute(property);
+        return _this.getFashionAttribute(element, property) || element.getAttribute(property);
       };
     })(this);
+  },
+  setFashionAttribute: function(element, key, value) {
+    if (typeof element !== 'string') {
+      element = element.id;
+    }
+    if (!window.FASHION.elements[element]) {
+      window.FASHION.elements[element] = {};
+    }
+    return window.FASHION.elements[element][key] = value;
+  },
+  getFashionAttribute: function(element, key) {
+    var _ref;
+    if (typeof element !== 'string') {
+      element = element.id;
+    }
+    if (!window.FASHION.elements[element]) {
+      void 0;
+    }
+    return (_ref = window.FASHION.elements[element]) != null ? _ref[key] : void 0;
   }
 });
 $wf.addRuntimeModule("stylesheet-dom", [], {
@@ -3646,6 +3698,47 @@ $wf.addRuntimeModule("sheets", ["stylesheet-dom"], {
       return;
     }
     return sheet.insertRule("" + selector + " {" + property + ": " + value + ";}", sheet.rules.length);
+  }
+});
+$wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-dom", "variables", "individualizedHelpers"], {
+  "getScopeOverride": function(element, varName, scope) {
+    var override;
+    if (typeof element === 'function') {
+      element = element();
+    }
+    while (element != null) {
+      if (this.matches(element, scope)) {
+        if (override = this.getFashionAttribute(element, "$" + varName)) {
+          return override;
+        }
+      }
+      element = element.parentNode;
+    }
+    return void 0;
+  },
+  "setScopedVariableOnElement": function(element, varName, value) {
+    var scope, vObj, _ref, _results;
+    if (typeof element === 'function') {
+      element = element();
+    }
+    this.setFashionAttribute(element, "$" + varName, value);
+    vObj = FASHION.variables[varName];
+    _ref = vObj.values;
+    _results = [];
+    for (scope in _ref) {
+      value = _ref[scope];
+      if (scope !== '0') {
+        if (this.matches(element, scope)) {
+          _results.push(this.updateDependencies(varName, scope));
+        } else {
+          _results.push(void 0);
+        }
+      }
+    }
+    return _results;
+  },
+  "$scopedFunctions": function() {
+    return window.FASHION.setElementVariable = this.setScopedVariableOnElement.bind(FASHION.runtime);
   }
 });
 window.fashion.$functions = {
@@ -3794,7 +3887,7 @@ $wf.$extend(window.fashion.$functions, {
       c.r = parseInt(Math.max(c.r * adj, 0));
       c.g = parseInt(Math.max(c.g * adj, 0));
       c.b = parseInt(Math.max(c.b * adj, 0));
-      return "rgba(" + c.r + "," + c.g + "," + c.b + "," + c.a + ")";
+      return "rgba(" + c.r + "," + c.g + "," + c.b + "," + (c.a || 1) + ")";
     }
   }),
   "darken": new FunctionModule({
@@ -3808,7 +3901,7 @@ $wf.$extend(window.fashion.$functions, {
       c.r = parseInt(Math.max(c.r * adj, 0));
       c.g = parseInt(Math.max(c.g * adj, 0));
       c.b = parseInt(Math.max(c.b * adj, 0));
-      return "rgba(" + c.r + "," + c.g + "," + c.b + "," + c.a + ")";
+      return "rgba(" + c.r + "," + c.g + "," + c.b + "," + (c.a || 1) + ")";
     }
   })
 });
@@ -3978,7 +4071,7 @@ $wf.$extend(window.fashion.$properties, new ((function() {
     caughtEvents = ["click", "dblclick", "mousedown", "mouseup", "drag", "dragdrop", "dragend", "drop", "blur", "change", "focus", "focusin", "focusout", "submit", "reset", "keydown", "keyup"];
     applyForCaughtEvent = function(evt) {
       var body;
-      body = "if(element.getAttribute('data-hastrigger-" + evt + "'))return;\nelement.addEventListener('" + evt + "', function(eo){\n	eo.stopPropagation();\n	evaluate();\n}, false);\nelement.setAttribute('data-hastrigger-" + evt + "', 'true');";
+      body = "if(this.getFashionAttribute(element,'data-hastrigger-" + evt + "'))return;\nelement.addEventListener('" + evt + "', function(eo){\n	eo.stopPropagation();\n	evaluate();\n}, false);\nthis.setFashionAttribute(element, 'data-hastrigger-" + evt + "', 'true');";
       return new Function("element", "value", "evaluate", body);
     };
     for (_i = 0, _len = caughtEvents.length; _i < _len; _i++) {
@@ -3992,7 +4085,7 @@ $wf.$extend(window.fashion.$properties, new ((function() {
     propogatedEvents = ["mouseenter", "mouseleave", "mousemove", "mouseout", "mouseover", "dragenter", "dragexit", "draggesture", "dragleave", "dragover", "dragstart"];
     applyForPropogatedEvent = function(evt) {
       var body;
-      body = "if(element.getAttribute('data-hastrigger-" + evt + "'))return;\nelement.addEventListener('" + evt + "', evaluate, false);\nelement.setAttribute('data-hastrigger-" + evt + "', 'true');";
+      body = "if(this.getFashionAttribute(element,'data-hastrigger-" + evt + "'))return;\nelement.addEventListener('" + evt + "', evaluate, false);\nthis.setFashionAttribute(element, 'data-hastrigger-" + evt + "', 'true');";
       return new Function("element", "value", "evaluate", body);
     };
     for (_j = 0, _len1 = propogatedEvents.length; _j < _len1; _j++) {

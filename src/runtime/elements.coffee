@@ -4,7 +4,7 @@ $wf.addRuntimeModule "elements", [],
 		if !element? then return
 
 		# Return the element directly
-		if !property? and keyword? then return element
+		if !property? then return element
 		
 		# Handle properties that 'bubble up'
 		if property.indexOf("parent") is 0
@@ -17,4 +17,17 @@ $wf.addRuntimeModule "elements", [],
 		if property is "height" then return element.clientHeight
 
 		# All else has failed, lookup the attribute
-		return element.getAttribute(property)
+		return @getFashionAttribute(element,property) || element.getAttribute(property)
+
+
+	# Fashion keeps its own set of attributes in JS, separate from HTML
+	setFashionAttribute: (element, key, value) ->
+		if typeof element isnt 'string' then element = element.id
+		if !window.FASHION.elements[element] then window.FASHION.elements[element] = {}
+		window.FASHION.elements[element][key] = value
+
+
+	getFashionAttribute: (element, key) ->
+		if typeof element isnt 'string' then element = element.id
+		if !window.FASHION.elements[element] then undefined
+		window.FASHION.elements[element]?[key]

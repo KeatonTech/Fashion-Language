@@ -15,7 +15,7 @@ window.fashion.$actualizer.autoAddRequirements = (runtimeData, parseTree) ->
 		add [$wf.$runtimeCapability.variables]
 
 		# If any of them are scoped, we'll need that too
-		for variable in runtimeData.variables
+		for name, variable of runtimeData.variables
 			if variable.scopes.length > 0
 				add [$wf.$runtimeCapability.scopedVariables]
 

@@ -66,7 +66,7 @@ window.fashion.$actualizer.minifier =
 
 
 	# Minify a runtime variable object
-	# FORMAT: ['v', name, type, unit, default, dependents, scopes?, values?]
+	# FORMAT: ['v', name, type, unit, default, dependents, values?]
 	variable: (varObj) ->
 		$wfam = window.fashion.$actualizer.minifier
 		if !varObj or not (varObj instanceof RuntimeVariable) then return
@@ -77,11 +77,13 @@ window.fashion.$actualizer.minifier =
 		else defaultVal = varObj.default
 
 		# Go through each value and condense them into expressions if necessary
-		values = []
-		for v in varObj.values
-			if v instanceof Expression
-				values.push $wfam.expression v
-			else values.push v
+		values = {}
+		hasValues = false
+		for sel, vObj of varObj.values
+			hasValues = true
+			if vObj instanceof Expression
+				values[sel] = $wfam.expression vObj
+			else values[sel] = vObj
 
 		# Return the selector object
 		r = [
@@ -89,7 +91,7 @@ window.fashion.$actualizer.minifier =
 				varObj.name, varObj.type, varObj.unit, varObj.mode,
 				defaultVal, varObj.dependents
 			]
-		if varObj.scopes then r.push.apply r, [varObj.scopes, values]
+		if hasValues then r.push values
 		return r
 
 

@@ -73,7 +73,7 @@ $wf.$extend window.fashion.$functions,
 			c.b = parseInt Math.max c.b * adj, 0
 
 			# Return in RGBA format
-			"rgba(#{c.r},#{c.g},#{c.b},#{c.a})"
+			"rgba(#{c.r},#{c.g},#{c.b},#{c.a || 1})"
 
 	# Darken a color linearly
 	"darken": new FunctionModule
@@ -92,5 +92,5 @@ $wf.$extend window.fashion.$functions,
 			c.b = parseInt Math.max c.b * adj, 0
 
 			# Return in RGBA format
-			"rgba(#{c.r},#{c.g},#{c.b},#{c.a})"
+			"rgba(#{c.r},#{c.g},#{c.b},#{c.a || 1})"
 			

@@ -10,15 +10,8 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 			varName, element
 		).value
 
-
-	# Set the value of a variable
-	setVariable: (varName, value, element) ->
-		if element is undefined then return @setTopLevelVariable varName, value
-		console.log "Scoped variable setting coming soon"
-
-
-	# Set a top-level variable
-	setTopLevelVariable: (varName, value) ->
+	# Set a variable's value
+	setVariable: (varName, value, scope = 0) ->
 		vObj = FASHION.variables[varName]
 		if !vObj then return @throwError "Variable '$#{varName}' does not exist"
 		if vObj.mode is 0 then return @throwError "Cannot change static variables"
@@ -39,17 +32,18 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 		###
 
 		# Instead, just trust that the user knows what they're doing *gasp*
-		vObj.default = value
-		@updateDependencies varName
+		vObj.values[scope] = value
+		if !scope or scope is 0 then vObj.default = value
+		@updateDependencies varName, scope
 
 
 	# Set a top-level variable
-	updateDependencies: (varName) ->
+	updateDependencies: (varName, scope = 0) ->
 		vObj = FASHION.variables[varName]
-		if !vObj.dependents[0]? then return
+		if !vObj.dependents[scope]? then return
 
 		# Update all of the dependents for the top level scope
-		for bindLink in vObj.dependents[0]
+		for bindLink in vObj.dependents[scope]
 
 			# If the dependency is a variable, go through and update all its stuff
 			if bindLink[0] is "v"

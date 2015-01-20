@@ -244,6 +244,7 @@ window.fashion.$parser.expressionExpander =
 			if scopes[selector.name]?
 				scope = selector.name
 				{type,unit,mode} = scopes[selector.name]
+				mode |= $wf.$runtimeMode.individual
 				scopeMatch = true
 				break
 			selector = selector.parent

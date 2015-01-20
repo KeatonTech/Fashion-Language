@@ -10,12 +10,12 @@ $wf.$extend window.fashion.$properties, new class then constructor: ->
 
 	applyForCaughtEvent = (evt) -> 
 		body = 	"""
-				if(element.getAttribute('data-hastrigger-#{evt}'))return;
+				if(this.getFashionAttribute(element,'data-hastrigger-#{evt}'))return;
 				element.addEventListener('#{evt}', function(eo){
 					eo.stopPropagation();
 					evaluate();
 				}, false);
-				element.setAttribute('data-hastrigger-#{evt}', 'true');
+				this.setFashionAttribute(element, 'data-hastrigger-#{evt}', 'true');
 				"""
 		return new Function "element", "value", "evaluate", body
 
@@ -34,9 +34,9 @@ $wf.$extend window.fashion.$properties, new class then constructor: ->
 
 	applyForPropogatedEvent = (evt) -> 
 		body = 	"""
-				if(element.getAttribute('data-hastrigger-#{evt}'))return;
+				if(this.getFashionAttribute(element,'data-hastrigger-#{evt}'))return;
 				element.addEventListener('#{evt}', evaluate, false);
-				element.setAttribute('data-hastrigger-#{evt}', 'true');
+				this.setFashionAttribute(element, 'data-hastrigger-#{evt}', 'true');
 				"""
 		return new Function "element", "value", "evaluate", body
 

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Fashion Test</title>
+	<script src="../../build/fashion.live.js"></script>
+	<style type="text/x-fashion">
+
+	$color: #248;
+
+	body {
+		background-color: #EEE;
+		margin: 0;
+		padding: 0;
+		text-style: 'Open Sans' 'Helvetica' sans-serif;
+	}
+
+	div.nonscoped-article, article {	
+
+		display: block;
+		float: left;
+		padding: 0px 10px;
+		margin: 10px;
+		background-color: white;
+		border: 1px solid #ddd;
+		border-radius: 3px;
+		box-shadow: 0px 1px 1px rgba(0,0,0,0.1);
+
+		width: (@width - 60px) / 3;
+
+		hr {
+			width: 100%;
+			height: 1px;
+			margin: 0px;
+		}
+
+		// Colors
+		h2 {color: $color; margin: 12px 0px 8px 0px;}
+		hr {background-color: changeAlpha(darken($color,0.66),0.4);}
+		p {color: darken($color,0.5); margin-top: 15px;}
+	}
+
+	article {
+		$color: #F43;
+
+		// Colors
+		h2 {color: $color;}
+		hr {background-color: changeAlpha(darken($color,0.66),0.4);}
+		p {color: darken($color,0.5);}
+	}
+	
+
+	</style>
+</head>
+<body>
+	<div class="nonscoped-article">
+		<h2>Breaking: Everything Normal</h2>
+		<hr/>
+		<p>This article does not have its own variable scope, which means that changing the global style.color will change its color. It's just your average div that don't want no trouble.</p>
+	</div>
+	<article>
+		<h2>Shocking REDelations</h2>
+		<hr/>
+		<p>This color variable is normally set to blue, but because this is inside an article tag it is given a different scope - a red scope.</p>
+	</article>
+	<article id="changeMe">
+		<h2>Change We Can Believe In</h2>
+		<hr/>
+		<p>This article has an ID of 'changeMe', which makes it easier for us to grab it in the code and change its scoped value</p>
+	</article>
+</body>
+</html>

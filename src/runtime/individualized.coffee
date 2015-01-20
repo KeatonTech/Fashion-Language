@@ -131,12 +131,10 @@ $wf.addRuntimeModule "individualized",
 	addedElements: (elements) ->
 		if !FASHION? then return
 		for element in elements
-			matches = element.matches || element.webkitMatchesSelector ||
-				element.mozMatchesSelector || element.msMatchesSelector
 
 			# Go through each individual selector that matches the element
 			for id,indObj of FASHION.individual when !indObj.elements[element.id]
-				if !element.matches indObj.name then continue
+				if !@matches element, indObj.name then continue
 				if !element.id then element.setAttribute('id', @generateRandomId())
 				indElement = {element: element, cssid: -1}
 				indObj.elements[element.id] = indElement
@@ -145,6 +143,15 @@ $wf.addRuntimeModule "individualized",
 
 $wf.addRuntimeModule "individualizedHelpers", [],
 
+	# Multi-browser wrapper for element.matches
+	matches: (element, selector) -> 
+		if typeof element is 'function' then element = element() # Unwrap Fashion Element
+		prefixedFunction = element.matches || element.webkitMatchesSelector ||
+			element.mozMatchesSelector || element.msMatchesSelector
+		if !prefixedFunction then return false
+		prefixedFunction.call element, selector
+
+	
 	# Generate a random, unique element ID
 	generateRandomId: (length = 20)->
 		guid = (Math.round(Math.random()*36).toString(36) for i in [0..length]).join("")

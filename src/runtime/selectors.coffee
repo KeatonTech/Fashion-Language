@@ -74,7 +74,7 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
 			# The apply function is run at runtime
 			if !module.apply then return
-			module.apply element, propertyObject.value, evalFunction
+			module.apply.call FASHION.runtime, element, propertyObject.value, evalFunction
 
 			if module.replace then return
 
