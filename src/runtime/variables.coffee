@@ -11,10 +11,15 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 		).value
 
 	# Set a variable's value
-	setVariable: (varName, value, scope = 0) ->
+	setVariable: (varName, value, scope = 0, element) ->
 		vObj = FASHION.variables[varName]
 		if !vObj then return @throwError "Variable '$#{varName}' does not exist"
 		if vObj.mode is 0 then return @throwError "Cannot change static variables"
+
+		if scope isnt 0 and element?
+			scopeElement = @getParentForScope element, scope
+			if scopeElement
+				return @setScopedVariableOnElement scopeElement, varName, value
 
 		### For now, it's your problem if you screw this up
 		# Make sure the variable did not change type

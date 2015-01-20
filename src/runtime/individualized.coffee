@@ -91,7 +91,9 @@ $wf.addRuntimeModule "individualized",
 		else element.cssid = FASHION.individualSheet.rules.length
 
 		# Generate the CSS rule
-		css = @CSSRuleForSelector selector, element.element, "##{id}"
+		selectorName = @evaluate selector.name, element
+		modifier = selectorName.match(/\:.*?$/) # Rescue things like :hover
+		css = @CSSRuleForSelector selector, element.element, "##{id}#{modifier||''}"
 
 		# Add it to the individual sheet
 		FASHION.individualSheet.insertRule css, element.cssid
@@ -160,4 +162,12 @@ $wf.addRuntimeModule "individualizedHelpers", [],
 
 	# Just a wrapper around query selector all, could be replaced by another thing
 	elementsForSelector: (selectorName) ->
+
+		# Remove modifiers like hover
+		selectorName = selectorName.replace /:.*?$/,""
+
+		# Remove the ID placeholders added by the compiler
+		selectorName = selectorName.replace /\#\#/g,""
+
+		# Query selector all
 		Array.prototype.slice.call document.querySelectorAll selectorName

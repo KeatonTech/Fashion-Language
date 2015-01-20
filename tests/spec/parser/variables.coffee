@@ -163,3 +163,25 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["var2"][".menu"]["type"]).toEqual type.Number
 
 
+	it "should not accept top-level individualized variable definitions", ()->
+
+		result = parse( """
+						$var1: @self.color;
+						""")
+
+		expect(result.variables["var1"]).not.toBeDefined()
+
+
+	it "should accept non-top-level individualized variable definitions", ()->
+
+		result = parse( """
+						div {
+							$var1: @self.color;
+						}
+						""")
+
+		expect(result.variables["var1"]).toBeDefined()
+		expect(result.variables["var1"]["div"].mode).toBe($wf.$runtimeMode.individual)
+
+
+

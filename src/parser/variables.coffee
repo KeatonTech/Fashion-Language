@@ -4,6 +4,10 @@ window.fashion.$parser.addVariable = (parseTree, name, value, flag, scopeSelecto
 	# Parse the value into an expression if necessary
 	value = $wf.$parser.parseSingleValue(value, parseTree, scopeSelector, true)
 
+	# Do not allow individualized expressions on non-nested variables
+	if value.mode and value.mode > $wf.$runtimeMode.dynamic and !scopeSelector
+		return console.log "[FASHION] Top level Variable $#{name} cannot refer to @self"
+
 	# Make a variable object
 	variableObject = new Variable name, value, scopeSelector?.name
 	if flag is "!static" then variableObject.mode = $wf.$runtimeMode.static

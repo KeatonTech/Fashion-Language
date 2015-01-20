@@ -24,6 +24,10 @@ window.fashiontests.runtime.cleanup = ()->
 	sheet = document.getElementById window.fashion.runtimeConfig.individualCSSID
 	if sheet? then sheet.parentNode.removeChild sheet
 
+	# Remove the scoped stylesheet
+	sheet = document.getElementById window.fashion.runtimeConfig.scopedCSSID
+	if sheet? then sheet.parentNode.removeChild sheet
+
 	# Remove the JS stuff
 	window.FASHION = undefined
 	window.FSMIN = undefined

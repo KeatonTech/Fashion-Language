@@ -124,13 +124,24 @@
       expect(result.variables["isSelected"][".menu .main"]["value"]).toEqual("true");
       return expect(result.variables["isSelected"][".menu .main"]["type"]).toEqual(type.Unknown);
     });
-    return it("should accept variable definitions without semicolons", function() {
+    it("should accept variable definitions without semicolons", function() {
       var result;
       result = parse("$var1: 1px\n.menu {\n	$var2: 10px\n}");
       expect(result.variables["var1"][0]["value"]).toEqual(1);
       expect(result.variables["var1"][0]["type"]).toEqual(type.Number);
       expect(result.variables["var2"][".menu"]["value"]).toEqual(10);
       return expect(result.variables["var2"][".menu"]["type"]).toEqual(type.Number);
+    });
+    it("should not accept top-level individualized variable definitions", function() {
+      var result;
+      result = parse("$var1: @self.color;");
+      return expect(result.variables["var1"]).not.toBeDefined();
+    });
+    return it("should accept non-top-level individualized variable definitions", function() {
+      var result;
+      result = parse("div {\n	$var1: @self.color;\n}");
+      expect(result.variables["var1"]).toBeDefined();
+      return expect(result.variables["var1"]["div"].mode).toBe($wf.$runtimeMode.individual);
     });
   };
 

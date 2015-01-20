@@ -4,12 +4,14 @@ window.fashion.color =
 
 	# Convert a CSS value into an RGB object
 	cssTOjs: (cssString, colorTools = $wf.color) ->
+		if !cssString or typeof cssString isnt 'string' then return {r:0,g:0,b:0,a:1}
 		if cssString[0] is "#" then return colorTools.hexTOrgb cssString
 		if rgbMatch = cssString.match /rgba?\((.*?),(.*?),([^,]*),?(.*?)\)/
 			r: parseInt rgbMatch[1]
 			g: parseInt rgbMatch[2]
 			b: parseInt rgbMatch[3]
 			a: parseFloat rgbMatch[4] || 1
+		else return {r:0,g:0,b:0,a:1}
 
 
 	# HEX ----------------------------------------------------------------------------------

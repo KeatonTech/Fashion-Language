@@ -468,7 +468,7 @@ Variable = (function() {
       name = name.substr(1);
     }
     this.name = name;
-    this.mode = $wf.$runtimeMode.dynamic;
+    this.mode = (defaultValue != null ? defaultValue.mode : void 0) || $wf.$runtimeMode.dynamic;
     this.raw = this.value = defaultValue;
     this.scope = scope;
     this.topLevel = scope === 0;
@@ -1683,6 +1683,9 @@ window.fashion.$parser.expressionExpander = {
 window.fashion.$parser.addVariable = function(parseTree, name, value, flag, scopeSelector) {
   var type, typedValue, unit, unittedValue, val, variableObject;
   value = $wf.$parser.parseSingleValue(value, parseTree, scopeSelector, true);
+  if (value.mode && value.mode > $wf.$runtimeMode.dynamic && !scopeSelector) {
+    return console.log("[FASHION] Top level Variable $" + name + " cannot refer to @self");
+  }
   variableObject = new Variable(name, value, scopeSelector != null ? scopeSelector.name : void 0);
   if (flag === "!static") {
     variableObject.mode = $wf.$runtimeMode["static"];
@@ -1913,7 +1916,8 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         varObjects.push({
           name: varName,
           object: vObj,
-          value: vObj.value
+          value: vObj.value,
+          scope: scope
         });
         return vObj;
       };
@@ -1942,7 +1946,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
           for (_i = 0, _len = varObjects.length; _i < _len; _i++) {
             v = varObjects[_i];
             if (v.object.value !== v.value) {
-              _this.setVariable(v.name, v.object.value);
+              _this.setVariable(v.name, v.object.value, v.scope, element);
             }
           }
         }
@@ -2246,6 +2250,14 @@ window.fashion.color = {
     if (colorTools == null) {
       colorTools = $wf.color;
     }
+    if (!cssString || typeof cssString !== 'string') {
+      return {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 1
+      };
+    }
     if (cssString[0] === "#") {
       return colorTools.hexTOrgb(cssString);
     }
@@ -2255,6 +2267,13 @@ window.fashion.color = {
         g: parseInt(rgbMatch[2]),
         b: parseInt(rgbMatch[3]),
         a: parseFloat(rgbMatch[4] || 1)
+      };
+    } else {
+      return {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 1
       };
     }
   },
@@ -3180,8 +3199,8 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
   variableValue: function(varName, element) {
     return this.getVariable(FASHION.variables, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, varName, element).value;
   },
-  setVariable: function(varName, value, scope) {
-    var vObj;
+  setVariable: function(varName, value, scope, element) {
+    var scopeElement, vObj;
     if (scope == null) {
       scope = 0;
     }
@@ -3191,6 +3210,12 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
     }
     if (vObj.mode === 0) {
       return this.throwError("Cannot change static variables");
+    }
+    if (scope !== 0 && (element != null)) {
+      scopeElement = this.getParentForScope(element, scope);
+      if (scopeElement) {
+        return this.setScopedVariableOnElement(scopeElement, varName, value);
+      }
     }
 
     /* For now, it's your problem if you screw this up
@@ -3444,13 +3469,15 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
     return _results;
   },
   regenerateElementSelector: function(selector, id, element) {
-    var css;
+    var css, modifier, selectorName;
     if (element.cssid !== -1) {
       FASHION.individualSheet.deleteRule(element.cssid);
     } else {
       element.cssid = FASHION.individualSheet.rules.length;
     }
-    css = this.CSSRuleForSelector(selector, element.element, "#" + id);
+    selectorName = this.evaluate(selector.name, element);
+    modifier = selectorName.match(/\:.*?$/);
+    css = this.CSSRuleForSelector(selector, element.element, "#" + id + (modifier || ''));
     return FASHION.individualSheet.insertRule(css, element.cssid);
   },
   watchForDOMAddition: function() {
@@ -3559,6 +3586,8 @@ $wf.addRuntimeModule("individualizedHelpers", [], {
     return FASHION.config.idPrefix + guid;
   },
   elementsForSelector: function(selectorName) {
+    selectorName = selectorName.replace(/:.*?$/, "");
+    selectorName = selectorName.replace(/\#\#/g, "");
     return Array.prototype.slice.call(document.querySelectorAll(selectorName));
   }
 });
@@ -3720,20 +3749,25 @@ $wf.addRuntimeModule("sheets", ["stylesheet-dom"], {
   }
 });
 $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-dom", "variables", "individualizedHelpers"], {
-  "getScopeOverride": function(element, varName, scope) {
-    var override;
+  "getParentForScope": function(element, scope) {
     if (typeof element === 'function') {
       element = element();
     }
     while (element != null) {
       if (this.matches(element, scope)) {
-        if (override = this.getFashionAttribute(element, "$" + varName)) {
-          return override;
-        }
+        return element;
       }
       element = element.parentNode;
     }
     return void 0;
+  },
+  "getScopeOverride": function(element, varName, scope) {
+    var scopeElement;
+    scopeElement = this.getParentForScope(element, scope);
+    if (!scopeElement) {
+      return void 0;
+    }
+    return this.getFashionAttribute(scopeElement, "$" + varName);
   },
   "setScopedVariableOnElement": function(element, varName, value) {
     var bindLink, scope, vObj, _ref, _results;
@@ -3782,16 +3816,26 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
 });
 
 $wf.addRuntimeModule("scopedVariableSelector", ["scopedVariables", "sheets", "selectors"], {
-  "addScopedSelectorOverride": function(selectorId, elementId) {
-    var element, name, rule, rules, selector, sheet;
+  "addScopedSelectorOverride": function(selectorId, element) {
+    var name, rule, rules, selector, sheet;
     selector = FASHION.selectors[selectorId];
-    element = document.getElementById(elementId);
+    if (typeof element === 'string') {
+      element = document.getElementById(element);
+    }
     name = this.evaluate(selector.name, element);
-    name = name.replace(/\#\#/g, "#" + elementId);
+    name = name.replace(/\#\#/g, "#" + element.id);
     rule = this.CSSRuleForSelector(selector, element, name);
     sheet = this.getStylesheet(FASHION.config.scopedCSSID).sheet;
     rules = sheet.rules || sheet.cssRules;
-    return sheet.insertRule(rule, rules.length);
+    if (!selector.scopedRules) {
+      selector.scopedRules = {};
+    }
+    if (selector.scopedRules[element.id] == null) {
+      selector.scopedRules[element.id] = rules.length;
+    } else {
+      sheet.deleteRule(selector.scopedRules[element.id]);
+    }
+    return sheet.insertRule(rule, selector.scopedRules[element.id]);
   }
 });
 window.fashion.$functions = {
@@ -3929,17 +3973,29 @@ $wf.$extend(window.fashion.$functions, {
       return "rgba(" + c.r + "," + c.g + "," + c.b + "," + newAlpha.value + ")";
     }
   }),
+  "invert": new FunctionModule({
+    output: window.fashion.$type.Color,
+    capabilities: ["colors"],
+    evaluate: function(color) {
+      var c;
+      c = this.cssTOjs(color.value, this);
+      c.r = parseInt(255 - c.r);
+      c.g = parseInt(255 - c.g);
+      c.b = parseInt(255 - c.b);
+      return "rgba(" + c.r + "," + c.g + "," + c.b + "," + (c.a || 1) + ")";
+    }
+  }),
   "brighten": new FunctionModule({
     output: window.fashion.$type.Color,
     capabilities: ["colors"],
     evaluate: function(color, brightenPercent) {
       var adj, c, percent;
       percent = brightenPercent.value;
-      adj = 1 + (percent > 1 ? percent / 100 : percent);
+      adj = (percent > 1 ? percent / 100 : percent);
       c = this.cssTOjs(color.value, this);
-      c.r = parseInt(Math.max(c.r * adj, 0));
-      c.g = parseInt(Math.max(c.g * adj, 0));
-      c.b = parseInt(Math.max(c.b * adj, 0));
+      c.r = parseInt(Math.min(c.r + (255 - c.r) * adj, 255));
+      c.g = parseInt(Math.min(c.g + (255 - c.g) * adj, 255));
+      c.b = parseInt(Math.min(c.b + (255 - c.b) * adj, 255));
       return "rgba(" + c.r + "," + c.g + "," + c.b + "," + (c.a || 1) + ")";
     }
   }),

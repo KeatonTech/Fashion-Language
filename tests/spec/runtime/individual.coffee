@@ -40,6 +40,28 @@ window.fashiontests.runtime.individual = ()->
 		expect(getIndRule(2).style.backgroundColor).toBe("green")
 
 
+	it "should work with modifiers like :hover", ()->
+
+		# Testing setup
+		id = testDiv """
+			<div class="item" color="red"></div>
+			<div class="item" color="blue"></div>
+			<div class="item" color="green"></div>
+		"""
+
+		testFSS """
+			.item:hover {
+				background-color: @self.color;
+			}
+			"""
+
+		# Check each rule
+		expect(getIndRule(0).selectorText.indexOf(":hover")).not.toBe(-1)
+		expect(getIndRule(0).style.backgroundColor).toBe("red")
+		expect(getIndRule(1).style.backgroundColor).toBe("blue")
+		expect(getIndRule(2).style.backgroundColor).toBe("green")
+
+
 	it "should not get confused by empty selectors", ()->
 
 		# Testing setup

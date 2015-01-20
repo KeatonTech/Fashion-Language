@@ -20,6 +20,10 @@
     if (sheet != null) {
       sheet.parentNode.removeChild(sheet);
     }
+    sheet = document.getElementById(window.fashion.runtimeConfig.scopedCSSID);
+    if (sheet != null) {
+      sheet.parentNode.removeChild(sheet);
+    }
     window.FASHION = void 0;
     window.FSMIN = void 0;
     window.style = void 0;
@@ -139,6 +143,15 @@
       expect(getIndRule(1).style.backgroundColor).toBe("blue");
       return expect(getIndRule(2).style.backgroundColor).toBe("green");
     });
+    it("should work with modifiers like :hover", function() {
+      var id;
+      id = testDiv("<div class=\"item\" color=\"red\"></div>\n<div class=\"item\" color=\"blue\"></div>\n<div class=\"item\" color=\"green\"></div>");
+      testFSS(".item:hover {\n	background-color: @self.color;\n}");
+      expect(getIndRule(0).selectorText.indexOf(":hover")).not.toBe(-1);
+      expect(getIndRule(0).style.backgroundColor).toBe("red");
+      expect(getIndRule(1).style.backgroundColor).toBe("blue");
+      return expect(getIndRule(2).style.backgroundColor).toBe("green");
+    });
     it("should not get confused by empty selectors", function() {
       var id;
       id = testDiv("<div class=\"item\" color=\"red\"></div>\n<div class=\"item2\" color=\"blue\"></div>\n<div class=\"item3\" color=\"green\"></div>");
@@ -251,10 +264,25 @@
       expect(getIndRule(0).style.backgroundColor).toBe("rgb(200, 100, 50)");
       return expect(getIndRule(1).style.backgroundColor).toBe("blue");
     });
-    return it("should work in selectors", function() {
+    it("should work in selectors", function() {
       var element, id, s1i1, s2i1;
       id = testDiv("<div id=\"select1\" class=\"select\">\n	<p class=\"i1\">Selected</p>\n	<p class=\"i2\">Not Selected</p>\n</div>\n<div id=\"select2\" class=\"select\">\n	<p class=\"i1\">Selected</p>\n	<p class=\"i2\">Not Selected</p>\n</div>");
       testFSS(".select {\n	$selected: i1;\n	p {\n		color: black;\n	}\n	.$selected {\n		color: red;\n	}\n}");
+      s1i1 = window.getComputedStyle(document.querySelectorAll("#select1 .i2")[0]);
+      expect(s1i1.color).toBe("rgb(0, 0, 0)");
+      s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
+      expect(s2i1.color).toBe("rgb(0, 0, 0)");
+      element = document.getElementById("select1");
+      FASHION.setElementVariable(element, "selected", "i2");
+      s1i1 = window.getComputedStyle(document.querySelectorAll("#select1 .i2")[0]);
+      expect(s1i1.color).toBe("rgb(255, 0, 0)");
+      s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
+      return expect(s2i1.color).toBe("rgb(0, 0, 0)");
+    });
+    return it("should work in combined selectors", function() {
+      var element, id, s1i1, s2i1;
+      id = testDiv("<article>\n	<div id=\"select1\" class=\"select\">\n		<p class=\"i1\">Selected</p>\n		<p class=\"i2\">Not Selected</p>\n	</div>\n	<div id=\"select2\" class=\"select\">\n		<p class=\"i1\">Selected</p>\n		<p class=\"i2\">Not Selected</p>\n	</div>\n</article>");
+      testFSS(".select {\n	$selected: i1;\n	p {\n		color: black;\n	}\n	^article .$selected {\n		color: red;\n	}\n}");
       s1i1 = window.getComputedStyle(document.querySelectorAll("#select1 .i2")[0]);
       expect(s1i1.color).toBe("rgb(0, 0, 0)");
       s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
