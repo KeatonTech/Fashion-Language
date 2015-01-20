@@ -55,6 +55,7 @@ window.fashion.runtimeConfig =
 	variableObject: "style"
 	idPrefix: "FS-"
 	individualCSSID: "FASHION-individual"
+	scopedCSSID: "FASHION-scopes"
 	cssId: window.fashion.cssId
 
 # CSS that appears at the beginning of each Fashion file

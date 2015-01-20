@@ -48,6 +48,7 @@ window.fashion.runtimeConfig = {
   variableObject: "style",
   idPrefix: "FS-",
   individualCSSID: "FASHION-individual",
+  scopedCSSID: "FASHION-scopes",
   cssId: window.fashion.cssId
 };
 
@@ -1194,7 +1195,7 @@ window.fashion.$parser.parseSections = function(fashionText, parseTree) {
 };
 
 window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, regex, lastIndex) {
-  var bracketDepth, segment, selectorStack, selectors, topSel;
+  var bracketDepth, flag, segment, selectorStack, selectors, topSel, value;
   selectors = [$wf.$parser.createSelector(parseTree, name)];
   bracketDepth = 1;
   selectorStack = [0];
@@ -1205,7 +1206,13 @@ window.fashion.$parser.parseSelector = function(parseTree, fashionText, name, re
     if (segment[0] === "}") {
       selectorStack.pop();
       bracketDepth--;
-    } else if ((segment[3] && segment[4]) || segment[6]) {
+    } else if (segment[3] && segment[4]) {
+      name = segment[3];
+      value = segment[4];
+      flag = value.match(/![a-zA-Z\-]*?$/);
+      value.replace(flag, "");
+      $wf.$parser.parseScopedVariable(name, value, flag, topSel, parseTree);
+    } else if (segment[6]) {
       topSel.addToBody(fashionText.substring(segment.index, lastIndex));
     } else if (segment[8]) {
       name = $wf.$parser.nestSelector(topSel.rawName, segment[8]);
@@ -1229,7 +1236,7 @@ window.fashion.$parser.nestSelector = function(outer, inner) {
   _ref = outer.split(",");
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     ostring = _ref[_i];
-    ostring = ostring.trim();
+    ostring = ostring.trim() + "##";
     _ref1 = inner.split(",");
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
       istring = _ref1[_j];
@@ -1254,32 +1261,44 @@ window.fashion.$parser.nestSelector = function(outer, inner) {
 };
 
 window.fashion.$parser.createSelector = function(parseTree, name, nestParent) {
-  var bindings, dmode, expander, foundVar, lastIndex, regex, script, selector, trimmed, vExpr;
+  var bindings, expander, foundVar, lastIndex, mode, regex, script, selector, trimmed, vExpr;
   selector = new Selector(name, void 0, nestParent);
   parseTree.addSelector(selector);
   if (name.indexOf("$") === -1) {
+    selector.name = selector.name.replace(/\#\#/g, "");
     return selector;
   }
   script = "return ";
   lastIndex = 0;
   bindings = new ExpressionBindings();
   regex = /\$([\w\-]+)/g;
+  mode = $wf.$runtimeMode.dynamic;
   while (foundVar = regex.exec(name)) {
     if (foundVar.index > lastIndex) {
       script += "'" + (name.substring(lastIndex, foundVar.index)) + "'+";
     }
     lastIndex = foundVar.index + foundVar[0].length;
     expander = $wf.$parser.expressionExpander.localVariable;
-    vExpr = expander(foundVar[1], parseTree);
+    vExpr = expander(foundVar[1], parseTree, nestParent);
+    if (!vExpr) {
+      continue;
+    }
     bindings.extend(vExpr.bindings);
     script += vExpr.script + "+";
+    if ((vExpr.mode & $wf.$runtimeMode.scoped) === $wf.$runtimeMode.scoped) {
+      parseTree.addRequirements([$wf.$runtimeCapability.scopedSelector]);
+      mode |= $wf.$runtimeMode.scoped;
+    }
   }
   if (name.length > lastIndex) {
     script += "'" + (name.substr(lastIndex)) + "'+";
   }
   trimmed = script.substr(0, script.length - 1);
-  dmode = selector.mode = $wf.$runtimeMode.dynamic;
-  selector.name = new Expression(trimmed, $wf.$type.String, 0, bindings, dmode);
+  if ((mode & $wf.$runtimeMode.scoped) !== $wf.$runtimeMode.scoped) {
+    trimmed = trimmed.replace(/\#\#/g, "");
+  }
+  selector.mode = mode;
+  selector.name = new Expression(trimmed, $wf.$type.String, 0, bindings, mode);
   selector.name.generate();
   return selector;
 };
@@ -1317,7 +1336,6 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
     value = $wf.$parser.parsePropertyValues(property[6], parseTree, selector);
     name = property[1];
     if (name[0] === "$") {
-      $wf.$parser.parseScopedVariable(name, value, property, selector, parseTree);
       continue;
     }
     if (property[3]) {
@@ -1356,17 +1374,14 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
   return _results;
 };
 
-window.fashion.$parser.parseScopedVariable = function(name, value, property, scopeSel, parseTree) {
+window.fashion.$parser.parseScopedVariable = function(name, value, flag, scopeSel, parseTree) {
   if (typeof value === 'array' && typeof value[0] === 'array') {
     throw new Error("Variable declaration '" + name + "' cannot have comma separated values");
   }
-  if (property[3]) {
-    throw new Error("Variable declaration '" + name + "' cannot have a transition");
-  }
-  if (property[7]) {
+  if (flag === "!important") {
     throw new Error("Variable declaration '" + name + "' cannot be !important");
   }
-  return $wf.$parser.addVariable(parseTree, name, value, property[7], scopeSel);
+  return $wf.$parser.addVariable(parseTree, name, value, flag, scopeSel);
 };
 
 window.fashion.$parser.parsePropertyValues = function(value, parseTree, selector) {
@@ -1661,6 +1676,9 @@ window.fashion.$parser.expressionExpander = {
       selector = selector.parent;
     }
     if (!scopeMatch) {
+      if (!scopes[0] && !scopes['0']) {
+        return console.log("[FASHION] $" + name + " does not have a global scope.");
+      }
       scope = 0;
       _ref1 = scopes[0] || scopes['0'], type = _ref1.type, unit = _ref1.unit, mode = _ref1.mode;
     }
@@ -2915,7 +2933,7 @@ window.fashion.$actualizer.cssPropertyTemplate = function(property, value) {
 };
 
 window.fashion.$actualizer.cssSelectorTemplate = function(selector, properties) {
-  return "" + selector + " {" + (properties.join('')) + "}\n";
+  return "" + (selector.replace(/\#\#/g, '')) + " {" + (properties.join('')) + "}\n";
 };
 
 window.fashion.$actualizer.cssTransitionTemplate = function(property, duration, easing, delay) {
@@ -2924,6 +2942,7 @@ window.fashion.$actualizer.cssTransitionTemplate = function(property, duration, 
 window.fashion.$runtimeCapability = {
   variables: "variables",
   scopedVariables: "scopedVariables",
+  scopedSelector: "scopedVariableSelector",
   individualProps: "individualized",
   liveProps: "liveProperties",
   globals: "globals"
@@ -3472,7 +3491,7 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
 $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom", "individualizedHelpers"], {
   $initializeIndividualProperties: function() {
     var id, selector, _ref, _ref1;
-    FASHION.individualSheet = this.addStylesheet("" + FASHION.config.individualCSSID).sheet;
+    FASHION.individualSheet = this.addStylesheet(FASHION.config.individualCSSID).sheet;
     _ref = FASHION.individual;
     for (id in _ref) {
       selector = _ref[id];
@@ -3849,7 +3868,7 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
     return void 0;
   },
   "setScopedVariableOnElement": function(element, varName, value) {
-    var scope, vObj, _ref, _results;
+    var bindLink, scope, vObj, _ref, _results;
     if (typeof element === 'function') {
       element = element();
     }
@@ -3861,7 +3880,27 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
       value = _ref[scope];
       if (scope !== '0') {
         if (this.matches(element, scope)) {
-          _results.push(this.updateDependencies(varName, scope));
+          this.updateDependencies(varName, scope);
+          vObj = FASHION.variables[varName];
+          if (vObj.dependents[scope] == null) {
+            continue;
+          }
+          _results.push((function() {
+            var _i, _len, _ref1, _results1;
+            _ref1 = vObj.dependents[scope];
+            _results1 = [];
+            for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+              bindLink = _ref1[_i];
+              if (bindLink.length === 2) {
+                if (bindLink[0] === 'v') {
+
+                } else {
+                  _results1.push(this.addScopedSelectorOverride(bindLink[1], element.id));
+                }
+              }
+            }
+            return _results1;
+          }).call(this));
         } else {
           _results.push(void 0);
         }
@@ -3871,6 +3910,20 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
   },
   "$scopedFunctions": function() {
     return window.FASHION.setElementVariable = this.setScopedVariableOnElement.bind(FASHION.runtime);
+  }
+});
+
+$wf.addRuntimeModule("scopedVariableSelector", ["scopedVariables", "sheets", "selectors"], {
+  "addScopedSelectorOverride": function(selectorId, elementId) {
+    var element, name, rule, rules, selector, sheet;
+    selector = FASHION.selectors[selectorId];
+    element = document.getElementById(elementId);
+    name = this.evaluate(selector.name, element);
+    name = name.replace(/\#\#/g, "#" + elementId);
+    rule = this.CSSRuleForSelector(selector, element, name);
+    sheet = this.getStylesheet(FASHION.config.scopedCSSID).sheet;
+    rules = sheet.rules || sheet.cssRules;
+    return sheet.insertRule(rule, rules.length);
   }
 });
 window.fashion.$functions = {

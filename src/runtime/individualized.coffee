@@ -5,7 +5,7 @@ $wf.addRuntimeModule "individualized",
 	$initializeIndividualProperties: ()->
 
 		# Create a new stylesheet just for individual properties
-		FASHION.individualSheet = @addStylesheet("#{FASHION.config.individualCSSID}").sheet
+		FASHION.individualSheet = @addStylesheet(FASHION.config.individualCSSID).sheet
 
 		# Figure out which elements each selector applies to
 		@updateSelectorElements(selector) for id,selector of FASHION.individual

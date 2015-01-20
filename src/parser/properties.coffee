@@ -23,7 +23,7 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 		# Check to see if this is a variable declaration
 		name = property[1]
 		if name[0] == "$"
-			$wf.$parser.parseScopedVariable name, value, property, selector, parseTree
+			#$wf.$parser.parseScopedVariable name, value, property, selector, parseTree
 			continue;
 
 		# Parse transition
@@ -55,17 +55,15 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 
 
 # Parse out variable declarations
-window.fashion.$parser.parseScopedVariable = (name, value, property, scopeSel, parseTree) ->
+window.fashion.$parser.parseScopedVariable = (name, value, flag, scopeSel, parseTree) ->
 
 	if typeof value is 'array' and typeof value[0] is 'array'
 		throw new Error "Variable declaration '#{name}' cannot have comma separated values"
 
-	if property[3]
-		throw new Error "Variable declaration '#{name}' cannot have a transition"
-	if property[7]
+	if flag is "!important"
 		throw new Error "Variable declaration '#{name}' cannot be !important"
 
-	$wf.$parser.addVariable parseTree, name, value, property[7], scopeSel
+	$wf.$parser.addVariable parseTree, name, value, flag, scopeSel
 
 
 # Splits a value up by commas if necessary and then evaluates it

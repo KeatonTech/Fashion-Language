@@ -251,6 +251,8 @@ window.fashion.$parser.expressionExpander =
 
 		# No scope found use global scope
 		if !scopeMatch
+			if !scopes[0] and !scopes['0']
+				return console.log "[FASHION] $#{name} does not have a global scope."
 			scope = 0
 			{type,unit,mode} = scopes[0] || scopes['0']
 

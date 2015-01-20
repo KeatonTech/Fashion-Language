@@ -240,16 +240,31 @@
       expect(getIndRule(0).style.backgroundColor).toBe("blue");
       return expect(getStaticRule(0).style.backgroundColor).toBe("red");
     });
-    return it("should be able to change variables for specific elements", function() {
+    it("should be able to change variables for specific elements", function() {
       var element, id;
       id = testDiv("<div class=\"item\" id=\"testColorChange\"></div>\n<div class=\"item\" id=\"testColorNotChange\"></div>");
-      testFSS("$color: red;\n.item {\n	$color: blue;\n	background-color: $color;\n}");
+      testFSS(".item {\n	$color: blue;\n	background-color: $color;\n}");
       expect(getIndRule(0).style.backgroundColor).toBe("blue");
       expect(getIndRule(1).style.backgroundColor).toBe("blue");
       element = document.getElementById("testColorChange");
       FASHION.setElementVariable(element, "color", "rgb(200, 100, 50)");
       expect(getIndRule(0).style.backgroundColor).toBe("rgb(200, 100, 50)");
       return expect(getIndRule(1).style.backgroundColor).toBe("blue");
+    });
+    return it("should work in selectors", function() {
+      var element, id, s1i1, s2i1;
+      id = testDiv("<div id=\"select1\" class=\"select\">\n	<p class=\"i1\">Selected</p>\n	<p class=\"i2\">Not Selected</p>\n</div>\n<div id=\"select2\" class=\"select\">\n	<p class=\"i1\">Selected</p>\n	<p class=\"i2\">Not Selected</p>\n</div>");
+      testFSS(".select {\n	$selected: i1;\n	p {\n		color: black;\n	}\n	.$selected {\n		color: red;\n	}\n}");
+      s1i1 = window.getComputedStyle(document.querySelectorAll("#select1 .i2")[0]);
+      expect(s1i1.color).toBe("rgb(0, 0, 0)");
+      s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
+      expect(s2i1.color).toBe("rgb(0, 0, 0)");
+      element = document.getElementById("select1");
+      FASHION.setElementVariable(element, "selected", "i2");
+      s1i1 = window.getComputedStyle(document.querySelectorAll("#select1 .i2")[0]);
+      expect(s1i1.color).toBe("rgb(255, 0, 0)");
+      s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
+      return expect(s2i1.color).toBe("rgb(0, 0, 0)");
     });
   };
 

@@ -2,6 +2,7 @@
 window.fashion.$runtimeCapability =
 	variables: "variables"
 	scopedVariables: "scopedVariables"
+	scopedSelector: "scopedVariableSelector"
 	individualProps: "individualized"
 	liveProps: "liveProperties"
 	globals: "globals"

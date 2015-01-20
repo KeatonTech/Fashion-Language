@@ -87,7 +87,7 @@ window.fashion.$actualizer.cssPropertyTemplate = (property, value) ->
 	"#{property.name}: #{value}#{if property.important then " !important" else ""};"
 
 window.fashion.$actualizer.cssSelectorTemplate = (selector, properties) ->
-	"#{selector} {#{properties.join('')}}\n"
+	"#{selector.replace(/\#\#/g,'')} {#{properties.join('')}}\n"
 
 window.fashion.$actualizer.cssTransitionTemplate = (property, duration, easing, delay) ->
 	"#{property} #{duration || '1s'} #{easing || ''}#{if delay then ' ' + delay else ''}"

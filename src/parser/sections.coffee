@@ -82,7 +82,17 @@ window.fashion.$parser.parseSelector = (parseTree, fashionText, name, regex, las
 			bracketDepth--
 
 		# Pass in variable declarations and blocks
-		else if (segment[3] and segment[4]) or segment[6]
+		else if segment[3] and segment[4]
+			name = segment[3]
+			value = segment[4]
+
+			flag = value.match /![a-zA-Z\-]*?$/
+			value.replace flag, ""
+
+			$wf.$parser.parseScopedVariable name, value, flag, topSel, parseTree
+
+		# Pass through blocks
+		else if segment[6]
 			topSel.addToBody fashionText.substring(segment.index, lastIndex)
 
 		# We need to go deeper.
@@ -109,7 +119,7 @@ window.fashion.$parser.nestSelector = (outer, inner) ->
 	if !inner then return outer
 
 	for ostring in outer.split ","
-		ostring = ostring.trim()
+		ostring = ostring.trim() + "##"
 		for istring in inner.split ","
 			istring = istring.trim()
 
@@ -142,8 +152,10 @@ window.fashion.$parser.createSelector = (parseTree, name, nestParent) ->
 	selector = new Selector(name, undefined, nestParent)
 	parseTree.addSelector selector
 
-	# If there are no variables, return here
-	if name.indexOf("$") == -1 then return selector
+	# If there are no variables, return here (and strip the ## ID marker)
+	if name.indexOf("$") == -1
+		selector.name = selector.name.replace /\#\#/g, ""
+		return selector
 
 	# Little mini expression generator going on here
 	script = "return "; lastIndex = 0
@@ -151,6 +163,7 @@ window.fashion.$parser.createSelector = (parseTree, name, nestParent) ->
 
 	# Search for variable names
 	regex = /\$([\w\-]+)/g
+	mode = $wf.$runtimeMode.dynamic
 	while foundVar = regex.exec name
 
 		# Add the previous piece to the expression
@@ -160,19 +173,30 @@ window.fashion.$parser.createSelector = (parseTree, name, nestParent) ->
 
 		# Create a variable sub-expression
 		expander = $wf.$parser.expressionExpander.localVariable
-		vExpr = expander foundVar[1], parseTree
+		vExpr = expander foundVar[1], parseTree, nestParent
+		if !vExpr then continue
 
 		# Use its results
 		bindings.extend vExpr.bindings
 		script += vExpr.script + "+"
+
+		# If the variable is scoped, we'll need to note that
+		if (vExpr.mode & $wf.$runtimeMode.scoped) is $wf.$runtimeMode.scoped
+			parseTree.addRequirements [$wf.$runtimeCapability.scopedSelector]
+			mode |= $wf.$runtimeMode.scoped
 
 	# Add the end of the string if necessary
 	if name.length > lastIndex then script += "'#{name.substr(lastIndex)}'+"
 
 	# Make an expression from this whole mess
 	trimmed = script.substr(0, script.length - 1)
-	dmode = selector.mode = $wf.$runtimeMode.dynamic
-	selector.name = new Expression(trimmed, $wf.$type.String, 0, bindings, dmode)
+
+	# If the value is not scoped, we can remove the ## ID placeholder
+	if (mode & $wf.$runtimeMode.scoped) isnt $wf.$runtimeMode.scoped
+		trimmed = trimmed.replace /\#\#/g, ""
+
+	selector.mode = mode
+	selector.name = new Expression(trimmed, $wf.$type.String, 0, bindings, mode)
 	selector.name.generate()
 	return selector
 
