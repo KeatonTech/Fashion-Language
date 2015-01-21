@@ -175,6 +175,8 @@ form td.field {
 }
 ```
 
+The JS for highlighting errors would be as simple as this:
+
 ```js
 function validateOpinionField(fieldElement, value) {
 	if(value !== "Fashion is Awesome"){
@@ -187,6 +189,8 @@ function validateOpinionField(fieldElement, value) {
 ```
 
 **NOTE:** In the future, there may be even simpler syntax for this by adding functionality to the element's existing *style* property.
+
+As usual, Fashion makes a point to keep all styling information out of your Javascript. Say you decided that the highlight wasn't noticable enough on mobile devices, and that you'd rather have the field's background highlighted red, with white text on top. Your JS wouldn't have to change at all, just your stylesheet, as should be the case for anything style related.
 
 
 ### CSS3 Transitions
