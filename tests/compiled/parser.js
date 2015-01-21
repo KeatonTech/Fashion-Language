@@ -133,15 +133,37 @@
       return expect(result.variables["var2"][".menu"]["type"]).toEqual(type.Number);
     });
     it("should not accept top-level individualized variable definitions", function() {
-      var result;
-      result = parse("$var1: @self.color;");
-      return expect(result.variables["var1"]).not.toBeDefined();
+      var e, result;
+      try {
+        return result = parse("$var1: @self.color;");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSIndividualVarError");
+      }
     });
-    return it("should accept non-top-level individualized variable definitions", function() {
+    it("should accept non-top-level individualized variable definitions", function() {
       var result;
       result = parse("div {\n	$var1: @self.color;\n}");
       expect(result.variables["var1"]).toBeDefined();
       return expect(result.variables["var1"]["div"].mode).toBe($wf.$runtimeMode.individual);
+    });
+    it("should not accept variables with comma-separated values", function() {
+      var e, result;
+      try {
+        return result = parse("$var1: red, blue;");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSMultipartVariableError");
+      }
+    });
+    return it("should not accept variables marked as important", function() {
+      var e, result;
+      try {
+        return result = parse("$var1: 100px !important;");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSImportantVarError");
+      }
     });
   };
 
@@ -277,12 +299,21 @@
       expect(result.selectors[0].name).toBe("div,article");
       return expect(result.selectors[1].name).toBe("div a,div:hover,article a,article:hover");
     });
-    return it("should remember the parent of nested selectors", function() {
+    it("should remember the parent of nested selectors", function() {
       var result;
       result = parse(".level1 {\n	div[l='2'] {\n		#level3 {\n			width: 100px;\n		}\n	}\n}");
       expect(result.selectors[2].name).toBe(".level1 div[l='2'] #level3");
       expect(result.selectors[2].parent.name).toBe(".level1 div[l='2']");
       return expect(result.selectors[2].parent.parent.name).toBe(".level1");
+    });
+    return it("should error on mismatched brackets", function() {
+      var e, result;
+      try {
+        return result = parse(".level1 {\n	div[l='2'] {\n		#level3 {\n			width: 100px;\n		}\n}");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSBracketMismatchError");
+      }
     });
   };
 
@@ -725,7 +756,7 @@
       }));
       return expect(expressionResult).toBe("#00f");
     });
-    return it("should parse ternary as function arguments", function() {
+    it("should parse ternary as function arguments", function() {
       var expression, expressionResult, result;
       result = parse("$selected: true;\ndiv {\n	width: max(if $selected then 200px else 100px, 150px);\n}");
       expression = result.selectors[0].properties[0].value;
@@ -741,6 +772,69 @@
         };
       }), 0, $wf.$functions);
       return expect(expressionResult).toBe("150px");
+    });
+    it("should not accept ternaries with different return types", function() {
+      var e, result;
+      try {
+        return result = parse("$selected: true;\ndiv {\n	width: if $selected then 200px else #f00;\n}");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSETernaryTypeError");
+      }
+    });
+    it("should not accept expressions with mismatched parenthesis", function() {
+      var e, result;
+      try {
+        return result = parse("$color: #d00;\ndiv {\n	color: changeAlpha(darken($color);\n}");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSEParenthesisMismatchError");
+      }
+    });
+    it("should not accept expressions with mismatched types", function() {
+      var e, result;
+      try {
+        return result = parse("div {\n	padding: #f00 + 0px;\n}");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSEMixedTypeError");
+      }
+    });
+    it("should not accept expressions that use variables that don't exist", function() {
+      var e, result;
+      try {
+        return result = parse("div {\n	padding: $padding;\n}");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSENonexistentVariableError");
+      }
+    });
+    it("should not accept expressions that use variables that don't exist in scope", function() {
+      var e, result;
+      try {
+        return result = parse("p {\n	$padding: 10px;\n}\ndiv {\n	padding: $padding;\n}");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSEVariableScopeError");
+      }
+    });
+    it("should not accept expressions that use globals that don't exist", function() {
+      var e, result;
+      try {
+        return result = parse("div {\n	padding: @padding;\n}");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSENonexistentGlobalError");
+      }
+    });
+    return it("should not accept expressions that use functions that don't exist", function() {
+      var e, result;
+      try {
+        return result = parse("div {\n	padding: padding();\n}");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSENonexistentFunctionError");
+      }
     });
   };
 
@@ -805,7 +899,7 @@
       expect(block.body).toBe("selector: {\n		property: 1;\n	}");
       return expect(block.type).toBe("outer-block");
     });
-    return it("should parse blocks with complex expression properties", function() {
+    it("should parse blocks with complex expression properties", function() {
       var block, result;
       result = parse("@client (@width < 10) 'this is a message' {\n	selector: {property: 1}\n}");
       block = result.blocks[0];
@@ -814,6 +908,15 @@
       expect(block["arguments"][1]).toBe("'this is a message'");
       expect(block.body).toBe("selector: {property: 1}");
       return expect(block.type).toBe("client");
+    });
+    return it("should error on a block that's never closed", function() {
+      var e, result;
+      try {
+        return result = parse("@block {\n\n	Body");
+      } catch (_error) {
+        e = _error;
+        return expect(e.constructor.name).toBe("FSBlockMismatchError");
+      }
     });
   };
 

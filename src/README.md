@@ -27,6 +27,7 @@ Fashion is written in Coffeescript. Lines are limited to 93 characters long.
 * ***properties.coffee:*** Parses the inside of a selector into individual properties and values.
 * ***expressions.coffee:*** Validates inline fashion expressions and converts them to Javascript functions.
 * ***variables.coffee:*** Can add variables to the parse tree.
+* ***errors.coffee:*** Custom error classes that are thrown from within the parser
 
 ### ./processor
 ##### Code to expand Fashion properties, blocks and selectors into a format closer to raw CSS and Javascript.

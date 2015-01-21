@@ -1,14 +1,18 @@
 # Adds a variable object
 window.fashion.$parser.addVariable = (parseTree, name, value, flag, scopeSelector) ->
+	if flag is "!important" then throw new FSImportantVarError name
 
 	# Parse the value into an expression if necessary
-	value = $wf.$parser.parseSingleValue(value, parseTree, scopeSelector, true)
+	FSSVal = value
+	value = $wf.$parser.parsePropertyValues(value, parseTree, scopeSelector, true)
+	if value instanceof Array
+		throw new FSMultipartVariableError name, JSON.stringify value
 
 	# Do not allow individualized expressions on non-nested variables
 	indMode = $wf.$runtimeMode.individual
 	if value.mode and (value.mode & indMode) is indMode
 		if !scopeSelector
-			return console.log "[FASHION] Top level Variable $#{name} cannot refer to @self"
+			throw new FSIndividualVarError name, FSSVal
 
 		# We'll need some special functionality to deal with this at runtime
 		parseTree.addRequirements [$wf.$runtimeCapability.scopedIndividual]

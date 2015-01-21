@@ -247,3 +247,17 @@ window.fashiontests.parser.selectors = ()->
 		expect(result.selectors[2].parent.name).toBe(".level1 div[l='2']")
 		expect(result.selectors[2].parent.parent.name).toBe(".level1")
 
+
+	it "should error on mismatched brackets", ()->
+		try
+			result = parse("""
+							.level1 {
+								div[l='2'] {
+									#level3 {
+										width: 100px;
+									}
+							}
+							""")
+		catch e
+			expect(e.constructor.name).toBe("FSBracketMismatchError")
+

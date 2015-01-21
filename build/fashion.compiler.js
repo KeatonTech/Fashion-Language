@@ -1177,6 +1177,9 @@ window.fashion.$parser.parseSections = function(fashionText, parseTree) {
       hasBody = segment[0].indexOf("{") !== -1;
       if (hasBody) {
         body = window.fashion.$parser.parseBlock(fashionText, regex, startIndex);
+        if (regex.lastIndex === 0) {
+          throw new FSBlockMismatchError(segment[6]);
+        }
       } else {
         body = "";
       }
@@ -1188,8 +1191,11 @@ window.fashion.$parser.parseSections = function(fashionText, parseTree) {
       parseTree.addBlockDependency(segment[6], $wf.$blocks[segment[6]]);
     } else if (segment[8]) {
       window.fashion.$parser.parseSelector(parseTree, fashionText, segment[8], regex, segment.index + segment[0].length);
+      if (regex.lastIndex === 0) {
+        throw new FSBracketMismatchError(segment[8]);
+      }
     } else {
-      console.log("[FASHION] Problem around '" + segment[0] + "';");
+      throw new FSUnknownParseError(regex);
     }
   }
   return parseTree;
@@ -1247,9 +1253,7 @@ window.fashion.$parser.nestSelector = function(outer, inner) {
       } else if (istring[0] === "^") {
         combined = $wf.$shared.combineSelectors(ostring, istring.substr(1));
         if (!combined) {
-          console.log("[FASHION] Could not combine selectors.");
-          console.log(ostring, istring.substr(1));
-          acc.push(ostring + " " + istring);
+          throw new FSSelectorCombinationError(ostring, istring.substr(1));
         } else {
           acc.push(combined);
         }
@@ -1376,21 +1380,18 @@ window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseT
 };
 
 window.fashion.$parser.parseScopedVariable = function(name, value, flag, scopeSel, parseTree) {
-  if (typeof value === 'array' && typeof value[0] === 'array') {
-    throw new Error("Variable declaration '" + name + "' cannot have comma separated values");
-  }
-  if (flag === "!important") {
-    throw new Error("Variable declaration '" + name + "' cannot be !important");
-  }
   return $wf.$parser.addVariable(parseTree, name, value, flag, scopeSel);
 };
 
-window.fashion.$parser.parsePropertyValues = function(value, parseTree, selector) {
+window.fashion.$parser.parsePropertyValues = function(value, parseTree, selector, isVar) {
   var i, item, ret, split;
+  if (isVar == null) {
+    isVar = false;
+  }
   if (value.indexOf(',') !== -1) {
     split = window.fashion.$parser.splitByTopLevelCommas(value);
     if (split.length === 1) {
-      return window.fashion.$parser.parsePropertyValue(split[0], parseTree, selector);
+      return $wf.$parser.parsePropertyValue(split[0], parseTree, selector, 1, 0, isVar);
     } else {
       ret = [];
       for (i in split) {
@@ -1399,16 +1400,16 @@ window.fashion.$parser.parsePropertyValues = function(value, parseTree, selector
       }
       for (i in split) {
         item = split[i];
-        ret[i] = window.fashion.$parser.parsePropertyValue(item, parseTree, selector, true, true);
+        ret[i] = window.fashion.$parser.parsePropertyValue(item, parseTree, selector, true, true, isVar);
       }
       return ret;
     }
   } else {
-    return window.fashion.$parser.parsePropertyValue(value, parseTree, selector);
+    return $wf.$parser.parsePropertyValue(value, parseTree, selector, 1, 0, isVar);
   }
 };
 
-window.fashion.$parser.parsePropertyValue = function(value, parseTree, selector, allowExpression, forceArray) {
+window.fashion.$parser.parsePropertyValue = function(value, parseTree, selector, allowExpression, forceArray, isVar) {
   var parts, v, val, vals, _i, _len;
   if (allowExpression == null) {
     allowExpression = true;
@@ -1416,17 +1417,20 @@ window.fashion.$parser.parsePropertyValue = function(value, parseTree, selector,
   if (forceArray == null) {
     forceArray = false;
   }
+  if (isVar == null) {
+    isVar = false;
+  }
   if (forceArray || (typeof value === "string" && value.indexOf(" ") !== -1)) {
     parts = $wf.$parser.splitByTopLevelSpaces(value);
     if (!forceArray && parts.length === 1) {
-      return window.fashion.$parser.parseSingleValue(value, parseTree, selector);
+      return window.fashion.$parser.parseSingleValue(value, parseTree, selector, isVar);
     }
     vals = (function() {
       var _i, _len, _results;
       _results = [];
       for (_i = 0, _len = parts.length; _i < _len; _i++) {
         v = parts[_i];
-        _results.push($wf.$parser.parseSingleValue(v, parseTree, selector));
+        _results.push($wf.$parser.parseSingleValue(v, parseTree, selector, isVar));
       }
       return _results;
     })();
@@ -1437,7 +1441,7 @@ window.fashion.$parser.parsePropertyValue = function(value, parseTree, selector,
     }
     return vals;
   } else {
-    return window.fashion.$parser.parseSingleValue(value, parseTree, selector);
+    return window.fashion.$parser.parseSingleValue(value, parseTree, selector, isVar);
   }
 };
 
@@ -1607,7 +1611,7 @@ window.fashion.$parser.matchParenthesis = function(regex, string, index) {
       lastIndex = section.index + section[0].length;
     }
   }
-  return console.log("[FASHION] Could not match parens: " + string);
+  throw new FSEParenthesisMismatchError(string, index);
 };
 
 window.fashion.$parser.determineExpressionType = function(types, units, expression) {
@@ -1624,7 +1628,7 @@ window.fashion.$parser.determineExpressionType = function(types, units, expressi
       if (type === $wf.$type.String) {
         topType = $wf.$type.String;
       } else {
-        console.log("[FASHION] Found mixed types in expression: '" + expression + "'");
+        throw new FSEMixedTypeError(expression);
         return {};
       }
     }
@@ -1663,7 +1667,7 @@ window.fashion.$parser.expressionExpander = {
     vars = parseTree.variables;
     scopes = vars[name];
     if (!scopes) {
-      return console.log("[FASHION] Variable $" + name + " does not exist.");
+      throw new FSENonexistentVariableError(name, selector.name);
     }
     scopeMatch = false;
     while (selector != null) {
@@ -1678,7 +1682,7 @@ window.fashion.$parser.expressionExpander = {
     }
     if (!scopeMatch) {
       if (!scopes[0] && !scopes['0']) {
-        return console.log("[FASHION] $" + name + " does not have a global scope.");
+        throw new FSEVariableScopeError(name);
       }
       scope = 0;
       _ref1 = scopes[0] || scopes['0'], type = _ref1.type, unit = _ref1.unit, mode = _ref1.mode;
@@ -1696,7 +1700,7 @@ window.fashion.$parser.expressionExpander = {
     name = name.toLowerCase();
     vObj = globals[name];
     if (!vObj) {
-      return console.log("[FASHION] Variable $" + name + " does not exist.");
+      throw new FSENonexistentGlobalError(name);
     }
     parseTree.addGlobalDependency(name, vObj);
     bindings = new ExpressionBindings("global", name);
@@ -1741,7 +1745,7 @@ window.fashion.$parser.expressionExpander = {
     vars = parseTree.variables;
     fObj = funcs[name];
     if (!fObj) {
-      return console.log("[FASHION] Function $" + name + " does not exist.");
+      throw new FSENonexistentFunctionError(name);
     }
     if (argumentsString.length > 1) {
       args = window.fashion.$parser.splitByTopLevelCommas(argumentsString);
@@ -1804,22 +1808,29 @@ window.fashion.$parser.expressionExpander = {
     trueExp = parse(trueExp.trim());
     falseExp = parse(falseExp.trim());
     if (trueExp.type !== falseExp.type) {
-      return console.log("[FASHION] Ternary results must return the same type");
+      throw new FSETernaryTypeError(trueExp.script, falseExp.script);
     }
     if (trueExp.unit !== falseExp.unit) {
-      return console.log("[FASHION] Ternary results must return the same unit");
+      throw new FSETernaryUnitError(trueExp.script, falseExp.script);
     }
     script = "(" + ifExp.script + " ? " + trueExp.script + " : " + falseExp.script + ")";
     return new Expression(script, trueExp.type, trueExp.unit, bindings, mode);
   }
 };
 window.fashion.$parser.addVariable = function(parseTree, name, value, flag, scopeSelector) {
-  var indMode, type, typedValue, unit, unittedValue, val, variableObject;
-  value = $wf.$parser.parseSingleValue(value, parseTree, scopeSelector, true);
+  var FSSVal, indMode, type, typedValue, unit, unittedValue, val, variableObject;
+  if (flag === "!important") {
+    throw new FSImportantVarError(name);
+  }
+  FSSVal = value;
+  value = $wf.$parser.parsePropertyValues(value, parseTree, scopeSelector, true);
+  if (value instanceof Array) {
+    throw new FSMultipartVariableError(name, JSON.stringify(value));
+  }
   indMode = $wf.$runtimeMode.individual;
   if (value.mode && (value.mode & indMode) === indMode) {
     if (!scopeSelector) {
-      return console.log("[FASHION] Top level Variable $" + name + " cannot refer to @self");
+      throw new FSIndividualVarError(name, FSSVal);
     }
     parseTree.addRequirements([$wf.$runtimeCapability.scopedIndividual]);
   }
@@ -1843,6 +1854,267 @@ window.fashion.$parser.addVariable = function(parseTree, name, value, flag, scop
   }
   return variableObject.annotateWithType(type, unit, typedValue);
 };
+var FSBlockMismatchError, FSBracketMismatchError, FSEMixedTypeError, FSENonexistentFunctionError, FSENonexistentGlobalError, FSENonexistentVariableError, FSEParenthesisMismatchError, FSETernaryTypeError, FSETernaryUnitError, FSEVariableScopeError, FSImportantVarError, FSIndividualVarError, FSMultipartVariableError, FSSelectorCombinationError, FSUnknownParseError, FashionExpressionParseError, FashionParseError, FashionSheetParseError,
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+FashionParseError = (function(_super) {
+  __extends(FashionParseError, _super);
+
+  function FashionParseError(source, string, index) {
+    var char, col, errName, i, id, lastLineChar, line, lineStr, msgLines;
+    errName = this.name || this.constructor.name;
+    if (string != null) {
+      line = 0;
+      lastLineChar = 0;
+      for (i in string) {
+        char = string[i];
+        if (i >= index) {
+          break;
+        }
+        if (char === "\n") {
+          line++;
+          lastLineChar = i;
+        }
+      }
+      col = index - lastLineChar;
+      lineStr = string.split('\n')[line] || '';
+      console.log("FASHION ERROR | " + errName + " at " + line + ":" + col + " of " + source);
+      console.log("       AROUND | '" + lineStr + "'");
+    } else {
+      console.log("FASHION ERROR | " + errName + " in " + source);
+    }
+    msgLines = this.message.split("\n");
+    console.log("      MESSAGE | " + msgLines[0]);
+    for (id in msgLines) {
+      line = msgLines[id];
+      if (id > 0) {
+        console.log("              | " + line);
+      }
+    }
+    console.log("");
+  }
+
+  return FashionParseError;
+
+})(Error);
+
+FashionSheetParseError = (function(_super) {
+  __extends(FashionSheetParseError, _super);
+
+  function FashionSheetParseError(string, index) {
+    FashionSheetParseError.__super__.constructor.call(this, "stylesheet", string, index);
+  }
+
+  return FashionSheetParseError;
+
+})(FashionParseError);
+
+FSBracketMismatchError = (function(_super) {
+  __extends(FSBracketMismatchError, _super);
+
+  function FSBracketMismatchError(selectorName) {
+    this.name = "BracketMismatchError";
+    this.message = "The top-level selector " + selectorName + " is never closed.\nMake sure your brackets match.";
+    FSBracketMismatchError.__super__.constructor.call(this);
+  }
+
+  return FSBracketMismatchError;
+
+})(FashionSheetParseError);
+
+FSBlockMismatchError = (function(_super) {
+  __extends(FSBlockMismatchError, _super);
+
+  function FSBlockMismatchError(blockName) {
+    this.name = "BlockBracketMismatchError";
+    this.message = "A block of type @" + blockName + " is never closed.\nMake sure your brackets match.";
+    FSBlockMismatchError.__super__.constructor.call(this);
+  }
+
+  return FSBlockMismatchError;
+
+})(FashionSheetParseError);
+
+FSIndividualVarError = (function(_super) {
+  __extends(FSIndividualVarError, _super);
+
+  function FSIndividualVarError(varName, expString) {
+    this.name = "IndividualVarError";
+    this.message = "Variable $" + varName + " cannot rely on individual properties like @self\nExpression: '" + expString + "'";
+    FSIndividualVarError.__super__.constructor.call(this);
+  }
+
+  return FSIndividualVarError;
+
+})(FashionSheetParseError);
+
+FSMultipartVariableError = (function(_super) {
+  __extends(FSMultipartVariableError, _super);
+
+  function FSMultipartVariableError(varName, valString) {
+    this.name = "MultipartVariableError";
+    this.message = "Variable $" + varName + " cannot be set to multiple values\nValue: '" + valString + "'\nMalformed expressions may sometimes be read as 2 separate expressions\nFor example '300px -100px' would be 2 expressions, not 1 evaluating to 200px";
+    FSMultipartVariableError.__super__.constructor.call(this);
+  }
+
+  return FSMultipartVariableError;
+
+})(FashionSheetParseError);
+
+FSImportantVarError = (function(_super) {
+  __extends(FSImportantVarError, _super);
+
+  function FSImportantVarError(varName) {
+    this.name = "ImportantVarError";
+    this.message = "Variable $" + varName + " cannot be flagged as important";
+    FSImportantVarError.__super__.constructor.call(this);
+  }
+
+  return FSImportantVarError;
+
+})(FashionSheetParseError);
+
+FSSelectorCombinationError = (function(_super) {
+  __extends(FSSelectorCombinationError, _super);
+
+  function FSSelectorCombinationError(outer, inner) {
+    this.name = "SelectorCombinationError";
+    this.message = "Could not combine '" + outer + "' with '" + inner + "'.\nPlease simplify the selectors to include fewer components (shallower nesting)";
+    FSSelectorCombinationError.__super__.constructor.call(this);
+  }
+
+  return FSSelectorCombinationError;
+
+})(FashionSheetParseError);
+
+FSUnknownParseError = (function(_super) {
+  __extends(FSUnknownParseError, _super);
+
+  function FSUnknownParseError(string, index) {
+    this.name = "UnknownParseError";
+    this.message = "Regex failed to execute on the stylesheet.";
+    FSUnknownParseError.__super__.constructor.call(this, string, index);
+  }
+
+  return FSUnknownParseError;
+
+})(FashionSheetParseError);
+
+FashionExpressionParseError = (function(_super) {
+  __extends(FashionExpressionParseError, _super);
+
+  function FashionExpressionParseError(string, index) {
+    FashionExpressionParseError.__super__.constructor.call(this, "expression", string, index);
+  }
+
+  return FashionExpressionParseError;
+
+})(FashionParseError);
+
+FSEParenthesisMismatchError = (function(_super) {
+  __extends(FSEParenthesisMismatchError, _super);
+
+  function FSEParenthesisMismatchError(string, index) {
+    this.name = "ParenthesisMismatchError";
+    this.message = "Could not match parenthesis in expression.";
+    FSEParenthesisMismatchError.__super__.constructor.call(this, string, index);
+  }
+
+  return FSEParenthesisMismatchError;
+
+})(FashionExpressionParseError);
+
+FSENonexistentVariableError = (function(_super) {
+  __extends(FSENonexistentVariableError, _super);
+
+  function FSENonexistentVariableError(varName, scope) {
+    this.name = "NonexistentVariableError";
+    this.message = "Variable $" + varName + " does not exist in this scope\nScope: '" + scope + "'";
+    FSENonexistentVariableError.__super__.constructor.call(this);
+  }
+
+  return FSENonexistentVariableError;
+
+})(FashionExpressionParseError);
+
+FSEVariableScopeError = (function(_super) {
+  __extends(FSEVariableScopeError, _super);
+
+  function FSEVariableScopeError(varName) {
+    this.name = "VariableScopeError";
+    this.message = "Variable $" + varName + " isn't in this scope and doesn't have a top-level value.";
+    FSEVariableScopeError.__super__.constructor.call(this);
+  }
+
+  return FSEVariableScopeError;
+
+})(FashionExpressionParseError);
+
+FSENonexistentGlobalError = (function(_super) {
+  __extends(FSENonexistentGlobalError, _super);
+
+  function FSENonexistentGlobalError(globalName) {
+    this.name = "NonexistentGlobalError";
+    this.message = "Global @" + globalName + " could not be found";
+    FSENonexistentGlobalError.__super__.constructor.call(this);
+  }
+
+  return FSENonexistentGlobalError;
+
+})(FashionExpressionParseError);
+
+FSENonexistentFunctionError = (function(_super) {
+  __extends(FSENonexistentFunctionError, _super);
+
+  function FSENonexistentFunctionError(funcName) {
+    this.name = "NonexistentFunctionError";
+    this.message = "Function module " + funcName + "() could not be found";
+    FSENonexistentFunctionError.__super__.constructor.call(this);
+  }
+
+  return FSENonexistentFunctionError;
+
+})(FashionExpressionParseError);
+
+FSETernaryTypeError = (function(_super) {
+  __extends(FSETernaryTypeError, _super);
+
+  function FSETernaryTypeError(onExp, offExp) {
+    this.name = "TernaryTypeError";
+    this.message = "Ternary expressions must return the same type in all instances\nMust match: '" + onExp + "' & '" + offExp + "'";
+    FSETernaryTypeError.__super__.constructor.call(this);
+  }
+
+  return FSETernaryTypeError;
+
+})(FashionExpressionParseError);
+
+FSETernaryUnitError = (function(_super) {
+  __extends(FSETernaryUnitError, _super);
+
+  function FSETernaryUnitError(onExp, offExp) {
+    this.name = "TernaryUnitError";
+    this.message = "Ternary expressions must return the same unit in all instances\nMust match: '" + onExp + "' & '" + offExp + "'";
+    FSETernaryUnitError.__super__.constructor.call(this);
+  }
+
+  return FSETernaryUnitError;
+
+})(FashionExpressionParseError);
+
+FSEMixedTypeError = (function(_super) {
+  __extends(FSEMixedTypeError, _super);
+
+  function FSEMixedTypeError(string, index) {
+    this.name = "MixedTypeError";
+    this.message = "Mixed types found in expression.";
+    FSEMixedTypeError.__super__.constructor.call(this, string, index);
+  }
+
+  return FSEMixedTypeError;
+
+})(FashionExpressionParseError);
 window.fashion.$processor = {
   process: function(parseTree) {
     parseTree = window.fashion.$processor.blocks(parseTree, $wf.$blocks);

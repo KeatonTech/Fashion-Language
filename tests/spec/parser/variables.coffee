@@ -165,11 +165,12 @@ window.fashiontests.parser.variables = () ->
 
 	it "should not accept top-level individualized variable definitions", ()->
 
-		result = parse( """
-						$var1: @self.color;
-						""")
-
-		expect(result.variables["var1"]).not.toBeDefined()
+		try
+			result = parse( """
+							$var1: @self.color;
+							""")
+		catch e
+			expect(e.constructor.name).toBe("FSIndividualVarError")
 
 
 	it "should accept non-top-level individualized variable definitions", ()->
@@ -184,4 +185,21 @@ window.fashiontests.parser.variables = () ->
 		expect(result.variables["var1"]["div"].mode).toBe($wf.$runtimeMode.individual)
 
 
+	it "should not accept variables with comma-separated values", ()->
 
+		try
+			result = parse( """
+							$var1: red, blue;
+							""")
+		catch e
+			expect(e.constructor.name).toBe("FSMultipartVariableError")
+
+
+	it "should not accept variables marked as important", ()->
+
+		try
+			result = parse( """
+							$var1: 100px !important;
+							""")
+		catch e
+			expect(e.constructor.name).toBe("FSImportantVarError")

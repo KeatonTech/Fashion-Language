@@ -33,6 +33,7 @@ window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 			hasBody = segment[0].indexOf("{") isnt -1
 			if hasBody
 				body = window.fashion.$parser.parseBlock fashionText, regex, startIndex
+				if regex.lastIndex is 0 then throw new FSBlockMismatchError segment[6]
 			else body = ""
 
 			# Add the block object
@@ -48,11 +49,10 @@ window.fashion.$parser.parseSections = (fashionText, parseTree) ->
 		else if segment[8]
 			window.fashion.$parser.parseSelector(parseTree, fashionText, segment[8],
 				regex, segment.index + segment[0].length)
+			if regex.lastIndex is 0 then throw new FSBracketMismatchError segment[8]
 
-		# Otherwise we might have a problem
-		# TODO(keatontech): Better error handling here. Heh.
-		else 
-			console.log "[FASHION] Problem around '#{segment[0]}';"
+		# Otherwise we have a problem, but we don't really know what
+		else throw new FSUnknownParseError regex
 
 	# Return something nice
 	return parseTree
@@ -133,9 +133,7 @@ window.fashion.$parser.nestSelector = (outer, inner) ->
 			else if istring[0] is "^"
 				combined = $wf.$shared.combineSelectors ostring, istring.substr(1)
 				if !combined
-					console.log "[FASHION] Could not combine selectors."
-					console.log ostring, istring.substr(1)
-					acc.push ostring + " " + istring
+					throw new FSSelectorCombinationError ostring, istring.substr(1)
 				else acc.push combined
 
 			# Otherwise, selectors are assumed to be direct children

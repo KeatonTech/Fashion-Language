@@ -189,7 +189,7 @@ window.fashion.$parser.matchParenthesis = (regex, string, index) ->
 			acc += string.substr(lastIndex, (section.index - lastIndex) + section[0].length)
 			lastIndex = section.index + section[0].length
 
-	console.log "[FASHION] Could not match parens: #{string}"
+	throw new FSEParenthesisMismatchError string, index
 
 
 # Determine the type and unit that an expression should return
@@ -204,7 +204,7 @@ window.fashion.$parser.determineExpressionType = (types, units, expression) ->
 		else if type isnt topType 
 			if type is $wf.$type.String then topType = $wf.$type.String
 			else
-				console.log "[FASHION] Found mixed types in expression: '#{expression}'"
+				throw new FSEMixedTypeError expression
 				return {}
 
 		# Figure out the expression's unit
@@ -236,7 +236,7 @@ window.fashion.$parser.expressionExpander =
 	localVariable: (name, parseTree, selector, isSetter = false) ->
 		vars = parseTree.variables
 		scopes = vars[name]
-		if !scopes then return console.log "[FASHION] Variable $#{name} does not exist."
+		if !scopes then throw new FSENonexistentVariableError name, selector.name
 
 		# Go up the selector chain trying to find a scope match
 		scopeMatch = false
@@ -252,7 +252,7 @@ window.fashion.$parser.expressionExpander =
 		# No scope found use global scope
 		if !scopeMatch
 			if !scopes[0] and !scopes['0']
-				return console.log "[FASHION] $#{name} does not have a global scope."
+				throw new FSEVariableScopeError name
 			scope = 0
 			{type,unit,mode} = scopes[0] || scopes['0']
 
@@ -273,7 +273,7 @@ window.fashion.$parser.expressionExpander =
 	globalVariable: (name, globals, parseTree) ->
 		name = name.toLowerCase()
 		vObj = globals[name]
-		if !vObj then return console.log "[FASHION] Variable $#{name} does not exist."
+		if !vObj then throw new FSENonexistentGlobalError name
 
 		# Add a global-module dependency
 		parseTree.addGlobalDependency name, vObj
@@ -328,7 +328,7 @@ window.fashion.$parser.expressionExpander =
 
 		# Make sure the function actually exists before continuing on
 		fObj = funcs[name]
-		if !fObj then return console.log "[FASHION] Function $#{name} does not exist."
+		if !fObj then throw new FSENonexistentFunctionError name
 
 		# Evaluate each argument separately
 		if argumentsString.length > 1
@@ -396,9 +396,9 @@ window.fashion.$parser.expressionExpander =
 
 		# Type checking
 		if trueExp.type isnt falseExp.type
-			return console.log "[FASHION] Ternary results must return the same type"
+			throw new FSETernaryTypeError trueExp.script, falseExp.script
 		if trueExp.unit isnt falseExp.unit
-			return console.log "[FASHION] Ternary results must return the same unit"
+			throw new FSETernaryUnitError trueExp.script, falseExp.script
 
 		# JS-style ternary
 		script = "(#{ifExp.script} ? #{trueExp.script} : #{falseExp.script})"

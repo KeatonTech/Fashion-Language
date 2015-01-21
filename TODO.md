@@ -4,7 +4,6 @@
 
 * Binding function, with DOM observers to update its value
 * @include block for loading additional .fss files at compile time
-* Full support for scoped variables - treated as individualized properties.
 * Compiler flag to generate multiple files instead of inlining
 * Simplified module API, or at least shortcuts into the existing one
 
@@ -17,7 +16,8 @@
 ### Misc
 * Transitions should be smarter about cascading, overriding CSS when necessary
 * Make variables declared in @transition blocks take an isolated scope
-* 150 unit tests
+* Bracket mismatches should be intelligently identified
+* 150+ unit tests
 
 # Fashion 0.5
 
@@ -38,6 +38,7 @@
 
 ### Fixes and optimizations
 * Caching on DOM properties, invalidated on DOM modification
+* Reading HTML attributes must require the selector to match only elements with that attribute.
 * Optimization to treat some scoped variables as normal CSS inheritance
 * Polyfills where necessary; guaranteed support back to IE 9, 'hinted' support to IE 8
 * Trigger properties should not require the whole 'individualized' module to be included

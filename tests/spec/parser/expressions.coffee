@@ -381,3 +381,92 @@ window.fashiontests.parser.expressions = ()->
 
 		expressionResult = expression.evaluate (()->value: false), 0, $wf.$functions
 		expect(expressionResult).toBe("150px")
+
+
+	it "should not accept ternaries with different return types", ()->
+		try
+			result = parse( """
+							$selected: true;
+							div {
+								width: if $selected then 200px else #f00;
+							}
+							""")
+
+		catch e
+			expect(e.constructor.name).toBe("FSETernaryTypeError")
+
+
+	it "should not accept expressions with mismatched parenthesis", ()->
+		try
+			result = parse( """
+							$color: #d00;
+							div {
+								color: changeAlpha(darken($color);
+							}
+							""")
+
+		catch e
+			expect(e.constructor.name).toBe("FSEParenthesisMismatchError")
+
+
+	it "should not accept expressions with mismatched types", ()->
+		try
+			result = parse( """
+							div {
+								padding: #f00 + 0px;
+							}
+							""")
+
+		catch e
+			expect(e.constructor.name).toBe("FSEMixedTypeError")
+
+
+	it "should not accept expressions that use variables that don't exist", ()->
+		try
+			result = parse( """
+							div {
+								padding: $padding;
+							}
+							""")
+
+		catch e
+			expect(e.constructor.name).toBe("FSENonexistentVariableError")
+
+
+	it "should not accept expressions that use variables that don't exist in scope", ()->
+		try
+			result = parse( """
+							p {
+								$padding: 10px;
+							}
+							div {
+								padding: $padding;
+							}
+							""")
+
+		catch e
+			expect(e.constructor.name).toBe("FSEVariableScopeError")
+
+
+	it "should not accept expressions that use globals that don't exist", ()->
+		try
+			result = parse( """
+							div {
+								padding: @padding;
+							}
+							""")
+
+		catch e
+			expect(e.constructor.name).toBe("FSENonexistentGlobalError")
+
+
+	it "should not accept expressions that use functions that don't exist", ()->
+		try
+			result = parse( """
+							div {
+								padding: padding();
+							}
+							""")
+
+		catch e
+			expect(e.constructor.name).toBe("FSENonexistentFunctionError")

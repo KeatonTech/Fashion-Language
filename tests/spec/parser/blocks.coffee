@@ -108,3 +108,14 @@ window.fashiontests.parser.blocks = ()->
 		expect(block.arguments[1]).toBe("'this is a message'")
 		expect(block.body).toBe("selector: {property: 1}")
 		expect(block.type).toBe("client")
+
+
+	it "should error on a block that's never closed", ()->
+		try
+			result = parse("""
+							@block {
+
+								Body
+							""")
+		catch e
+			expect(e.constructor.name).toBe("FSBlockMismatchError")

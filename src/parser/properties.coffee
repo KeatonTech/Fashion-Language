@@ -57,17 +57,12 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 # Parse out variable declarations
 window.fashion.$parser.parseScopedVariable = (name, value, flag, scopeSel, parseTree) ->
 
-	if typeof value is 'array' and typeof value[0] is 'array'
-		throw new Error "Variable declaration '#{name}' cannot have comma separated values"
-
-	if flag is "!important"
-		throw new Error "Variable declaration '#{name}' cannot be !important"
-
+	# This used to do more, and might in the future
 	$wf.$parser.addVariable parseTree, name, value, flag, scopeSel
 
 
 # Splits a value up by commas if necessary and then evaluates it
-window.fashion.$parser.parsePropertyValues = (value, parseTree, selector) ->
+window.fashion.$parser.parsePropertyValues = (value, parseTree, selector, isVar = false) ->
 
 	# Commas mean array
 	if value.indexOf(',') isnt -1
@@ -75,7 +70,7 @@ window.fashion.$parser.parsePropertyValues = (value, parseTree, selector) ->
 
 		# False alarm
 		if split.length is 1
-			return window.fashion.$parser.parsePropertyValue(split[0], parseTree, selector)
+			return $wf.$parser.parsePropertyValue(split[0], parseTree, selector, 1, 0, isVar)
 
 		# Build an array of processed values
 		else
@@ -83,33 +78,33 @@ window.fashion.$parser.parsePropertyValues = (value, parseTree, selector) ->
 			split[i] = item.trim() for i,item of split
 			for i,item of split
 				ret[i] = window.fashion.$parser.parsePropertyValue(
-					item, parseTree, selector, true, true)
+					item, parseTree, selector, true, true, isVar)
 			return ret
 
 	# Just process the one value
-	else return window.fashion.$parser.parsePropertyValue(value, parseTree, selector)
+	else return $wf.$parser.parsePropertyValue(value, parseTree, selector, 1, 0, isVar)
 
 
 # Convert a property value into a linked object or expression, if necessary
 window.fashion.$parser.parsePropertyValue = 
-	(value, parseTree, selector, allowExpression = true, forceArray = false) ->
+(value, parseTree, selector, allowExpression = true, forceArray = false, isVar = false) ->
 
-		# Check to see if we have a multi-piece property
-		if forceArray or (typeof value is "string" and value.indexOf(" ") isnt -1)
-			parts = $wf.$parser.splitByTopLevelSpaces value
+	# Check to see if we have a multi-piece property
+	if forceArray or (typeof value is "string" and value.indexOf(" ") isnt -1)
+		parts = $wf.$parser.splitByTopLevelSpaces value
 
-			# False alarm!
-			if !forceArray and parts.length is 1
-				return window.fashion.$parser.parseSingleValue value, parseTree, selector
+		# False alarm!
+		if !forceArray and parts.length is 1
+			return window.fashion.$parser.parseSingleValue value, parseTree, selector, isVar
 
-			# Accumulate all of the single values into an array and calculate the mode
-			vals = ($wf.$parser.parseSingleValue(v, parseTree, selector) for v in parts)
-			vals.mode = 0
-			(vals.mode |= (val.mode || 0)) for val in vals
-			return vals
+		# Accumulate all of the single values into an array and calculate the mode
+		vals = ($wf.$parser.parseSingleValue(v, parseTree, selector,isVar) for v in parts)
+		vals.mode = 0
+		(vals.mode |= (val.mode || 0)) for val in vals
+		return vals
 
-		# We have a single-piece property
-		else window.fashion.$parser.parseSingleValue value, parseTree, selector
+	# We have a single-piece property
+	else window.fashion.$parser.parseSingleValue value, parseTree, selector, isVar
 
 
 # Shared regex used to identify expressions
