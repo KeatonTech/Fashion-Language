@@ -175,6 +175,51 @@ window.fashiontests.runtime.scoped = ()->
 		expect(s2i1.color).toBe("rgb(0, 0, 0)")
 
 
+	it "should work in selectors containing individual properties", ()->
+
+		# Testing setup
+		id = testDiv """
+			<div id="select1" class="select">
+				<p class="i1" color="rgb(10, 0, 0)">Selected</p>
+				<p class="i2" color="rgb(10, 10, 0)">Not Selected</p>
+			</div>
+			<div id="select2" class="select">
+				<p class="i1" color="rgb(0, 0, 10)">Selected</p>
+				<p class="i2" color="rgb(0, 10, 10)">Not Selected</p>
+			</div>
+		"""
+
+		testFSS """
+			.select {
+				$selected: i1;
+				p {
+					color: black;
+				}
+				.$selected {
+					color: @self.color;
+				}
+			}
+			"""
+
+		# Check the beginning values
+		s1i1 = window.getComputedStyle document.querySelectorAll("#select1 .i2")[0]
+		expect(s1i1.color).toBe("rgb(0, 0, 0)")
+
+		s2i1 = window.getComputedStyle document.querySelectorAll("#select2 .i2")[0]
+		expect(s2i1.color).toBe("rgb(0, 0, 0)")
+
+		# Set the color variable on this element
+		element = document.getElementById "select2"
+		FASHION.setElementVariable element, "selected", "i2"
+
+		# Check the beginning values
+		s1i1 = window.getComputedStyle document.querySelectorAll("#select1 .i2")[0]
+		expect(s1i1.color).toBe("rgb(0, 0, 0)")
+
+		s2i1 = window.getComputedStyle document.querySelectorAll("#select2 .i2")[0]
+		expect(s2i1.color).toBe("rgb(0, 10, 10)")
+
+
 	it "should assign overrides to each element for individualized scoped variables", ()->
 
 		# Testing setup

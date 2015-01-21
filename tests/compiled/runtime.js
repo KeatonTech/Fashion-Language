@@ -11,7 +11,7 @@
   };
 
   window.fashiontests.runtime.cleanup = function() {
-    var sheet, tdiv;
+    var sheet, sheets, tdiv, _i, _len;
     sheet = document.getElementById(window.fashion.cssId);
     if (sheet != null) {
       sheet.parentNode.removeChild(sheet);
@@ -23,6 +23,13 @@
     sheet = document.getElementById(window.fashion.runtimeConfig.scopedCSSID);
     if (sheet != null) {
       sheet.parentNode.removeChild(sheet);
+    }
+    sheets = document.getElementsByClassName(window.fashion.runtimeConfig.scopedCSSID);
+    for (_i = 0, _len = sheets.length; _i < _len; _i++) {
+      sheet = sheets[_i];
+      if (sheet != null) {
+        sheet.parentNode.removeChild(sheet);
+      }
     }
     window.FASHION = void 0;
     window.FSMIN = void 0;
@@ -297,6 +304,21 @@
       expect(s1i1.color).toBe("rgb(255, 0, 0)");
       s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
       return expect(s2i1.color).toBe("rgb(0, 0, 0)");
+    });
+    it("should work in selectors containing individual properties", function() {
+      var element, id, s1i1, s2i1;
+      id = testDiv("<div id=\"select1\" class=\"select\">\n	<p class=\"i1\" color=\"rgb(10, 0, 0)\">Selected</p>\n	<p class=\"i2\" color=\"rgb(10, 10, 0)\">Not Selected</p>\n</div>\n<div id=\"select2\" class=\"select\">\n	<p class=\"i1\" color=\"rgb(0, 0, 10)\">Selected</p>\n	<p class=\"i2\" color=\"rgb(0, 10, 10)\">Not Selected</p>\n</div>");
+      testFSS(".select {\n	$selected: i1;\n	p {\n		color: black;\n	}\n	.$selected {\n		color: @self.color;\n	}\n}");
+      s1i1 = window.getComputedStyle(document.querySelectorAll("#select1 .i2")[0]);
+      expect(s1i1.color).toBe("rgb(0, 0, 0)");
+      s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
+      expect(s2i1.color).toBe("rgb(0, 0, 0)");
+      element = document.getElementById("select2");
+      FASHION.setElementVariable(element, "selected", "i2");
+      s1i1 = window.getComputedStyle(document.querySelectorAll("#select1 .i2")[0]);
+      expect(s1i1.color).toBe("rgb(0, 0, 0)");
+      s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
+      return expect(s2i1.color).toBe("rgb(0, 10, 10)");
     });
     it("should assign overrides to each element for individualized scoped variables", function() {
       var id;

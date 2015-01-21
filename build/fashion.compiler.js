@@ -49,6 +49,7 @@ window.fashion.runtimeConfig = {
   idPrefix: "FS-",
   individualCSSID: "FASHION-individual",
   scopedCSSID: "FASHION-scopes",
+  scopedIndCSSPrefix: "FASHION-scopes-",
   cssId: window.fashion.cssId
 };
 
@@ -1130,7 +1131,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   sq = dq = bt = false;
   acc = "";
   ret = [];
-  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\"\'\s]+(\s+[\+\-\/\*\=]\s+|[\+\/\*\=]))+[^\`\"\'\s]+|\s+(\&\&|\|\|)\s+|\s+(==|!==)\s+|if\s+|\s+then\s+|\s+else\s+|\s|[^\(\)\"\'\`\s]+)/g;
+  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\/\*\=]))+[^\`\s]+|\s+(\&\&|\|\|)\s+|\s+(==|!==)\s+|if\s+|\s+then\s+|\s+else\s+|\s|[^\(\)\"\'\`\s]+)/g;
   while (token = regex.exec(value)) {
     if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
       ret.push(acc);
@@ -4001,8 +4002,10 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
               if (bindLink.length === 2) {
                 if (bindLink[0] === 'v') {
 
+                } else if (bindLink[0] === 'i') {
+                  _results1.push(this.addIndividualScopedSelectorOverride(bindLink[1], element));
                 } else {
-                  _results1.push(this.addScopedSelectorOverride(bindLink[1], element.id));
+                  _results1.push(this.addScopedSelectorOverride(bindLink[1], element));
                 }
               }
             }
@@ -4046,25 +4049,58 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
 
 $wf.addRuntimeModule("scopedVariableSelector", ["scopedVariables", "sheets", "selectors"], {
   "addScopedSelectorOverride": function(selectorId, element) {
-    var name, rule, rules, selector, sheet;
+    var name, rule, selector, sheet;
     selector = FASHION.selectors[selectorId];
+    name = this.getScopedSelectorName(selector, element);
+    rule = this.CSSRuleForSelector(selector, element, name);
+    sheet = this.getStylesheet(FASHION.config.scopedCSSID).sheet;
+    sheet.rules = sheet.rules || sheet.cssRules;
+    if (!selector.scopedRules) {
+      selector.scopedRules = {};
+    }
+    if (selector.scopedRules[element.id] == null) {
+      selector.scopedRules[element.id] = sheet.rules.length;
+    } else {
+      sheet.deleteRule(selector.scopedRules[element.id]);
+    }
+    return sheet.insertRule(rule, selector.scopedRules[element.id]);
+  },
+  "addIndividualScopedSelectorOverride": function(selectorId, element) {
+    var matchElement, matches, name, rule, selector, sheet, sheetId, _i, _len;
+    selector = FASHION.individual[selectorId];
+    if (!selector) {
+      this.throwError("Could not find individual selector " + selectorId);
+    }
+    if (!selector.scopedRules) {
+      selector.scopedRules = {};
+    }
+    if (selector.scopedRules[element.id] != null) {
+      sheet = document.getElementById(selector.scopedRules[element.id]);
+      sheet.parentNode.removeChild(sheet);
+    }
+    name = this.getScopedSelectorName(selector, element);
+    matches = this.elementsForSelector(name);
+    if (matches.length === 0) {
+      return;
+    }
+    sheetId = FASHION.config.scopedIndCSSPrefix + this.generateRandomId();
+    sheet = this.addStylesheet(sheetId, FASHION.config.scopedCSSID).sheet;
+    selector.scopedRules[element.id] = sheetId;
+    for (_i = 0, _len = matches.length; _i < _len; _i++) {
+      matchElement = matches[_i];
+      rule = this.CSSRuleForSelector(selector, matchElement, name);
+      sheet.insertRule(rule, 0);
+    }
+    return '';
+  },
+  "getScopedSelectorName": function(selector, element) {
+    var name;
     if (typeof element === 'string') {
       element = document.getElementById(element);
     }
     name = this.evaluate(selector.name, element);
     name = name.replace(/\#\#/g, "#" + element.id);
-    rule = this.CSSRuleForSelector(selector, element, name);
-    sheet = this.getStylesheet(FASHION.config.scopedCSSID).sheet;
-    rules = sheet.rules || sheet.cssRules;
-    if (!selector.scopedRules) {
-      selector.scopedRules = {};
-    }
-    if (selector.scopedRules[element.id] == null) {
-      selector.scopedRules[element.id] = rules.length;
-    } else {
-      sheet.deleteRule(selector.scopedRules[element.id]);
-    }
-    return sheet.insertRule(rule, selector.scopedRules[element.id]);
+    return name;
   }
 });
 

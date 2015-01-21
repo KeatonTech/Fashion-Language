@@ -40,9 +40,11 @@ $wf.addRuntimeModule "scopedVariables",
 				for bindLink in vObj.dependents[scope] when bindLink.length is 2
 					if bindLink[0] is 'v'
 						# Update variables - not sure how this is going to go TBH
+					else if bindLink[0] is 'i'
+						@addIndividualScopedSelectorOverride bindLink[1], element
 					else
 						# Update the selector
-						@addScopedSelectorOverride bindLink[1], element.id
+						@addScopedSelectorOverride bindLink[1], element
 
 	# Install some useful functionality
 	"$initializeScoped": ()->
@@ -64,37 +66,67 @@ $wf.addRuntimeModule "scopedVariables",
 # When the scoped variable shows up in selectors, we need some more complicated methods
 $wf.addRuntimeModule "scopedVariableSelector", ["scopedVariables", "sheets", "selectors"],
 
+	# Add a dynamic rule for the given scope
 	"addScopedSelectorOverride": (selectorId, element) ->
 		selector = FASHION.selectors[selectorId]
 
-		# Evaluate the name against the ID of the element with the scoped variable override
-		if typeof element is 'string' then element = document.getElementById element
-		name = @evaluate selector.name, element
-
-		# The compiler leaves a '##' flag in, specifying where the ID should go
-		# This is always filtered out being being added to the CSS but if we catch it here
-		# we can sub in our element ID so as to only affect its children.
-		name = name.replace /\#\#/g,"#"+element.id
-
-		# Generate a CSS rule to the scope sheet
+		# Generate a rule with the scoped name
+		name = @getScopedSelectorName selector, element
 		rule = @CSSRuleForSelector selector, element, name
+
+		# We have a sheet for this stuff
 		sheet = @getStylesheet(FASHION.config.scopedCSSID).sheet
-		rules = sheet.rules || sheet.cssRules
+		sheet.rules = sheet.rules || sheet.cssRules
 
 		# Make sure a new version of this will overwrite the old one
 		if !selector.scopedRules then selector.scopedRules = {}
 		if !selector.scopedRules[element.id]?
-			selector.scopedRules[element.id] = rules.length
+			selector.scopedRules[element.id] = sheet.rules.length
 		else sheet.deleteRule selector.scopedRules[element.id]
 
 		# Add the CSS rule
 		sheet.insertRule rule, selector.scopedRules[element.id]
+	
+
+	# Add an individualized rule for each element matching the selector for the given scope
+	"addIndividualScopedSelectorOverride": (selectorId, element) ->
+		selector = FASHION.individual[selectorId]
+		if !selector then @throwError "Could not find individual selector #{selectorId}"
+
+		# Delete any existing individual rules for this element
+		if !selector.scopedRules then selector.scopedRules = {}
+		if selector.scopedRules[element.id]?
+			sheet = document.getElementById selector.scopedRules[element.id]
+			sheet.parentNode.removeChild sheet
+
+		# Get every element matching this selector
+		name = @getScopedSelectorName selector, element
+		matches = @elementsForSelector name
+		if matches.length is 0 then return
+
+		# Generate a new sheet for these rule overrides
+		sheetId = FASHION.config.scopedIndCSSPrefix + @generateRandomId()
+		sheet = @addStylesheet(sheetId,FASHION.config.scopedCSSID).sheet
+		selector.scopedRules[element.id] = sheetId
+		
+		# Go through adding rules
+		for matchElement in matches
+			rule = @CSSRuleForSelector selector, matchElement, name
+			sheet.insertRule rule, 0
+		''
+
+	# Generates the specific selector for the given element
+	"getScopedSelectorName": (selector, element) ->
+		if typeof element is 'string' then element = document.getElementById element
+		name = @evaluate selector.name, element
+		name = name.replace /\#\#/g,"#"+element.id
+		return name
 
 
-
-# When the scoped variable shows up in selectors, we need some more complicated methods
+# Special handling for when the scoped variable is set by an individualized expression
 $wf.addRuntimeModule "scopedVariableIndividual", ["scopedVariables", "DOMWatcher"],
 
+	# Add overrides for each element matching the scope selector
 	"initializeIndividualScope": (varName, scope) ->
 		variable = FASHION.variables[varName]
 		scopeVal = variable.values[scope]
@@ -105,6 +137,7 @@ $wf.addRuntimeModule "scopedVariableIndividual", ["scopedVariables", "DOMWatcher
 			@setScopedVariableOnElement element, varName, value
 
 
+	# Callback from the DOM Watcher, to add overrides when new elements get added
 	"addedIndividualScopedElements": (elements) ->
 		indMode = @runtimeModes.individual
 		for varName,vObj of FASHION.variables
