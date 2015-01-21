@@ -5,8 +5,13 @@ window.fashion.$parser.addVariable = (parseTree, name, value, flag, scopeSelecto
 	value = $wf.$parser.parseSingleValue(value, parseTree, scopeSelector, true)
 
 	# Do not allow individualized expressions on non-nested variables
-	if value.mode and value.mode > $wf.$runtimeMode.dynamic and !scopeSelector
-		return console.log "[FASHION] Top level Variable $#{name} cannot refer to @self"
+	indMode = $wf.$runtimeMode.individual
+	if value.mode and (value.mode & indMode) is indMode
+		if !scopeSelector
+			return console.log "[FASHION] Top level Variable $#{name} cannot refer to @self"
+
+		# We'll need some special functionality to deal with this at runtime
+		parseTree.addRequirements [$wf.$runtimeCapability.scopedIndividual]
 
 	# Make a variable object
 	variableObject = new Variable name, value, scopeSelector?.name

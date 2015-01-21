@@ -16,12 +16,15 @@ window.fashion.$shared.getVariable =
 		if !vObj.values[scope]
 			@throwError "$#{varName} does not have a value for scope '#{scope}'"
 
-		if elem?
+		if elem? and @getScopeOverride?
 			scopeVal = @getScopeOverride(elem, varName, scope) || vObj.values[scope]
 		else scopeVal = vObj.values[scope]
 
+		indMode = @runtimeModes?.individual || $wf?.$runtimeMode?.individual
+		if (scopeVal.mode & indMode) is indMode then return 0
+
 		if scopeVal.evaluate
-			return value: @evaluate vObj.default, variables, globals, funcs, runtime, elem
+			return value: @evaluate scopeVal, variables, globals, funcs, runtime, elem
 		else return value: scopeVal
 
 	# Top-level variables
@@ -43,6 +46,10 @@ window.fashion.$shared.evaluate =
 	# Evaluates a single value, not an array
 	evaluateSingleValue = (valueObject) =>
 
+		if !valueObject?
+			console.log "[FASHION] Could not evaluate empty value object"
+			return console.log new Error().stack
+
 		# Take care of the easy stuff
 		if typeof valueObject is "string" then return valueObject
 		if typeof valueObject is "number" then return valueObject
@@ -61,6 +68,7 @@ window.fashion.$shared.evaluate =
 				return @throwError "Expression requires element but none provided"
 			elmLookup = @elementFunction element
 			if !elmLookup? then return @throwError "Could not generate element function"
+		else elmLookup = () -> return 0
 
 		# Handle expressions
 		if valueObject.evaluate

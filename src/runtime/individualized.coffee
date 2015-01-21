@@ -1,5 +1,5 @@
 $wf.addRuntimeModule "individualized", 
-["selectors", "elements", "stylesheet-dom", "individualizedHelpers"],
+["selectors", "elements", "stylesheet-dom", "individualizedHelpers", "DOMWatcher"],
 
 	# Start up by listing each element that matches each individual selector
 	$initializeIndividualProperties: ()->
@@ -12,9 +12,6 @@ $wf.addRuntimeModule "individualized",
 
 		# Generate each selector
 		@regenerateIndividualSelector(id) for id,selector of FASHION.individual
-
-		# Use a mutation observer to watch for changes to the dom
-		@watchForDOMAddition()
 
 		# Publish function that lets fashion know to recompute the individual elements
 		window.FASHION.pageChanged = window.FASHION.domChanged = @pageChanged.bind(this)
@@ -99,26 +96,12 @@ $wf.addRuntimeModule "individualized",
 		FASHION.individualSheet.insertRule css, element.cssid
 
 
-	# Now for some fun stuff!
-	watchForDOMAddition: ()->
-		if window.FASHION_NO_OBSERVE is true then return
-		window.FSOBSERVER = new MutationObserver (mutations)->
-			if !window.FSOBSERVER? or !window.FASHION? or !FASHION.runtime.addedElements? or
-				window.FASHION_NO_OBSERVE is true then return
-
-			for mutation in mutations when mutation.addedNodes.length > 0
-				FASHION.runtime.addedElements mutation.addedNodes
-			return true
-
-		window.FSOBSERVER.observe(document.body, {childList: true, subtree: true});
-
-
 	# Re-query the page for each individual selector
 	# Optional addedElements property allows it to not look through every single object
 	pageChanged: (addedElements)->
 
 		# We have a special case for this
-		if addedElements? then return @addedElements(addedElements)
+		if addedElements? then return @addedIndividualElements(addedElements)
 
 		# Otherwise, build a list of added elements ourselves
 		addedElements = []
@@ -126,11 +109,11 @@ $wf.addRuntimeModule "individualized",
 			matchedElements = @elementsForSelector selector.elementsSelector
 			for element in matchedElements when !selector.elements[element.id]
 				addedElements.push element
-		@addedElements(addedElements)
+		@addedIndividualElements(addedElements)
 
 
 	# Elements added to the page
-	addedElements: (elements) ->
+	addedIndividualElements: (elements) ->
 		if !FASHION? then return
 		for element in elements
 

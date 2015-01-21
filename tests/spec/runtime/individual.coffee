@@ -106,7 +106,9 @@ window.fashiontests.runtime.individual = ()->
 
 			wait 1, ()->
 				# Make sure that worked
-				expect(getIndRule(1).style.backgroundColor).toBe("yellow")
+				sheet = document.getElementById($wf.runtimeConfig.individualCSSID).sheet
+				rules = sheet.rules || sheet.cssRules
+				expect(getIndRule(rules.length - 1).style.backgroundColor).toBe("yellow")
 				done()
 
 

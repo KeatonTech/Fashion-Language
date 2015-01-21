@@ -173,3 +173,62 @@ window.fashiontests.runtime.scoped = ()->
 
 		s2i1 = window.getComputedStyle document.querySelectorAll("#select2 .i2")[0]
 		expect(s2i1.color).toBe("rgb(0, 0, 0)")
+
+
+	it "should assign overrides to each element for individualized scoped variables", ()->
+
+		# Testing setup
+		id = testDiv """
+			<div class="item" color="rgb(221, 170, 0)"><h2 id="t1"></h2></div>
+			<div class="item" color="rgb(0, 153, 255)"><h2 id="t2"></h2></div>
+		"""
+
+		testFSS """
+			.item {
+				$color: @self.color;
+				h2 {
+					color: $color;
+				}
+			}
+			"""
+
+		# Check the beginning values
+		expect(getIndRule(0).style.color).toBe("rgb(221, 170, 0)")
+		expect(getIndRule(1).style.color).toBe("rgb(0, 153, 255)")
+
+		# Make sure the rules are applied to the right element
+		expect(getIndRule(0).selectorText).toBe("#t1")
+		expect(getIndRule(1).selectorText).toBe("#t2")
+
+
+	it "should process new elements with individualized scope variables", (done)->
+
+		# Testing setup
+		id = testDiv """
+			<div class="item" color="rgb(221, 170, 0)"><h2 id="t1"></h2></div>
+			<div class="item" color="rgb(221, 170, 0)"><h2 id="t2"></h2></div>
+		"""
+
+		testFSS """
+			.item {
+				$color: @self.color;
+				h2 {
+					color: $color;
+				}
+			}
+			"""
+
+		wait = (d,f) -> setTimeout f,d
+		wait 1, ()->
+
+			# Add a new element using appendChild
+			ct = document.getElementById(id)
+			ct.innerHTML += """
+				<div class="item" color="rgb(32, 64, 128)"><h2 id="a1"></h2></div>'
+				"""
+
+			wait 1, ()->
+				# Make sure that worked
+				expect(getIndRule(2).style.color).toBe("rgb(32, 64, 128)")
+				expect(getIndRule(2).selectorText).toBe("#a1")
+				done()

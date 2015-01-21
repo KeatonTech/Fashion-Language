@@ -48,6 +48,7 @@ $wf.addRuntimeModule "wait", [], wait: (d,f)-> setTimeout f,d
 #@prepros-append ./variables.coffee
 #@prepros-append ./selectors.coffee
 #@prepros-append ./individualized.coffee
+#@prepros-append ./dom-watcher.coffee
 #@prepros-append ./globals.coffee
 #@prepros-append ./elements.coffee
 #@prepros-append ./sheets.coffee

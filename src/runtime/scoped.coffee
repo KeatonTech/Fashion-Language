@@ -45,10 +45,20 @@ $wf.addRuntimeModule "scopedVariables",
 						@addScopedSelectorOverride bindLink[1], element.id
 
 	# Install some useful functionality
-	"$scopedFunctions": ()->
+	"$initializeScoped": ()->
 
 		# Install a helpful API function
 		window.FASHION.setElementVariable = @setScopedVariableOnElement.bind FASHION.runtime
+
+		# Go through each variable and find scoped ones with individualized properties
+		indMode = @runtimeModes.individual
+		for varName,vObj of FASHION.variables
+			for scope,val of vObj.values when scope isnt '0'
+
+				# If the variable's expression is individualized, we'll need to give each
+				# matching element its own override right off the bat.
+				if val? and val.evaluate? and (val.mode & indMode) is indMode
+					@initializeIndividualScope varName, scope
 
 
 # When the scoped variable shows up in selectors, we need some more complicated methods
@@ -80,3 +90,32 @@ $wf.addRuntimeModule "scopedVariableSelector", ["scopedVariables", "sheets", "se
 		# Add the CSS rule
 		sheet.insertRule rule, selector.scopedRules[element.id]
 
+
+
+# When the scoped variable shows up in selectors, we need some more complicated methods
+$wf.addRuntimeModule "scopedVariableIndividual", ["scopedVariables", "DOMWatcher"],
+
+	"initializeIndividualScope": (varName, scope) ->
+		variable = FASHION.variables[varName]
+		scopeVal = variable.values[scope]
+
+		for element in @elementsForSelector scope
+			if !element.id then element.setAttribute('id', @generateRandomId())
+			value = @evaluate scopeVal, element
+			@setScopedVariableOnElement element, varName, value
+
+
+	"addedIndividualScopedElements": (elements) ->
+		indMode = @runtimeModes.individual
+		for varName,vObj of FASHION.variables
+			for scope,val of vObj.values when scope isnt '0'
+
+				# If the variable's expression is individualized, we'll need to give each
+				# matching element its own override right off the bat.
+				if val? and val.evaluate? and (val.mode & indMode) is indMode
+					for element in elements when @matches element, scope
+
+						# Process each new element matching this variable's selector
+						if !element.id then element.setAttribute('id', @generateRandomId())
+						indValue = @evaluate val, element
+						@setScopedVariableOnElement element, varName, indValue

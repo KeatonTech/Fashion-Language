@@ -15,7 +15,7 @@ window.fashion.$actualizer.minifier.expandRuntimeData = (minData, expandTo) ->
 			evaluate: Function("v","g","f","t","e",e[5])}
 		v: (v) -> {
 			name: v[1], type: v[2], unit: v[3], mode: v[4], default: expand(v[5]),
-			dependents: v[6], values:expand(v[7])}
+			dependents: v[6], values:expandObj(v[7])}
 
 
 	# Function that'll convert an array of arrays into an array of objects
@@ -31,6 +31,16 @@ window.fashion.$actualizer.minifier.expandRuntimeData = (minData, expandTo) ->
 					r.push expanderFunctions[a[0]](a)
 				else r.push a
 			return r
+
+	# Function that'll convert an object of arrays into an object of objects
+	expandObj = (valObj) ->
+		if not (typeof valObj is 'object') then return valObj
+		r = {}
+		for k,a of valObj
+			if expanderFunctions[a[0]]
+				r[k] = expanderFunctions[a[0]](a)
+			else r[k] = a
+		return r
 
 
 	# Expand each selector

@@ -32,8 +32,9 @@
     }
     if (window.FSOBSERVER != null) {
       window.FSOBSERVER.disconnect();
-      return window.FSOBSERVER = void 0;
+      delete window.FSOBSERVER;
     }
+    return window.FASHION_NO_OBSERVE = false;
   };
 
   window.fashiontests.runtime.getRule = function(id, sheetId) {
@@ -172,7 +173,10 @@
         newDiv.setAttribute("color", "yellow");
         document.getElementById(id).appendChild(newDiv);
         return wait(1, function() {
-          expect(getIndRule(1).style.backgroundColor).toBe("yellow");
+          var rules, sheet;
+          sheet = document.getElementById($wf.runtimeConfig.individualCSSID).sheet;
+          rules = sheet.rules || sheet.cssRules;
+          expect(getIndRule(rules.length - 1).style.backgroundColor).toBe("yellow");
           return done();
         });
       });
@@ -279,7 +283,7 @@
       s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
       return expect(s2i1.color).toBe("rgb(0, 0, 0)");
     });
-    return it("should work in combined selectors", function() {
+    it("should work in combined selectors", function() {
       var element, id, s1i1, s2i1;
       id = testDiv("<article>\n	<div id=\"select1\" class=\"select\">\n		<p class=\"i1\">Selected</p>\n		<p class=\"i2\">Not Selected</p>\n	</div>\n	<div id=\"select2\" class=\"select\">\n		<p class=\"i1\">Selected</p>\n		<p class=\"i2\">Not Selected</p>\n	</div>\n</article>");
       testFSS(".select {\n	$selected: i1;\n	p {\n		color: black;\n	}\n	^article .$selected {\n		color: red;\n	}\n}");
@@ -293,6 +297,33 @@
       expect(s1i1.color).toBe("rgb(255, 0, 0)");
       s2i1 = window.getComputedStyle(document.querySelectorAll("#select2 .i2")[0]);
       return expect(s2i1.color).toBe("rgb(0, 0, 0)");
+    });
+    it("should assign overrides to each element for individualized scoped variables", function() {
+      var id;
+      id = testDiv("<div class=\"item\" color=\"rgb(221, 170, 0)\"><h2 id=\"t1\"></h2></div>\n<div class=\"item\" color=\"rgb(0, 153, 255)\"><h2 id=\"t2\"></h2></div>");
+      testFSS(".item {\n	$color: @self.color;\n	h2 {\n		color: $color;\n	}\n}");
+      expect(getIndRule(0).style.color).toBe("rgb(221, 170, 0)");
+      expect(getIndRule(1).style.color).toBe("rgb(0, 153, 255)");
+      expect(getIndRule(0).selectorText).toBe("#t1");
+      return expect(getIndRule(1).selectorText).toBe("#t2");
+    });
+    return it("should process new elements with individualized scope variables", function(done) {
+      var id, wait;
+      id = testDiv("<div class=\"item\" color=\"rgb(221, 170, 0)\"><h2 id=\"t1\"></h2></div>\n<div class=\"item\" color=\"rgb(221, 170, 0)\"><h2 id=\"t2\"></h2></div>");
+      testFSS(".item {\n	$color: @self.color;\n	h2 {\n		color: $color;\n	}\n}");
+      wait = function(d, f) {
+        return setTimeout(f, d);
+      };
+      return wait(1, function() {
+        var ct;
+        ct = document.getElementById(id);
+        ct.innerHTML += "<div class=\"item\" color=\"rgb(32, 64, 128)\"><h2 id=\"a1\"></h2></div>'";
+        return wait(1, function() {
+          expect(getIndRule(2).style.color).toBe("rgb(32, 64, 128)");
+          expect(getIndRule(2).selectorText).toBe("#a1");
+          return done();
+        });
+      });
     });
   };
 

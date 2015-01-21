@@ -40,7 +40,9 @@ window.fashiontests.runtime.cleanup = ()->
 	# Remove the DOM observer
 	if window.FSOBSERVER?
 		window.FSOBSERVER.disconnect()
-		window.FSOBSERVER = undefined
+		delete window.FSOBSERVER
+
+	window.FASHION_NO_OBSERVE = false
 
 
 # Get a CSS rule
