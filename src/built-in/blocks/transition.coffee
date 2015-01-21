@@ -56,7 +56,9 @@ window.fashion.$blocks["transition"] = new BlockModule
 
 		# Parse each inner body
 		for keyframe, body of keyframes
-			transition[keyframe] = @parse(body)
+			parsedBody = @parse(body)
+			delete parsedBody.variables
+			transition[keyframe] = parsedBody
 
 		# Add to the runtime runtimeObject
 		@runtimeObject.transitions[name] = transition

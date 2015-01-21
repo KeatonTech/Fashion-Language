@@ -30,7 +30,7 @@ THE SOFTWARE.
 var $wf, wait;
 
 $wf = window.fashion = {
-  version: "0.3.2",
+  version: "0.3.5",
   url: "http://writefashion.org",
   author: "Keaton Brandt",
   mimeType: "text/x-fashion",
@@ -4477,7 +4477,7 @@ window.fashion.$blocks = {};
 window.fashion.$blocks["transition"] = new BlockModule({
   capabilities: ["transitionBlock"],
   compile: function(args, body) {
-    var acc, count, currentKeyframe, depth, keyframe, keyframes, lastAcc, name, regex, segment, transition;
+    var acc, count, currentKeyframe, depth, keyframe, keyframes, lastAcc, name, parsedBody, regex, segment, transition;
     name = args[0];
     regex = /(\s*([0-9\-\.\s\%]+?\%|start|begin|finish)\s?\{|\$([\w\-]+)\:[\s]*(.*?)[;\n]|\}|\{)/g;
     keyframes = {};
@@ -4517,7 +4517,9 @@ window.fashion.$blocks["transition"] = new BlockModule({
     }
     for (keyframe in keyframes) {
       body = keyframes[keyframe];
-      transition[keyframe] = this.parse(body);
+      parsedBody = this.parse(body);
+      delete parsedBody.variables;
+      transition[keyframe] = parsedBody;
     }
     return this.runtimeObject.transitions[name] = transition;
   },

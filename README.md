@@ -113,21 +113,83 @@ Here's the part where we start to break some totally new ground. Fashion is more
 This same technique can be used to create things like navigation menus with absolutely no Javascript.
 
 ```scss
-$item: option-one;
 $selectionColor: red;
 
-li {
-	on-click: $item = @self.id;
-}
+.selector {
+	$item: option-one;
 
-li#$item {
-	background-color: $selectionColor;
+	li {
+		on-click: $item = @self.id;
+	}
+
+	li#$item {
+		background-color: $selectionColor;
+	}
 }
 ```
 
-NOTE: This functionality will soon be improved by adding scoped variables, so you could add multiple of these per page. Things like iFrame src properties will also allow you to actually implement the navigation part.
+The $item variable is scoped to the #selector element, so if you have multiple selectors per page, changing one will not change any of the other ones.
 
-### Transitions & Animations
+### Scoped Variables
+
+As seen in the previous example, not all variables apply to the page as a whole, some only apply to specific elements and their children. This is useful for situations where you have a number of similar objects on the page, each with slight differences to their style. Say, for example, you have a page with a bunch of articles on it, like so.
+
+```html
+<body>
+	<article color="#d00">
+		<h2>Red Header</h2>
+		<p>Body</p>
+	</article>
+	<article color="#00d">
+		<h2>Blue Header</h2>
+		<p>Body</p>
+	</article>
+</body>
+```
+
+Here we want the header inside each of these articles to be the color specified by their color attribute, and the body to be a slightly darkened version of that color. In CSS, we'd have to make a ".redColor" class and a ".blueColor" class, and just hope that there's never a green article. Not so in Fashion, we can just defined a variable, scoped to the article, that takes its color attribute.
+
+```scss
+article{
+	$color: @self.color;
+
+	h2 {
+		color: $color;
+	}
+
+	p {
+		color: darken($color, 0.25);
+	}
+}
+```
+
+Scoped variables can also be changed for a particular element in Javascript. Say you have a form and you'd like to highlight a specific field red when there is a validation error.
+
+```scss
+form td.field {
+	$color: black;
+	input, label {color: $color}
+	input {
+		background-color: if $color == 'black' then white else changeAlpha($color, 0.1)
+	}
+}
+```
+
+```js
+function validateOpinionField(fieldElement, value) {
+	if(value !== "Fashion is Awesome"){
+		FASHION.setElementVariable(fieldElement, color, "red");
+		console.log("Please re-evaluate your opinion");
+	} else {
+		FASHION.setElementVariable(fieldElement, color, "black");
+	}
+}
+```
+
+**NOTE:** In the future, there may be even simpler syntax for this by adding functionality to the element's existing *style* property.
+
+
+### CSS3 Transitions
 
 The web is an increasingly animated place. Far beyond the geocities gifs of yesteryear, animations on the modern web can visually guide users around a website and provide context for interactions. CSS3 introduced syntax for GPU-accelerated transitions, which tend to work pretty well. The only downside is that the syntax is cumbersome and needs to be browser-prefixed, which might lead some developers to forego transitions in places where they would be helpful. Fashion provides some new syntactic sugar to combat this.
 
@@ -158,6 +220,8 @@ $contentAnimateDuration: 300ms;
 ```
 
 The third property for transitions is the delay, so in this case the box's content will wait until the box has animated in to animate in itself. Also notice that every property of the transition can be bound to a variable, so adding something like an animation speed setting for your users would be trivial.
+
+### Transition Blocks
 
 But wait, there's more! CSS3 provides the @keyframes block to define more complex animations. Unfortunately, this block can only apply to individual elements, so it is not very useful when orchestrating a whole big animated event on your site (a transition between pages, for example). Creating this kind of beautiful symphony of animations right now requires some really ugly Javascript code with things like setTimeout scattered around. Fashion solves this with the new @transition block.
 
@@ -244,8 +308,6 @@ article {
 	}
 }
 ```
-
-**NOTE:** Scoped variables are not yet fully supported through all of Fashion, so this particular example will not work until the next release.
 
 The '^' character semantically means "Anything that matches this selector and has a parent that matches the parent selector, or itself matches the parent selector". This allows you to nest multipart selectors (something like "#content .header h2") where not all of the parts have to be children of the parent selector. In the example above, #hot does not have to be a child of an article tag.
 

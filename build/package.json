@@ -1,6 +1,6 @@
 {
   "name": "fashion",
-  "version": "0.3.0",
+  "version": "0.3.5",
   "description": "A new CSS for the web of 2014 and beyond.",
   "author": "Keaton Brandt <keaton.brandt@gmail.com>",
   "main": "./fashion.compiler.js",
