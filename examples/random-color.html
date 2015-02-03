@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Fashion Test</title>
+	<script src="../../build/fashion.live.js"></script>
+	<style type="text/x-fashion">
+
+	$padding: min(15px, @width/50);
+	$boxSize: 200px;
+
+	$changeRate: 1000ms;
+
+	body, html {
+		width: 100%;
+		padding: 0;
+		margin: 0;
+	}
+
+
+	$containerWidth: min($boxSize * 3, @width) + $padding * 6
+	article {
+		height: $boxSize;
+		position: absolute;
+		top: (@height / 2) - $boxSize / 2;
+		width: $containerWidth;
+		left: (@width / 2) - $containerWidth / 2;
+		margin: 0px;
+		padding: 0px;
+		border: 0px;
+	}
+
+	div {
+		display: inline-block;
+		width: min($boxSize, @width / 3);
+		height: 100%;
+		margin: 0px $padding;
+		background-color: black;
+		border: 1px solid #666;
+		border-radius: 3px;
+
+		&.cbright {
+			background-color: randomBrightColor($changeRate);
+		}
+
+		&.crandom {
+			background-color: randomColor($changeRate);
+		}
+
+		&.cdark {
+			background-color: randomDarkColor($changeRate);
+		}
+	}
+
+	</style>
+</head>
+<body>
+	<article>
+		<div class="cbright"></div><div class="crandom"></div><div class="cdark"></div>
+	<article>
+</body>
+</html>

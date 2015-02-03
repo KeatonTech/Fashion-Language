@@ -32,7 +32,7 @@ $wf.addRuntimeModule "scopedVariables",
 			if @matches element, scope
 
 				# Normal dependencies
-				@updateDependencies varName, scope
+				@regenerateVariableDependencies varName, scope
 
 				# If any selectors depend on this scoped value they need special treatment
 				vObj = FASHION.variables[varName]
@@ -152,3 +152,8 @@ $wf.addRuntimeModule "scopedVariableIndividual", ["scopedVariables", "DOMWatcher
 						if !element.id then element.setAttribute('id', @generateRandomId())
 						indValue = @evaluate val, element
 						@setScopedVariableOnElement element, varName, indValue
+
+
+	# This function needs to be registered with the DOM watcher
+	"$registerScopedVariableIndividual": ()->
+		@registerDomWatcher "addNodes", @addedIndividualScopedElements

@@ -37,6 +37,7 @@
     if (tdiv = document.getElementById("FSTESTBLOCK")) {
       document.body.removeChild(tdiv);
     }
+    window.FSDOMWATCHERS = void 0;
     if (window.FSOBSERVER != null) {
       window.FSOBSERVER.disconnect();
       delete window.FSOBSERVER;
@@ -351,10 +352,51 @@
 
 }).call(this);
 (function() {
+  window.fashiontests.runtime.functionWatchers = function() {
+    var $wf, getRule, testFSS;
+    $wf = window.fashion;
+    beforeEach(function() {
+      window.fsStyleHeader = $wf.styleHeader;
+      $wf.styleHeader = "";
+      window.fsStyleHeaderRules = $wf.styleHeaderRules;
+      return $wf.styleHeaderRules = 0;
+    });
+    afterEach(function() {
+      $wf.styleHeader = window.fsStyleHeader;
+      return $wf.styleHeaderRules = window.fsStyleHeaderRules;
+    });
+    getRule = window.fashiontests.runtime.getRule;
+    testFSS = function(fss) {
+      var css, js, _ref;
+      _ref = $wf.$actualizer.actualize($wf.$processor.process($wf.$parser.parse(fss))), css = _ref.css, js = _ref.js;
+      return window.fashiontests.runtime.simulateRuntime(css, js);
+    };
+    return it("should watch function values and update expressions accordingly", function() {
+      window.FSTCOLOR = "blue";
+      window.fashion.addFunction("fstColor", {
+        output: $wf.$type.Color,
+        watch: function(c) {
+          return window.addEventListener("FSTCHANGE", c);
+        },
+        evaluate: function() {
+          return window.FSTCOLOR;
+        }
+      });
+      testFSS(".item {\n	background-color: fstColor();\n}");
+      expect(getRule(0).style.cssText).toBe("background-color: blue;");
+      window.FSTCOLOR = "yellow";
+      window.dispatchEvent(new Event("FSTCHANGE"));
+      return expect(getRule(0).style.cssText).toBe("background-color: yellow;");
+    });
+  };
+
+}).call(this);
+(function() {
   describe("Runtime", function() {
     describe("Variables", window.fashiontests.runtime.variables);
     describe("Scoped Variables", window.fashiontests.runtime.scoped);
-    return describe("Individual Properties", window.fashiontests.runtime.individual);
+    describe("Individual Properties", window.fashiontests.runtime.individual);
+    return describe("Function Watchers", window.fashiontests.runtime.functionWatchers);
   });
 
 }).call(this);

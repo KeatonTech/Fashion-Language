@@ -39,7 +39,7 @@ window.fashion.$shared.getVariable =
 
 # Turn a value object into an actual string value for the sheet
 window.fashion.$shared.evaluate =
-(valueObject, variables, globals, funcs, runtime, element, cssMode = true) ->
+(valueObject, variables, globals, funcs, runtime, element, cssMode = true, extraArg) ->
 	isImportant = false
 	iMode = @runtimeModes?.individual || $wf?.$runtimeMode?.individual
 
@@ -56,7 +56,7 @@ window.fashion.$shared.evaluate =
 
 		# Create a variable lookup function
 		varObjects = []
-		varLookup = (varName, scope, element) => 
+		getVar = (varName, scope, element) => 
 			vObj = @getVariable variables, globals, funcs, runtime, varName, scope, element
 			varObjects.push {name: varName, object: vObj, value: vObj.value, scope: scope}
 			return vObj
@@ -66,14 +66,14 @@ window.fashion.$shared.evaluate =
 		if ((valueObject.mode & iMode) is iMode or element?) and @elementFunction?
 			if !element?
 				return @throwError "Expression requires element but none provided"
-			elmLookup = @elementFunction element
-			if !elmLookup? then return @throwError "Could not generate element function"
-		else elmLookup = () -> return 0
+			getElm = @elementFunction element
+			if !getElm? then return @throwError "Could not generate element function"
+		else getElm = () -> return 0
 
 		# Handle expressions
 		if valueObject.evaluate
 			try
-				val = valueObject.evaluate varLookup, globals, funcs, runtime, elmLookup
+				val = valueObject.evaluate getVar, globals, funcs, runtime, getElm, extraArg
 			catch e
 				console.log "[FASHION] Could not evaluate: #{valueObject.evaluate}"
 				console.log e

@@ -8,6 +8,9 @@ window.fashion.$actualizer.addBindings = (runtimeData, jsSels, indSels) ->
 	# Variables can also depend on variables
 	$wf.$actualizer.bindVariables runtimeData
 
+	# Function watchers depend on the arguments to that function
+	$wf.$actualizer.bindFunctionWatchers runtimeData
+
 
 # Go through each selector and bind any expressions
 window.fashion.$actualizer.bindSelectors = (runtimeData, selectors, sheet) ->
@@ -61,6 +64,19 @@ window.fashion.$actualizer.bindVariables = (runtimeData) ->
 				$wf.$actualizer.bindExpression runtimeData, scopeValue, bindLink
 
 
+# Each watched function will need its watcher updated whenever an argument changes
+window.fashion.$actualizer.bindFunctionWatchers = (runtimeData) ->
+	for fName, fObj of runtimeData.modules.functions when fObj.dependents?.length > 0
+
+		# Variables can be bound to different things in different scopes
+		for i, watcherObject of fObj.dependents
+
+			# If the variable's value is an expression, it can depend on other variables
+			if watcherObject[0] instanceof Expression
+				bindLink = ["w", fName, i]
+				$wf.$actualizer.bindExpression runtimeData, watcherObject[0], bindLink
+
+
 # Add bindings from an expression
 window.fashion.$actualizer.bindExpression = (runtimeData, expression, bindLink) ->
 
@@ -82,6 +98,16 @@ window.fashion.$actualizer.bindExpression = (runtimeData, expression, bindLink) 
 			if !gObj.dependents? then gObj.dependents = []
 			if bindLink in gObj.dependents then continue
 			gObj.dependents.push bindLink
+
+	# Add function bindings
+	for funcWatcher in expression.bindings.functions
+		funcName = funcWatcher[0]
+		fObj = runtimeData.modules.functions[funcName]
+		if !fObj
+			console.log "[FASHION] Could not bind to nonexistent function: '#{funcName}'"
+		else
+			if !fObj.dependents? then fObj.dependents = []
+			fObj.dependents.push [funcWatcher[1], bindLink]
 
 
 # Convert CSS names into JS names

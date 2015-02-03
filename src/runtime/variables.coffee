@@ -39,28 +39,14 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 		# Instead, just trust that the user knows what they're doing *gasp*
 		vObj.values[scope] = value
 		if !scope or scope is 0 then vObj.default = value
-		@updateDependencies varName, scope
+		@regenerateVariableDependencies varName, scope
 
 
 	# Set a top-level variable
-	updateDependencies: (varName, scope = 0) ->
+	regenerateVariableDependencies: (varName, scope = 0) ->
 		vObj = FASHION.variables[varName]
 		if !vObj.dependents[scope]? then return
-
-		# Update all of the dependents for the top level scope
-		for bindLink in vObj.dependents[scope]
-
-			# If the dependency is a variable, go through and update all its stuff
-			if bindLink[0] is "v"
-				@updateDependencies bindLink[1]
-
-			# Bound to a specific property that we can just update
-			else if bindLink.length is 3
-				@setPropertyOnSelector bindLink[0], bindLink[1], bindLink[2]
-
-			# Bound to an entire selector that will need to be regenerated
-			else
-				@regenerateSelector bindLink[0], bindLink[1]
+		@regenerateBoundSelectors vObj.dependents[scope]
 
 
 	# Register the module that gets and sets dynamic variables

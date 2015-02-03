@@ -1,16 +1,32 @@
+# This is basically the core of the Fashion runtime, it handles modifying CSS stylesheets
 $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
-	# Include the runtime modes
-	runtimeModes: window.fashion.$runtimeMode
+	# Common entry point, takes a list of binding objects and updates all associated CSS
+	regenerateBoundSelectors: (bindings) ->
+		@regenerateBoundSelector(bindLink) for bindLink in bindings
 
-	# Convert CSS names into JS names
-	makeCamelCase: (propertyObject) ->
-		if !propertyObject? or !propertyObject.name? then return ""
-		if !propertyObject.jsName?
-			n = propertyObject.name
-			cc = n.replace /-([a-z])/gi, (full, letter) -> letter.toUpperCase();
-			propertyObject.jsName = cc
-		return propertyObject.jsName
+
+	# Same thing but handles only a single bind link
+	regenerateBoundSelector: (bindLink) ->
+
+		# If the dependency is a variable, go through and update all its stuff
+		if bindLink[0] is "v" and @regenerateVariableDependencies?
+			@regenerateVariableDependencies bindLink[1]
+
+		# If the dependency is a function watcher, recreate it
+		else if bindLink[0] is "w" and @watchFunctionBinding?
+			@watchFunctionBinding FASHION.modules.functions[bindLink[1]], bindLink[2]
+
+		# Bound to a specific property that we can just update
+		else if bindLink.length is 3
+			@setPropertyOnSelector bindLink[0], bindLink[1], bindLink[2]
+
+		# Bound to an entire selector that will need to be regenerated
+		else
+			@regenerateSelector bindLink[0], bindLink[1]
+
+
+	# ==== 2 Different Methods of Stylesheet Modification ==== #
 	
 
 	# Set a property on a CSS selector block
@@ -40,7 +56,7 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 			else
 				# Generate the CSS property and set it as a style on our rule
 				rule.style[propertyName] = @CSSRuleForProperty pObj, undefined, true
-
+				
 
 	# Update the CSS of a selector block
 	regenerateSelector: (sheet, selectorId) ->
@@ -59,6 +75,9 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
 		# Add the regenerated selector
 		stylesheet.insertRule @CSSRuleForSelector(selector), selector.rule
+
+
+	# ==== Templates for CSS Generation ==== #
 
 
 	# CSS Templates
@@ -97,3 +116,19 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
 		# Return the templated selector
 		return @CSSSelectorTemplate selectorName, cssProperties
+
+
+	# ==== Helper Functions ==== #
+
+
+	# Include the runtime modes
+	runtimeModes: window.fashion.$runtimeMode
+
+	# Convert CSS names into JS names
+	makeCamelCase: (propertyObject) ->
+		if !propertyObject? or !propertyObject.name? then return ""
+		if !propertyObject.jsName?
+			n = propertyObject.name
+			cc = n.replace /-([a-z])/gi, (full, letter) -> letter.toUpperCase();
+			propertyObject.jsName = cc
+		return propertyObject.jsName

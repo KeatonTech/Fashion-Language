@@ -1,11 +1,10 @@
 ###
-6-bit Mode -----------------------------------------------------------------------
-	000001 (Bit 0): Can change, needs to be included in the JS
-	000010 (Bit 1): Can rely on non-top-level variables
-	000100 (Bit 2): Can rely on relative styles & attributes
-	001000 (Bit 3): Needs to be continuously recomputed
-	010000 (Bit 4): Can rely on globals, cannot be pre-computed
-	100000 (Bit 5): Triggered property, does not need recomputing
+5-bit Mode -----------------------------------------------------------------------
+	00001 (Bit 0): Can change, needs to be included in the JS
+	00010 (Bit 1): Can rely on non-top-level variables
+	00100 (Bit 2): Can rely on relative styles & attributes
+	01000 (Bit 3): Can rely on globals, cannot be pre-computed
+	10000 (Bit 4): Triggered property, does not need recomputing
 ----------------------------------------------------------------------------------
 ###
 
@@ -27,34 +26,29 @@ window.fashion.$runtimeMode =
 	# because scoped properties cannot access relative attributes like @self.
 	scoped: 3			# 000011
 
-	# Global dynamic properties are dynamic properties whose values cannot be
-	# pre-determined at compile time due to a reliance on the state of the page.
-	# For example, @width, @pixelratio, @(bind), max(bind), etc
-	globalDynamic: 17	# 010001
-
 	# Individual properties rely on attributes of the element they are applied to.
 	# As such, they must be recomputed for each element that matches the selector.
 	# Like dynamic properties, they will only change when a dependency changes.
-	individual: 7		# 000111
+	individual: 7		# 00111
+
+	# Global dynamic properties are dynamic properties whose values cannot be
+	# pre-determined at compile time due to a reliance on the state of the page.
+	# For example, @width, @pixelratio, @(bind), max(bind), etc
+	globalDynamic: 9	# 01001
 
 	# Live properties are continuously recomputed on an interval, to allow for
 	# evolving data to be represented in CSS. They are essentially just dynamic
 	# properties without the optimizations that keep them from being recomputed.
-	live: 9				# 001001
-
-	# Live properties are continuously recomputed on an interval, to allow for
-	# evolving data to be represented in CSS. They are essentially just dynamic
-	# properties without the optimizations that keep them from being recomputed.
-	triggered: 32		# 100000
+	triggered: 16		# 10000
 
 	# These can be combined, for example a property that is continuously
 	# recomputed based on a non-top-level variable may be 'live | scoped'.
 	# Using boolean algebra that would result in 11, or 1011
 	
 	# Or, for the math-challenged, here's a function to make one for you.
-	generate: (dynamic, individualized, live, scoped, globals) ->
-		(if dynamic then 1 else 0)|
-		(if individualized then 7 else 0)|
-		(if live then 9 else 0)|
-		(if scoped then 3 else 0)|
-		(if globals then 17 else 0)
+	generate: (dynamic, individualized, scoped, globals, triggered) ->
+		(if dynamic 		then 1  else 0)|
+		(if scoped 			then 3  else 0)|
+		(if individualized 	then 7  else 0)|
+		(if globals 		then 9  else 0)|
+		(if triggered 		then 16 else 0)

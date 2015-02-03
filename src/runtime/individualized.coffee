@@ -4,6 +4,9 @@ $wf.addRuntimeModule "individualized",
 	# Start up by listing each element that matches each individual selector
 	$initializeIndividualProperties: ()->
 
+		# When a new element is added, we need to check if it has individualized props
+		@registerDomWatcher "addNodes", @addedIndividualElements
+
 		# Create a new stylesheet just for individual properties
 		FASHION.individualSheet = @addStylesheet(FASHION.config.individualCSSID).sheet
 
@@ -115,7 +118,7 @@ $wf.addRuntimeModule "individualized",
 	# Elements added to the page
 	addedIndividualElements: (elements) ->
 		if !FASHION? then return
-		for element in elements
+		for element in elements when element?
 
 			# Go through each individual selector that matches the element
 			for id,indObj of FASHION.individual when !indObj.elements[element.id]

@@ -34,15 +34,15 @@ class ReturnValueModule extends Module
 			# Any arguments passed to the module will be passed to this.
 			@get = args.get || args.evaluate # ()-> return window.innerWidth
 
+			# Function that runs a callback when the value changes
+			@watch = args.watch
+
 			# These can be dynamically recomputed based on a runtime mode
 			super args
 
 # Adds a new global variable to Fashion.
 class GlobalModule extends ReturnValueModule
 	constructor: (args) -> 
-
-		# Function that runs a callback when the value changes
-		@watch = args.watch
 
 		# Default to global dynamic mode
 		if !args.mode then args.mode = $wf.$runtimeMode.globalDynamic
@@ -59,6 +59,13 @@ class FunctionModule extends ReturnValueModule
 		if args.unitFrom isnt undefined
 			@unitFrom = args.unitFrom
 			delete args.unit
+
+		# Default to static for most functions, or dynamic for ones with watchers
+		if !args.mode
+			if args.watch?
+				args.mode = $wf.$runtimeMode.dynamic
+			else
+				args.mode = $wf.$runtimeMode.static
 
 		# Functions can be dynamically recomputed based on a runtime mode
 		super args

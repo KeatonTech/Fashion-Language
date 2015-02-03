@@ -43,6 +43,7 @@ window.fashiontests.runtime.cleanup = ()->
 		document.body.removeChild tdiv
 
 	# Remove the DOM observer
+	window.FSDOMWATCHERS = undefined
 	if window.FSOBSERVER?
 		window.FSOBSERVER.disconnect()
 		delete window.FSOBSERVER

@@ -371,6 +371,9 @@ window.fashion.$parser.expressionExpander =
 		# Add the function dependency to the parse tree
 		parseTree.addFunctionDependency name, fObj
 
+		# Add the function watcher to the parse tree, if necessary
+		if fObj.watch? then bindings.addFunctionBinding name, scripts, bindings.copy(), mode
+
 		# Return a neat little package
 		script = "f['#{name}'].get.call(#{scripts.join(',')})"
 		return new Expression script, fObj.type, inputUnit || unit, bindings, mode

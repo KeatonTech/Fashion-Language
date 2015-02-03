@@ -7,6 +7,7 @@ window.fashion.$runtimeCapability =
 	individualProps: "individualized"
 	liveProps: "liveProperties"
 	globals: "globals"
+	watchedFunctions: "functionWatchers"
 	
 # Determines what functionality needs to be included in the generated JS
 window.fashion.$actualizer.autoAddRequirements = (runtimeData, parseTree) ->
@@ -32,6 +33,11 @@ window.fashion.$actualizer.autoAddRequirements = (runtimeData, parseTree) ->
 	# Check for globals
 	if JSON.stringify(runtimeData.modules.globals) isnt "{}"
 		add [$wf.$runtimeCapability.globals]
+
+	# Check for functions that need to be watched
+	for fName,fObj of runtimeData.modules.functions when fObj.watch?
+		add [$wf.$runtimeCapability.watchedFunctions]
+		break
 
 
 # Test the runtime data to see if it has a selector block with the given mode
@@ -68,4 +74,8 @@ window.fashion.$actualizer.addRuntimeFunctions = (runtimeData, parseTree) ->
 				functionName = "window.#{$wf.runtimeObject}.runtime.#{key}.bind(FASHION.runtime)"
 				parseTree.addScript "FSREADY(#{functionName});"
 
+	# Remove functions with ignored prefixes
+	for name, f of runtimeData.runtime
+		for ignoredPrefix in $wf.ignoreRuntimePrefixes
+			if name.indexOf ignoredPrefix is 0 then delete runtimeData.runtime[name]
 

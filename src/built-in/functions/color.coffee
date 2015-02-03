@@ -33,17 +33,59 @@ $wf.$extend window.fashion.$functions,
 
 	"hsb": new FunctionModule
 		output: $wf.$type.Color,
-		capabilities: ["colors"],
+		requires: ["colors"]
 		evaluate: (h,s,b) -> 
 			{r,g,b} = @hsbTOrgb h.value, s.value, b.value
 			"rgb(#{parseInt r},#{parseInt g},#{parseInt b})"
 
 	"hsba": new FunctionModule
 		output: $wf.$type.Color,
-		capabilities: ["colors"],
+		requires: ["colors"]
 		evaluate: (h,s,b,a) -> 
 			{r,g,b} = @hsbTOrgb h.value, s.value, b.value
 			"rgba(#{parseInt r},#{parseInt g},#{parseInt b},#{a.value})"
+
+
+	# COLOR GENERATION FUNCTIONS
+
+	"randomColor": new FunctionModule
+		output: $wf.$type.Color
+		watch: (rate, c) -> 
+			if !rate.value then return 
+			i = setInterval c, rate.value
+			return ()-> clearInterval(i)
+
+		evaluate: (rate) ->
+			[r,g,b] = [Math.random()*255, Math.random()*255, Math.random()*255]
+			"rgb(#{parseInt r},#{parseInt g},#{parseInt b})"
+
+
+	"randomBrightColor": new FunctionModule
+		output: $wf.$type.Color
+		requires: ["colors"]
+		watch: (rate, c) -> 
+			if !rate.value then return 
+			i = setInterval c, rate.value
+			return ()-> clearInterval(i)
+
+		evaluate: (rate) ->
+			randomHue = Math.random() * 360
+			{r,g,b} = @hsbTOrgb randomHue, 80, 80
+			"rgb(#{parseInt r},#{parseInt g},#{parseInt b})"
+
+
+	"randomDarkColor": new FunctionModule
+		output: $wf.$type.Color
+		requires: ["colors"]
+		watch: (rate, c) -> 
+			if !rate.value then return 
+			i = setInterval c, rate.value
+			return ()-> clearInterval(i)
+			
+		evaluate: (rate) ->
+			randomHue = Math.random() * 360
+			{r,g,b} = @hsbTOrgb randomHue, 80, 30
+			"rgb(#{parseInt r},#{parseInt g},#{parseInt b})"
 
 
 	# COLOR MANIPULATION FUNCTIONS
@@ -51,7 +93,7 @@ $wf.$extend window.fashion.$functions,
 	# Give a color an alpha value
 	"changeAlpha": new FunctionModule
 		output: window.fashion.$type.Color,
-		capabilities: ["colors"]
+		requires: ["colors"]
 		evaluate: (color, newAlpha)->
 			c = @cssTOjs color.value, this
 			"rgba(#{c.r},#{c.g},#{c.b},#{newAlpha.value})"
@@ -59,7 +101,7 @@ $wf.$extend window.fashion.$functions,
 	# Invert a color
 	"invert": new FunctionModule
 		output: window.fashion.$type.Color,
-		capabilities: ["colors"]
+		requires: ["colors"]
 		evaluate: (color)->
 
 			# Convert the color input into something usable
@@ -76,7 +118,7 @@ $wf.$extend window.fashion.$functions,
 	# Brighten a color linearly
 	"brighten": new FunctionModule
 		output: window.fashion.$type.Color,
-		capabilities: ["colors"]
+		requires: ["colors"]
 		evaluate: (color, brightenPercent)->
 			percent = brightenPercent.value
 			adj = (if percent > 1 then percent / 100 else percent)
@@ -95,7 +137,7 @@ $wf.$extend window.fashion.$functions,
 	# Darken a color linearly
 	"darken": new FunctionModule
 		output: window.fashion.$type.Color,
-		capabilities: ["colors"]
+		requires: ["colors"]
 		evaluate: (color, darkenPercent)->
 			percent = darkenPercent.value
 			adj = 1 - (if percent > 1 then percent / 100 else percent)

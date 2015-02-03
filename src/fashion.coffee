@@ -43,8 +43,8 @@ $wf = window.fashion = {
 	minifiedObject: "FSMIN",
 	runtimeObject: "FASHION",
 
-	# Generated JS runtime
-	runtimeModules: []
+	# Functions whose names begin with things like "LEGACY_" can sometimes be culled
+	ignoreRuntimePrefixes: []
 
 	# When page is ready to go
 	readyEvent: "fashion-ready"

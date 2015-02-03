@@ -40,7 +40,7 @@ $wf = window.fashion = {
   cssId: "FASHION-stylesheet",
   minifiedObject: "FSMIN",
   runtimeObject: "FASHION",
-  runtimeModules: [],
+  ignoreRuntimePrefixes: [],
   readyEvent: "fashion-ready"
 };
 
@@ -713,7 +713,7 @@ Expression = (function() {
   Expression.prototype.generate = function() {
     var e;
     try {
-      return this.evaluate = Function("v", "g", "f", "t", "e", this.script);
+      return this.evaluate = Function("v", "g", "f", "t", "e", "x", this.script);
     } catch (_error) {
       e = _error;
       console.log("[FASHION] Could not compile script '" + this.script + "'");
@@ -729,7 +729,7 @@ ExpressionBindings = (function() {
   function ExpressionBindings(startType, startVal) {
     this.variables = [];
     this.globals = [];
-    this.dom = [];
+    this.functions = [];
     switch (startType) {
       case "variable":
         this.addVariableBinding(startVal);
@@ -737,8 +737,8 @@ ExpressionBindings = (function() {
       case "global":
         this.addGlobalBinding(startVal);
         break;
-      case "dom":
-        console.log("[FASHION] DOM Bindings not yet supported");
+      case "function":
+        this.addFunctionBinding(startVal);
     }
   }
 
@@ -752,6 +752,14 @@ ExpressionBindings = (function() {
     if (!(__indexOf.call(this.globals, globalName) >= 0)) {
       return this.globals.push(globalName);
     }
+  };
+
+  ExpressionBindings.prototype.addFunctionBinding = function(functionName, functionArgs, bindings, mode) {
+    var e, script;
+    script = "f['" + functionName + "'].watch.call(" + (functionArgs.join(',')) + ",x)";
+    e = new Expression(script, $wf.$type.None, 0, bindings, mode);
+    e.generate();
+    return this.functions.push([functionName, e]);
   };
 
   ExpressionBindings.prototype.addDOMBinding = function(selectorId, selector, boundSelector, boundProperty) {
@@ -778,13 +786,20 @@ ExpressionBindings = (function() {
       v = _ref1[_j];
       ext(this.globals, v);
     }
-    _ref2 = bindingObject.dom;
+    _ref2 = bindingObject.functions;
     _results = [];
     for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
       v = _ref2[_k];
-      _results.push(ext(this.dom, v));
+      _results.push(ext(this.functions, v));
     }
     return _results;
+  };
+
+  ExpressionBindings.prototype.copy = function() {
+    var nb;
+    nb = new ExpressionBindings;
+    nb.extend(this);
+    return nb;
   };
 
   return ExpressionBindings;
@@ -825,6 +840,7 @@ ReturnValueModule = (function(_super) {
       this.type = args.type || args.output || args.outputType || $wf.$type.String;
       this.unit = args.unit || '';
       this.get = args.get || args.evaluate;
+      this.watch = args.watch;
       ReturnValueModule.__super__.constructor.call(this, args);
     }
   }
@@ -837,7 +853,6 @@ GlobalModule = (function(_super) {
   __extends(GlobalModule, _super);
 
   function GlobalModule(args) {
-    this.watch = args.watch;
     if (!args.mode) {
       args.mode = $wf.$runtimeMode.globalDynamic;
     }
@@ -855,6 +870,13 @@ FunctionModule = (function(_super) {
     if (args.unitFrom !== void 0) {
       this.unitFrom = args.unitFrom;
       delete args.unit;
+    }
+    if (!args.mode) {
+      if (args.watch != null) {
+        args.mode = $wf.$runtimeMode.dynamic;
+      } else {
+        args.mode = $wf.$runtimeMode["static"];
+      }
     }
     FunctionModule.__super__.constructor.call(this, args);
   }
@@ -958,25 +980,23 @@ window.fashion.$typeConstants = {
 };
 
 /*
-6-bit Mode -----------------------------------------------------------------------
-	000001 (Bit 0): Can change, needs to be included in the JS
-	000010 (Bit 1): Can rely on non-top-level variables
-	000100 (Bit 2): Can rely on relative styles & attributes
-	001000 (Bit 3): Needs to be continuously recomputed
-	010000 (Bit 4): Can rely on globals, cannot be pre-computed
-	100000 (Bit 5): Triggered property, does not need recomputing
+5-bit Mode -----------------------------------------------------------------------
+	00001 (Bit 0): Can change, needs to be included in the JS
+	00010 (Bit 1): Can rely on non-top-level variables
+	00100 (Bit 2): Can rely on relative styles & attributes
+	01000 (Bit 3): Can rely on globals, cannot be pre-computed
+	10000 (Bit 4): Triggered property, does not need recomputing
 ----------------------------------------------------------------------------------
  */
 window.fashion.$runtimeMode = {
   "static": 0,
   dynamic: 1,
   scoped: 3,
-  globalDynamic: 17,
   individual: 7,
-  live: 9,
-  triggered: 32,
-  generate: function(dynamic, individualized, live, scoped, globals) {
-    return (dynamic ? 1 : 0) | (individualized ? 7 : 0) | (live ? 9 : 0) | (scoped ? 3 : 0) | (globals ? 17 : 0);
+  globalDynamic: 9,
+  triggered: 16,
+  generate: function(dynamic, individualized, scoped, globals, triggered) {
+    return (dynamic ? 1 : 0) | (scoped ? 3 : 0) | (individualized ? 7 : 0) | (globals ? 9 : 0) | (triggered ? 16 : 0);
   }
 };
 var path;
@@ -1789,6 +1809,9 @@ window.fashion.$parser.expressionExpander = {
       unit = "";
     }
     parseTree.addFunctionDependency(name, fObj);
+    if (fObj.watch != null) {
+      bindings.addFunctionBinding(name, scripts, bindings.copy(), mode);
+    }
     script = "f['" + name + "'].get.call(" + (scripts.join(',')) + ")";
     return new Expression(script, fObj.type, inputUnit || unit, bindings, mode);
   },
@@ -2306,7 +2329,7 @@ window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime
   }
 };
 
-window.fashion.$shared.evaluate = function(valueObject, variables, globals, funcs, runtime, element, cssMode) {
+window.fashion.$shared.evaluate = function(valueObject, variables, globals, funcs, runtime, element, cssMode, extraArg) {
   var addSuffix, evaluateSingleValue, iMode, isImportant, string, value, vi, vo, _ref, _ref1;
   if (cssMode == null) {
     cssMode = true;
@@ -2315,7 +2338,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
   iMode = ((_ref = this.runtimeModes) != null ? _ref.individual : void 0) || (typeof $wf !== "undefined" && $wf !== null ? (_ref1 = $wf.$runtimeMode) != null ? _ref1.individual : void 0 : void 0);
   evaluateSingleValue = (function(_this) {
     return function(valueObject) {
-      var e, elmLookup, v, val, varLookup, varObjects, _i, _len;
+      var e, getElm, getVar, v, val, varObjects, _i, _len;
       if (valueObject == null) {
         console.log("[FASHION] Could not evaluate empty value object");
         return console.log(new Error().stack);
@@ -2327,7 +2350,7 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         return valueObject;
       }
       varObjects = [];
-      varLookup = function(varName, scope, element) {
+      getVar = function(varName, scope, element) {
         var vObj;
         vObj = _this.getVariable(variables, globals, funcs, runtime, varName, scope, element);
         varObjects.push({
@@ -2342,18 +2365,18 @@ window.fashion.$shared.evaluate = function(valueObject, variables, globals, func
         if (element == null) {
           return _this.throwError("Expression requires element but none provided");
         }
-        elmLookup = _this.elementFunction(element);
-        if (elmLookup == null) {
+        getElm = _this.elementFunction(element);
+        if (getElm == null) {
           return _this.throwError("Could not generate element function");
         }
       } else {
-        elmLookup = function() {
+        getElm = function() {
           return 0;
         };
       }
       if (valueObject.evaluate) {
         try {
-          val = valueObject.evaluate(varLookup, globals, funcs, runtime, elmLookup);
+          val = valueObject.evaluate(getVar, globals, funcs, runtime, getElm, extraArg);
         } catch (_error) {
           e = _error;
           console.log("[FASHION] Could not evaluate: " + valueObject.evaluate);
@@ -2899,7 +2922,8 @@ var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; 
 window.fashion.$actualizer.addBindings = function(runtimeData, jsSels, indSels) {
   $wf.$actualizer.bindSelectors(runtimeData, jsSels, "s");
   $wf.$actualizer.bindSelectors(runtimeData, indSels, "i");
-  return $wf.$actualizer.bindVariables(runtimeData);
+  $wf.$actualizer.bindVariables(runtimeData);
+  return $wf.$actualizer.bindFunctionWatchers(runtimeData);
 };
 
 window.fashion.$actualizer.bindSelectors = function(runtimeData, selectors, sheet) {
@@ -2989,8 +3013,35 @@ window.fashion.$actualizer.bindVariables = function(runtimeData) {
   return _results;
 };
 
+window.fashion.$actualizer.bindFunctionWatchers = function(runtimeData) {
+  var bindLink, fName, fObj, i, watcherObject, _ref, _ref1, _results;
+  _ref = runtimeData.modules.functions;
+  _results = [];
+  for (fName in _ref) {
+    fObj = _ref[fName];
+    if (((_ref1 = fObj.dependents) != null ? _ref1.length : void 0) > 0) {
+      _results.push((function() {
+        var _ref2, _results1;
+        _ref2 = fObj.dependents;
+        _results1 = [];
+        for (i in _ref2) {
+          watcherObject = _ref2[i];
+          if (watcherObject[0] instanceof Expression) {
+            bindLink = ["w", fName, i];
+            _results1.push($wf.$actualizer.bindExpression(runtimeData, watcherObject[0], bindLink));
+          } else {
+            _results1.push(void 0);
+          }
+        }
+        return _results1;
+      })());
+    }
+  }
+  return _results;
+};
+
 window.fashion.$actualizer.bindExpression = function(runtimeData, expression, bindLink) {
-  var gObj, globalName, vObj, varBind, varName, varScope, _i, _j, _len, _len1, _ref, _ref1, _results;
+  var fObj, funcName, funcWatcher, gObj, globalName, vObj, varBind, varName, varScope, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results;
   _ref = expression.bindings.variables;
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     varBind = _ref[_i];
@@ -3003,12 +3054,11 @@ window.fashion.$actualizer.bindExpression = function(runtimeData, expression, bi
     }
   }
   _ref1 = expression.bindings.globals;
-  _results = [];
   for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
     globalName = _ref1[_j];
     gObj = runtimeData.modules.globals[globalName];
     if (!gObj) {
-      _results.push(console.log("[FASHION] Could not bind to nonexistent global: '" + varName + "'"));
+      console.log("[FASHION] Could not bind to nonexistent global: '" + varName + "'");
     } else {
       if (gObj.dependents == null) {
         gObj.dependents = [];
@@ -3016,7 +3066,22 @@ window.fashion.$actualizer.bindExpression = function(runtimeData, expression, bi
       if (__indexOf.call(gObj.dependents, bindLink) >= 0) {
         continue;
       }
-      _results.push(gObj.dependents.push(bindLink));
+      gObj.dependents.push(bindLink);
+    }
+  }
+  _ref2 = expression.bindings.functions;
+  _results = [];
+  for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+    funcWatcher = _ref2[_k];
+    funcName = funcWatcher[0];
+    fObj = runtimeData.modules.functions[funcName];
+    if (!fObj) {
+      _results.push(console.log("[FASHION] Could not bind to nonexistent function: '" + funcName + "'"));
+    } else {
+      if (fObj.dependents == null) {
+        fObj.dependents = [];
+      }
+      _results.push(fObj.dependents.push([funcWatcher[1], bindLink]));
     }
   }
   return _results;
@@ -3254,11 +3319,12 @@ window.fashion.$runtimeCapability = {
   scopedIndividual: "scopedVariableIndividual",
   individualProps: "individualized",
   liveProps: "liveProperties",
-  globals: "globals"
+  globals: "globals",
+  watchedFunctions: "functionWatchers"
 };
 
 window.fashion.$actualizer.autoAddRequirements = function(runtimeData, parseTree) {
-  var add, name, variable, _ref;
+  var add, fName, fObj, name, variable, _ref, _ref1, _results;
   add = parseTree.addRequirements.bind(parseTree);
   if (JSON.stringify(runtimeData.variables) !== "{}") {
     add([$wf.$runtimeCapability.variables]);
@@ -3277,8 +3343,19 @@ window.fashion.$actualizer.autoAddRequirements = function(runtimeData, parseTree
     add([$wf.$runtimeCapability.liveProps]);
   }
   if (JSON.stringify(runtimeData.modules.globals) !== "{}") {
-    return add([$wf.$runtimeCapability.globals]);
+    add([$wf.$runtimeCapability.globals]);
   }
+  _ref1 = runtimeData.modules.functions;
+  _results = [];
+  for (fName in _ref1) {
+    fObj = _ref1[fName];
+    if (!(fObj.watch != null)) {
+      continue;
+    }
+    add([$wf.$runtimeCapability.watchedFunctions]);
+    break;
+  }
+  return _results;
 };
 
 window.fashion.$actualizer.hasPropertyMode = function(selectors, mode) {
@@ -3297,7 +3374,7 @@ window.fashion.$actualizer.hasPropertyMode = function(selectors, mode) {
 };
 
 window.fashion.$actualizer.addRuntimeFunctions = function(runtimeData, parseTree) {
-  var cid, functionName, key, module, moduleName, _i, _len, _ref;
+  var cid, f, functionName, ignoredPrefix, key, module, moduleName, name, _i, _len, _ref, _ref1, _results;
   if (!parseTree.requires) {
     return;
   }
@@ -3322,6 +3399,26 @@ window.fashion.$actualizer.addRuntimeFunctions = function(runtimeData, parseTree
       }
     }
   }
+  _ref1 = runtimeData.runtime;
+  _results = [];
+  for (name in _ref1) {
+    f = _ref1[name];
+    _results.push((function() {
+      var _j, _len1, _ref2, _results1;
+      _ref2 = $wf.ignoreRuntimePrefixes;
+      _results1 = [];
+      for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
+        ignoredPrefix = _ref2[_j];
+        if (name.indexOf(ignoredPrefix === 0)) {
+          _results1.push(delete runtimeData.runtime[name]);
+        } else {
+          _results1.push(void 0);
+        }
+      }
+      return _results1;
+    })());
+  }
+  return _results;
 };
 window.fashion.$actualizer.hideIndividualizedSelectors = function(cssSelectors, scripts, indSels) {
   var hideSel, hideSelectors, id, joinedSelector, key, len, selector, value;
@@ -3600,7 +3697,7 @@ $wf.addRuntimeModule("types", [], {
 
 $wf.addRuntimeModule("evaluation", [], {
   evaluate_Shared: window.fashion.$shared.evaluate,
-  evaluate: function(value, element, extraVariables) {
+  evaluate: function(value, element, extraVariables, extraArg) {
     var n, v, vars, _ref;
     if (extraVariables != null) {
       vars = extraVariables;
@@ -3614,7 +3711,7 @@ $wf.addRuntimeModule("evaluation", [], {
     } else {
       vars = FASHION.variables;
     }
-    return this.evaluate_Shared(value, vars, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, element);
+    return this.evaluate_Shared(value, vars, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, element, void 0, extraArg);
   }
 });
 
@@ -3674,10 +3771,10 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
     if (!scope || scope === 0) {
       vObj["default"] = value;
     }
-    return this.updateDependencies(varName, scope);
+    return this.regenerateVariableDependencies(varName, scope);
   },
-  updateDependencies: function(varName, scope) {
-    var bindLink, vObj, _i, _len, _ref, _results;
+  regenerateVariableDependencies: function(varName, scope) {
+    var vObj;
     if (scope == null) {
       scope = 0;
     }
@@ -3685,19 +3782,7 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
     if (vObj.dependents[scope] == null) {
       return;
     }
-    _ref = vObj.dependents[scope];
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      bindLink = _ref[_i];
-      if (bindLink[0] === "v") {
-        _results.push(this.updateDependencies(bindLink[1]));
-      } else if (bindLink.length === 3) {
-        _results.push(this.setPropertyOnSelector(bindLink[0], bindLink[1], bindLink[2]));
-      } else {
-        _results.push(this.regenerateSelector(bindLink[0], bindLink[1]));
-      }
-    }
-    return _results;
+    return this.regenerateBoundSelectors(vObj.dependents[scope]);
   },
   $initWatchers: function() {
     var propObject, styleObject, varName, varObj, _ref, _results;
@@ -3725,20 +3810,25 @@ $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"]
   }
 });
 $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
-  runtimeModes: window.fashion.$runtimeMode,
-  makeCamelCase: function(propertyObject) {
-    var cc, n;
-    if ((propertyObject == null) || (propertyObject.name == null)) {
-      return "";
+  regenerateBoundSelectors: function(bindings) {
+    var bindLink, _i, _len, _results;
+    _results = [];
+    for (_i = 0, _len = bindings.length; _i < _len; _i++) {
+      bindLink = bindings[_i];
+      _results.push(this.regenerateBoundSelector(bindLink));
     }
-    if (propertyObject.jsName == null) {
-      n = propertyObject.name;
-      cc = n.replace(/-([a-z])/gi, function(full, letter) {
-        return letter.toUpperCase();
-      });
-      propertyObject.jsName = cc;
+    return _results;
+  },
+  regenerateBoundSelector: function(bindLink) {
+    if (bindLink[0] === "v" && (this.regenerateVariableDependencies != null)) {
+      return this.regenerateVariableDependencies(bindLink[1]);
+    } else if (bindLink[0] === "w" && (this.watchFunctionBinding != null)) {
+      return this.watchFunctionBinding(FASHION.modules.functions[bindLink[1]], bindLink[2]);
+    } else if (bindLink.length === 3) {
+      return this.setPropertyOnSelector(bindLink[0], bindLink[1], bindLink[2]);
+    } else {
+      return this.regenerateSelector(bindLink[0], bindLink[1]);
     }
-    return propertyObject.jsName;
   },
   setPropertyOnSelector: function(sheet, selectorId, propertyName) {
     var pObj, regex, replacement, rule, rules, selector, _i, _len, _ref, _results;
@@ -3817,11 +3907,27 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
       return _results;
     }).call(this);
     return this.CSSSelectorTemplate(selectorName, cssProperties);
+  },
+  runtimeModes: window.fashion.$runtimeMode,
+  makeCamelCase: function(propertyObject) {
+    var cc, n;
+    if ((propertyObject == null) || (propertyObject.name == null)) {
+      return "";
+    }
+    if (propertyObject.jsName == null) {
+      n = propertyObject.name;
+      cc = n.replace(/-([a-z])/gi, function(full, letter) {
+        return letter.toUpperCase();
+      });
+      propertyObject.jsName = cc;
+    }
+    return propertyObject.jsName;
   }
 });
 $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom", "individualizedHelpers", "DOMWatcher"], {
   $initializeIndividualProperties: function() {
     var id, selector, _ref, _ref1;
+    this.registerDomWatcher("addNodes", this.addedIndividualElements);
     FASHION.individualSheet = this.addStylesheet(FASHION.config.individualCSSID).sheet;
     _ref = FASHION.individual;
     for (id in _ref) {
@@ -3944,30 +4050,32 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
     _results = [];
     for (_i = 0, _len = elements.length; _i < _len; _i++) {
       element = elements[_i];
-      _results.push((function() {
-        var _ref, _results1;
-        _ref = FASHION.individual;
-        _results1 = [];
-        for (id in _ref) {
-          indObj = _ref[id];
-          if (!(!indObj.elements[element.id])) {
-            continue;
+      if (element != null) {
+        _results.push((function() {
+          var _ref, _results1;
+          _ref = FASHION.individual;
+          _results1 = [];
+          for (id in _ref) {
+            indObj = _ref[id];
+            if (!(!indObj.elements[element.id])) {
+              continue;
+            }
+            if (!this.matches(element, indObj.name)) {
+              continue;
+            }
+            if (!element.id) {
+              element.setAttribute('id', this.generateRandomId());
+            }
+            indElement = {
+              element: element,
+              cssid: -1
+            };
+            indObj.elements[element.id] = indElement;
+            _results1.push(this.regenerateElementSelector(indObj, element.id, indElement));
           }
-          if (!this.matches(element, indObj.name)) {
-            continue;
-          }
-          if (!element.id) {
-            element.setAttribute('id', this.generateRandomId());
-          }
-          indElement = {
-            element: element,
-            cssid: -1
-          };
-          indObj.elements[element.id] = indElement;
-          _results1.push(this.regenerateElementSelector(indObj, element.id, indElement));
-        }
-        return _results1;
-      }).call(this));
+          return _results1;
+        }).call(this));
+      }
     }
     return _results;
   }
@@ -4006,31 +4114,90 @@ $wf.addRuntimeModule("individualizedHelpers", [], {
     return Array.prototype.slice.call(document.querySelectorAll(selectorName));
   }
 });
+$wf.addRuntimeModule("functionWatchers", ["selectors"], {
+  $startFunctionWatchers: function() {
+    var bindIndex, fObj, name, _ref, _results;
+    _ref = FASHION.modules.functions;
+    _results = [];
+    for (name in _ref) {
+      fObj = _ref[name];
+      if (fObj.watch != null) {
+        _results.push((function() {
+          var _results1;
+          _results1 = [];
+          for (bindIndex in fObj.dependents) {
+            _results1.push(this.watchFunctionBinding(fObj, bindIndex));
+          }
+          return _results1;
+        }).call(this));
+      }
+    }
+    return _results;
+  },
+  createFunctionWatcherObject: function(bindLink) {
+    var runtime, watcher;
+    runtime = this;
+    watcher = {
+      invalidated: false
+    };
+    watcher.callback = function() {
+      if (!watcher.invalidated) {
+        return runtime.regenerateBoundSelector(bindLink);
+      }
+    };
+    watcher.invalidate = function() {
+      watcher.invalidated = true;
+      if (watcher.destroy != null) {
+        return watcher.destroy();
+      }
+    };
+    return watcher;
+  },
+  watchFunctionBinding: function(fObj, bindIndex) {
+    var bindLink, bindObj, watcher, watcherExpression;
+    bindObj = fObj.dependents[bindIndex];
+    watcherExpression = bindObj[0], bindLink = bindObj[1], watcher = bindObj[2];
+    if (watcher != null) {
+      watcher.invalidate();
+    }
+    watcher = this.createFunctionWatcherObject(bindLink);
+    watcher.destroy = this.evaluate(watcherExpression, 0, void 0, watcher.callback);
+    if (bindObj.length === 2) {
+      return bindObj.push(watcher);
+    } else {
+      return bindObj[2] = watcher;
+    }
+  }
+});
+var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
 $wf.addRuntimeModule("DOMWatcher", [], {
   "$watchDom": function() {
-    var observeFunction;
+    var MutationObserver, observeFunction;
     if (window.FASHION_NO_OBSERVE === true) {
       return;
     }
-    observeFunction = function(mutations) {
-      var addedNodes, mutation, _i, _len;
-      if ((window.FSOBSERVER == null) || (window.FASHION == null) || window.FASHION_NO_OBSERVE === true) {
-        return;
+    if (typeof MutationObserver === "undefined" || MutationObserver === null) {
+      MutationObserver = WebKitMutationObserver;
+    }
+    if (MutationObserver == null) {
+      if (this.watchDomPolyfill) {
+        return this.LEGACY_watchDomPolyfill();
+      } else {
+        return this.throwError("Failed to setup DOM watchers, cannot detect changes.");
       }
-      if (this.expandNodeList == null) {
+    }
+    observeFunction = function(mutations) {
+      var mutation, _i, _len;
+      if ((window.FSOBSERVER == null) || (window.FASHION == null) || window.FASHION_NO_OBSERVE === true) {
         return;
       }
       for (_i = 0, _len = mutations.length; _i < _len; _i++) {
         mutation = mutations[_i];
-        if (!(mutation.addedNodes.length > 0)) {
-          continue;
-        }
-        addedNodes = this.expandNodeList(mutation.addedNodes);
-        if (this.addedIndividualScopedElements != null) {
-          this.addedIndividualScopedElements(addedNodes);
-        }
-        if (this.addedIndividualElements != null) {
-          this.addedIndividualElements(addedNodes);
+        if (mutation.addedNodes.length > 0) {
+          this.callDomGlobalWatchers("addNodes", this.expandNodeList(mutation.addedNodes));
+        } else if (mutation.target != null) {
+          this.callDomElementWatchers("changedNode", mutation.target);
         }
       }
       return true;
@@ -4045,6 +4212,41 @@ $wf.addRuntimeModule("DOMWatcher", [], {
       childList: true,
       subtree: true
     });
+  },
+  "registerDomWatcher": function(type, handler, elementId) {
+    if (!window.FSDOMWATCHERS) {
+      window.FSDOMWATCHERS = {};
+    }
+    if (!window.FSDOMWATCHERS[type]) {
+      window.FSDOMWATCHERS[type] = [];
+    }
+    return window.FSDOMWATCHERS[type].push([handler, elementId]);
+  },
+  "callDomGlobalWatchers": function(tag, nodes) {
+    var f, _i, _len, _ref, _results;
+    _ref = window.FSDOMWATCHERS[tag];
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      f = _ref[_i];
+      _results.push(f[0].call(FASHION.runtime, nodes));
+    }
+    return _results;
+  },
+  "callDomElementWatchers": function(tag, element) {
+    var f, matchingIds, _i, _len, _ref, _ref1, _results;
+    matchingIds = [element.id];
+    while (element(element.parentNode != null)) {
+      matchingIds.push(element.id);
+    }
+    _ref = window.FSDOMWATCHERS[tag];
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      f = _ref[_i];
+      if (_ref1 = f[1], __indexOf.call(matchingIds, _ref1) >= 0) {
+        _results.push(f[0].call(FASHION.runtime, element));
+      }
+    }
+    return _results;
   },
   "expandNodeList": function(nodeList) {
     var addChildren, i, _i, _ref;
@@ -4067,10 +4269,26 @@ $wf.addRuntimeModule("DOMWatcher", [], {
       addChildren(nodeList[i]);
     }
     return nodeList;
+  },
+  "LEGACY_watchDomPolyfill": function() {
+    var changeEvents, evtName, _i, _len, _results;
+    console.log("[FASHION] Installing DOM Observer Polyfill. Will impact performance!");
+    document.body.addEventListener("DOMNodeInserted", (function(ev) {
+      return this.callDomGlobalWatchers("addNodes", this.expandNodeList([event.target]));
+    }), false);
+    changeEvents = ["DOMAttrModified", "DOMCharacterDataModified", "DOMElementNameChanged", "DOMAttributeNameChanged"];
+    _results = [];
+    for (_i = 0, _len = changeEvents.length; _i < _len; _i++) {
+      evtName = changeEvents[_i];
+      _results.push(document.body.addEventListener(evtName, (function(ev) {
+        return this.callDomElementWatchers("changedNode", ev.target);
+      }), false));
+    }
+    return _results;
   }
 });
 $wf.addRuntimeModule("globals", ["selectors"], {
-  $startWatchers: function() {
+  $startGlobalWatchers: function() {
     var global, name, onChangeFunction, _ref, _results;
     onChangeFunction = (function(_this) {
       return function(global) {
@@ -4081,32 +4299,17 @@ $wf.addRuntimeModule("globals", ["selectors"], {
     _results = [];
     for (name in _ref) {
       global = _ref[name];
-      if (!(global.watch != null)) {
-        continue;
+      if (global.watch != null) {
+        _results.push(global.watch(onChangeFunction(global)));
       }
-      global.watch(onChangeFunction(global));
-      _results.push(this.updateGlobal(global));
     }
     return _results;
   },
   updateGlobal: function(global) {
-    var bindLink, _i, _len, _ref, _results;
     if ((global == null) || (global.dependents == null)) {
       return;
     }
-    _ref = global.dependents;
-    _results = [];
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      bindLink = _ref[_i];
-      if (bindLink[0] === "v") {
-        _results.push(this.updateDependencies(bindLink[1]));
-      } else if (bindLink.length === 3) {
-        _results.push(this.setPropertyOnSelector(bindLink[0], bindLink[1], bindLink[2]));
-      } else {
-        _results.push(this.regenerateSelector(bindLink[0], bindLink[1]));
-      }
-    }
-    return _results;
+    return this.regenerateBoundSelectors(global.dependents);
   }
 });
 $wf.addRuntimeModule("elements", [], {
@@ -4260,7 +4463,7 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
       value = _ref[scope];
       if (scope !== '0') {
         if (this.matches(element, scope)) {
-          this.updateDependencies(varName, scope);
+          this.regenerateVariableDependencies(varName, scope);
           vObj = FASHION.variables[varName];
           if (vObj.dependents[scope] == null) {
             continue;
@@ -4433,6 +4636,9 @@ $wf.addRuntimeModule("scopedVariableIndividual", ["scopedVariables", "DOMWatcher
       }).call(this));
     }
     return _results;
+  },
+  "$registerScopedVariableIndividual": function() {
+    return this.registerDomWatcher("addNodes", this.addedIndividualScopedElements);
   }
 });
 window.fashion.$functions = {
@@ -4507,6 +4713,7 @@ $wf.$extend(window.fashion.$functions, {
     output: $wf.$type.Number,
     unit: '',
     dynamic: true,
+    requires: ["DOMWatcher"],
     evaluate: function(selector, property, element) {
       var matched, style;
       if (!element) {
@@ -4515,6 +4722,9 @@ $wf.$extend(window.fashion.$functions, {
       matched = this.querySelector(selector.value);
       style = this.getComputedStyle(matched);
       return style[property.value];
+    },
+    watch: function(selector, property, element) {
+      return console.log(arguments);
     }
   })
 });
@@ -4545,7 +4755,7 @@ $wf.$extend(window.fashion.$functions, {
   }),
   "hsb": new FunctionModule({
     output: $wf.$type.Color,
-    capabilities: ["colors"],
+    requires: ["colors"],
     evaluate: function(h, s, b) {
       var g, r, _ref;
       _ref = this.hsbTOrgb(h.value, s.value, b.value), r = _ref.r, g = _ref.g, b = _ref.b;
@@ -4554,16 +4764,74 @@ $wf.$extend(window.fashion.$functions, {
   }),
   "hsba": new FunctionModule({
     output: $wf.$type.Color,
-    capabilities: ["colors"],
+    requires: ["colors"],
     evaluate: function(h, s, b, a) {
       var g, r, _ref;
       _ref = this.hsbTOrgb(h.value, s.value, b.value), r = _ref.r, g = _ref.g, b = _ref.b;
       return "rgba(" + (parseInt(r)) + "," + (parseInt(g)) + "," + (parseInt(b)) + "," + a.value + ")";
     }
   }),
+  "randomColor": new FunctionModule({
+    output: $wf.$type.Color,
+    watch: function(rate, c) {
+      var i;
+      if (!rate.value) {
+        return;
+      }
+      i = setInterval(c, rate.value);
+      return function() {
+        return clearInterval(i);
+      };
+    },
+    evaluate: function(rate) {
+      var b, g, r, _ref;
+      _ref = [Math.random() * 255, Math.random() * 255, Math.random() * 255], r = _ref[0], g = _ref[1], b = _ref[2];
+      return "rgb(" + (parseInt(r)) + "," + (parseInt(g)) + "," + (parseInt(b)) + ")";
+    }
+  }),
+  "randomBrightColor": new FunctionModule({
+    output: $wf.$type.Color,
+    requires: ["colors"],
+    watch: function(rate, c) {
+      var i;
+      if (!rate.value) {
+        return;
+      }
+      i = setInterval(c, rate.value);
+      return function() {
+        return clearInterval(i);
+      };
+    },
+    evaluate: function(rate) {
+      var b, g, r, randomHue, _ref;
+      randomHue = Math.random() * 360;
+      _ref = this.hsbTOrgb(randomHue, 80, 80), r = _ref.r, g = _ref.g, b = _ref.b;
+      return "rgb(" + (parseInt(r)) + "," + (parseInt(g)) + "," + (parseInt(b)) + ")";
+    }
+  }),
+  "randomDarkColor": new FunctionModule({
+    output: $wf.$type.Color,
+    requires: ["colors"],
+    watch: function(rate, c) {
+      var i;
+      if (!rate.value) {
+        return;
+      }
+      i = setInterval(c, rate.value);
+      return function() {
+        return clearInterval(i);
+      };
+    },
+    evaluate: function(rate) {
+      var b, g, r, randomHue, _ref;
+      randomHue = Math.random() * 360;
+      _ref = this.hsbTOrgb(randomHue, 80, 30), r = _ref.r, g = _ref.g, b = _ref.b;
+      return "rgb(" + (parseInt(r)) + "," + (parseInt(g)) + "," + (parseInt(b)) + ")";
+    }
+  }),
   "changeAlpha": new FunctionModule({
     output: window.fashion.$type.Color,
-    capabilities: ["colors"],
+    requires: ["colors"],
     evaluate: function(color, newAlpha) {
       var c;
       c = this.cssTOjs(color.value, this);
@@ -4572,7 +4840,7 @@ $wf.$extend(window.fashion.$functions, {
   }),
   "invert": new FunctionModule({
     output: window.fashion.$type.Color,
-    capabilities: ["colors"],
+    requires: ["colors"],
     evaluate: function(color) {
       var c;
       c = this.cssTOjs(color.value, this);
@@ -4584,7 +4852,7 @@ $wf.$extend(window.fashion.$functions, {
   }),
   "brighten": new FunctionModule({
     output: window.fashion.$type.Color,
-    capabilities: ["colors"],
+    requires: ["colors"],
     evaluate: function(color, brightenPercent) {
       var adj, c, percent;
       percent = brightenPercent.value;
@@ -4598,7 +4866,7 @@ $wf.$extend(window.fashion.$functions, {
   }),
   "darken": new FunctionModule({
     output: window.fashion.$type.Color,
-    capabilities: ["colors"],
+    requires: ["colors"],
     evaluate: function(color, darkenPercent) {
       var adj, c, percent;
       percent = darkenPercent.value;
