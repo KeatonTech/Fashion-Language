@@ -5,7 +5,7 @@ $wf.addRuntimeModule "functionWatchers", ["selectors"],
 	$startFunctionWatchers: () ->
 
 		# Each binding is currently treated entirely independantly
-		for name, fObj of FASHION.modules.functions when fObj.watch?
+		for name, fObj of FASHION.modules.functions when fObj.watcher?
 			@watchFunctionBinding(fObj, bindIndex) for bindIndex of fObj.dependents
 
 

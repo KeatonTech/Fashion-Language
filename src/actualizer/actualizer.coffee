@@ -47,7 +47,7 @@ window.fashion.$actualizer =
 		$wfa.removeUnnecessaryModuleData runtimeData
 
 		# Dispatch an event once the full fashion page load is complete
-		parseTree.scripts.push "document.dispatchEvent(new Event('#{$wf.readyEvent}'));"
+		parseTree.scripts.push "setTimeout(function(){document.dispatchEvent(new Event('#{$wf.readyEvent}'));},17);"
 
 		#
 		# STAGE 3: Generate output code in CSS and JS given the selectors and runtime data
@@ -97,7 +97,7 @@ window.fashion.$actualizer.createJS = (runtimeData, minifiedData, scripts) ->
 	FSEXPAND(window.#{$wf.minifiedObject},window.#{$wf.runtimeObject});
 	FSREADY = function(r){d=document;c="complete";
 		if(d.readyState==c)r()
-		else d.addEventListener('readystatechange',function(){if(d.readyState==c)r()})
+		else d.addEventListener('DOMContentLoaded',r)
 	}
 	#{scripts.join('\n')}
 	"""

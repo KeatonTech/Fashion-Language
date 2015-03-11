@@ -19,6 +19,11 @@ $wf.addRuntimeModule "individualized",
 		# Publish function that lets fashion know to recompute the individual elements
 		window.FASHION.pageChanged = window.FASHION.domChanged = @pageChanged.bind(this)
 
+		# Publish function that lets fashion know that element(s) were removed
+		window.FASHION.elementsRemoved = @removedIndividualElements.bind(this)
+		window.FASHION.elementRemoved = (element) => 
+			@removedIndividualElements @expandNodeList [element]
+
 
 	# List elements for selector
 	updateSelectorElements: (selector) ->
@@ -65,6 +70,7 @@ $wf.addRuntimeModule "individualized",
 				# Generate the CSS property and set it as a style on our rule
 				rule.style[propertyName] = @CSSRuleForProperty pObj, individual.element, true
 
+		return
 
 	# Recalculate the CSS value of an individual selector block for each matching element
 	regenerateIndividualSelector: (selectorId) ->
@@ -84,6 +90,9 @@ $wf.addRuntimeModule "individualized",
 
 	# Generate a specific selector on a specific element
 	regenerateElementSelector: (selector, id, element) ->
+
+		# Shield against bogus ID's such as those used in templates
+		if id.match /[\$\#\.]/ then return
 
 		# Delete the old rule if necessary
 		if element.cssid isnt -1
@@ -127,6 +136,20 @@ $wf.addRuntimeModule "individualized",
 				indElement = {element: element, cssid: -1}
 				indObj.elements[element.id] = indElement
 				@regenerateElementSelector indObj, element.id, indElement
+
+
+	# Elements deleted from the page
+	removedIndividualElements: (elements) ->
+		if !FASHION? then return
+		for element in elements when element? and element.id?
+
+			# Go through each individual selector that matches the element
+			for id,indObj of FASHION.individual when indObj.elements[element.id]
+				rules = FASHION.individualSheet.rules || FASHION.individualSheet.cssRules
+				#if rules.length > indObj.elements[element.id].cssid
+					#FASHION.individualSheet.deleteRule indObj.elements[element.id].cssid
+				delete FASHION.elements[element.id]
+				delete indObj.elements[element.id]
 
 
 $wf.addRuntimeModule "individualizedHelpers", [],

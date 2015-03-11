@@ -5,7 +5,7 @@ window.fashion.$loader =
 	# Any scripts that are found to be the fashion compiler are thrown out
 	# Wow, this is a horrifying hack. The ramifications...
 	# Well I really can't think of a better way so it is what it is.
-	fashionIdentifier: "/*\nFASHION: Style + Smarts -"
+	fashionIdentifier: "window.fashion ="
 
 	# Get all FSS code from the HTML and return it as a single string
 	extractFromHTML: (html, htmlPath, fssCallback)->

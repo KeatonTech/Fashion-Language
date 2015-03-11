@@ -1,3 +1,6 @@
+# Some would say these are the 2 most important functions in all of Fashion
+# Which is why it's a shame they're so complicated
+
 window.fashion.$shared.getVariable =
 (variables, globals, funcs, runtime, varName, scope, elem) ->
 	vObj = variables[varName]
@@ -17,20 +20,24 @@ window.fashion.$shared.getVariable =
 			@throwError "$#{varName} does not have a value for scope '#{scope}'"
 
 		if elem? and @getScopeOverride?
-			scopeVal = @getScopeOverride(elem, varName, scope) || vObj.values[scope]
-		else scopeVal = vObj.values[scope]
+			[scopeElem, scopeVal] = @getScopeOverride(elem, varName, scope)
+			if !scopeVal?
+				[scopeElem, scopeVal] = [elem, vObj.values[scope]]
+		else [scopeElem, scopeVal] = [elem, vObj.values[scope]]
 
 		indMode = @runtimeModes?.individual || $wf?.$runtimeMode?.individual
-		if (scopeVal.mode & indMode) is indMode then return 0
+		#if (scopeVal.mode & indMode) is indMode then return 0
 
 		if scopeVal.evaluate
-			return value: @evaluate scopeVal, variables, globals, funcs, runtime, elem
+			ran = @evaluate scopeVal.evaluate, variables, globals, funcs, runtime, scopeElem
+			return value: ran
 		else return value: scopeVal
 
 	# Top-level variables
 	else if vObj.default isnt undefined
 		if vObj.default.evaluate
-			return value: @evaluate vObj.default, variables, globals, funcs, runtime, elem
+			ran = @evaluate vObj.default, variables, globals, funcs, runtime, elem
+			return value: ran
 		else return value: vObj.default 
 
 	# Variable doesn't exist, I guess

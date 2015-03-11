@@ -11,14 +11,13 @@ window.fashion.$actualizer.createCSS = (runtimeData, cssSelectors) ->
 		# Convert each property to a CSS string
 		cssProperties = []
 		for pid,property of selector.properties
-			if !property.value? then console.log selector
 
 			# These properties cannot be calculated at compile time
-			if (selector.mode & $wf.$runtimeMode.globalDynamic) > 2 then continue
+			if (property.mode & $wf.$runtimeMode.globalDynamic) > 2 then continue
 
 			# Values are computed differently if they're dynamic or have a transition
 			value = property.value
-			if selector.mode is $wf.$runtimeMode.static
+			if property.mode is $wf.$runtimeMode.static
 				if typeof value is 'object' and value.value
 					cssValue = evalFunction value.value 		# Static w/ Transition
 				else cssValue = evalFunction value 				# Static w/o Transition

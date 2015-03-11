@@ -18,7 +18,8 @@ $wf.addRuntimeModule "scopedVariables",
 	"getScopeOverride": (element, varName, scope) ->
 		scopeElement = @getParentForScope element, scope
 		if !scopeElement then return undefined
-		return @getFashionAttribute scopeElement, "$"+varName
+		val = @getFashionAttribute scopeElement, "$"+varName
+		return [@elementFunction(scopeElement), val]
 
 
 	# Function to set a value for a particular scope
@@ -35,15 +36,21 @@ $wf.addRuntimeModule "scopedVariables",
 				@regenerateVariableDependencies varName, scope
 
 				# If any selectors depend on this scoped value they need special treatment
-				vObj = FASHION.variables[varName]
 				if !vObj.dependents[scope]? then continue
-				for bindLink in vObj.dependents[scope] when bindLink.length is 2
+				for bindLink in vObj.dependents[scope]
 					if bindLink[0] is 'v'
+						nVal = @variableValue bindLink[1], @elementFunction(element), scope
+						@setScopedVariableOnElement element, bindLink[1], nVal
 						# Update variables - not sure how this is going to go TBH
+						
 					else if bindLink[0] is 'i'
+						# Update an individualized property
+						if !@addIndividualScopedSelectorOverride? then continue
 						@addIndividualScopedSelectorOverride bindLink[1], element
+
 					else
 						# Update the selector
+						if !@addScopedSelectorOverride? then continue
 						@addScopedSelectorOverride bindLink[1], element
 
 	# Install some useful functionality

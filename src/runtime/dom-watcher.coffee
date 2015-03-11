@@ -5,9 +5,10 @@ $wf.addRuntimeModule "DOMWatcher", [],
 		if window.FASHION_NO_OBSERVE is true then return
 
 		# Get the mutation observer object, or revert to the polyfill if we can't
-		if !MutationObserver? then MutationObserver = WebKitMutationObserver # Hello, Safari
-		if !MutationObserver?
-			if @watchDomPolyfill then return @LEGACY_watchDomPolyfill()
+		if !window.MutationObserver? and WebKitMutationObserver?
+			window.MutationObserver = WebKitMutationObserver # Hello, Safari
+		if !window.MutationObserver?
+			if @LEGACY_watchDomPolyfill then return @LEGACY_watchDomPolyfill()
 			else return @throwError "Failed to setup DOM watchers, cannot detect changes."
 
 		observeFunction = (mutations)->
@@ -29,7 +30,7 @@ $wf.addRuntimeModule "DOMWatcher", [],
 			return true
 
 		# Start the watcher
-		window.FSOBSERVER = new MutationObserver (mutations)-> 
+		window.FSOBSERVER = new window.MutationObserver (mutations)-> 
 			if !window.FASHION? or !FASHION.runtime? then return
 			observeFunction.call(FASHION.runtime, mutations)
 		window.FSOBSERVER.observe(document.body, {childList: true, subtree: true});
@@ -54,10 +55,11 @@ $wf.addRuntimeModule "DOMWatcher", [],
 
 		# Accumulate all parents of the element
 		matchingIds = [element.id]
-		while element element.parentNode?
+		while element = element.parentNode
 			matchingIds.push element.id
 
 		# Go through watcher functions
+		if !window.FSDOMWATCHERS[tag]? then return
 		for f in window.FSDOMWATCHERS[tag] when f[1] in matchingIds
 			f[0].call(FASHION.runtime, element)
 
@@ -85,8 +87,8 @@ $wf.addRuntimeModule "DOMWatcher", [],
 		console.log "[FASHION] Installing DOM Observer Polyfill. Will impact performance!"
 
 		# Added Nodes
-		document.body.addEventListener "DOMNodeInserted", ((ev)->
-			@callDomGlobalWatchers "addNodes", @expandNodeList [event.target]
+		document.body.addEventListener "DOMNodeInserted", ((ev)=>
+			@callDomGlobalWatchers "addNodes", @expandNodeList [ev.target]
 		), false
 
 		# Changed Node
@@ -95,6 +97,6 @@ $wf.addRuntimeModule "DOMWatcher", [],
 			"DOMElementNameChanged", "DOMAttributeNameChanged"
 		]
 		for evtName in changeEvents
-			document.body.addEventListener evtName, ((ev)->
+			document.body.addEventListener evtName, ((ev)=>
 				@callDomElementWatchers "changedNode", ev.target
 			), false

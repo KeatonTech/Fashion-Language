@@ -8,7 +8,7 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 
 	# Same thing but handles only a single bind link
 	regenerateBoundSelector: (bindLink) ->
-
+		
 		# If the dependency is a variable, go through and update all its stuff
 		if bindLink[0] is "v" and @regenerateVariableDependencies?
 			@regenerateVariableDependencies bindLink[1]
@@ -39,7 +39,7 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 		# Get the rule from the stylesheet
 		sheet = document.getElementById(FASHION.config.cssId).sheet
 		rules = sheet.rules || sheet.cssRules # Hello, firefox
-		rule = sheet.rules[selector.rule]
+		rule = rules[selector.rule]
 
 		# Go through each property looking for ones with the given name
 		# There could be multiple properties that match, usually as fallbacks

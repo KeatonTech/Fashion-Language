@@ -8,6 +8,7 @@ $wf.addRuntimeModule "stylesheet-dom", [],
 		if className then sheetElement.setAttribute("class", className)
 		head = document.head || document.getElementsByTagName('head')[0]
 		head.appendChild(sheetElement)
+		sheetElement.sheet.rules = sheetElement.sheet.rules || sheetElement.sheet.cssRules
 		return sheetElement
 
 	# Delete a stylesheet
@@ -43,7 +44,7 @@ $wf.addRuntimeModule "sheets", ["stylesheet-dom"],
 			# Rearranges the sheet so that this new property has the highest priority
 			if prioritize
 				ruleText = rule.cssText
-				sheet.removeRule id
+				sheet.deleteRule id
 				sheet.insertRule ruleText, sheet.rules.length
 
 			return

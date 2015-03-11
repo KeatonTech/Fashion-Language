@@ -42,3 +42,4 @@ window.fashion.$properties =
 #@prepros-append ./layout.coffee
 #@prepros-append ./triggers.coffee
 #@prepros-append ./gradient.coffee
+#@prepros-append ./dom.coffee

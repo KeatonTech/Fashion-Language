@@ -13,11 +13,6 @@ into CSS and Javascript. It is not reccommended for production apps.
 ------------------------------------------------------------------------------
 ###
 
-# More constants
-window.fashion.live = {
-	loadedEvent: "fashion-loaded"
-}
-
 # Useful later
 currentScript = document.currentScript || document.scripts[document.scripts.length - 1]
 
@@ -50,11 +45,6 @@ document.addEventListener 'readystatechange', ()->
 
 			# Print the load time
 			console.log "[FASHION] Page initialize finished in #{new Date().getTime() - start}ms"
-
-			# Trigger the loaded event
-			event = new Event(window.fashion.live.loadedEvent)
-			event.variableObject = window[window.fashion.variableObject]
-			document.dispatchEvent event
 
 
 # Include helper files, used by everything

@@ -51,3 +51,8 @@ window.fashion.$globals =
 				if window.devicePixelRatio isnt lastRatio then onchange()
 				lastRatio = window.devicePixelRatio
 			),1000)
+
+	browserwebkit: new GlobalModule
+		type: $wf.$type.Boolean
+		get: () -> /WebKit/.test(navigator.userAgent)
+		watch: (onchange) -> return false

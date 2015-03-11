@@ -201,7 +201,7 @@ The web is an increasingly animated place. Far beyond the geocities gifs of yest
 $noticeBottom: 0px;
 #notice {
 	position: absolute;
-	bottom: [ease-out 300ms] $noticeBottom;
+	bottom: [300ms ease-out] $noticeBottom;
 }
 ```
 
@@ -215,10 +215,10 @@ $boxAnimateDuration: 500ms;
 $contentAnimateDuration: 300ms;
 
 .box {
-	height: [linear $boxAnimateDuration] $boxHeight;
+	height: [$boxAnimateDuration linear] $boxHeight;
 
 	.content {
-		height: [linear $contentAnimateDuration $boxAnimateDuration] $boxHeight;
+		height: [$contentAnimateDuration linear  $boxAnimateDuration] $boxHeight;
 	}
 }
 ```
@@ -243,12 +243,12 @@ But wait, there's more! CSS3 provides the @keyframes block to define more comple
 
 	0% {
 		div {
-			opacity: [linear 50%] 1.0;
-			right: [ease-out 75%] 0px;
+			opacity: [50% linear] 1.0;
+			right: [75% ease-out] 0px;
 		}
 	}
 	30% - 50% {
-		div p {opacity: [linear 50%] 1.0;}
+		div p {opacity: [50% linear] 1.0;}
 	}
 }
 

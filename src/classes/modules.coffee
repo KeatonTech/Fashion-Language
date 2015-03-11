@@ -35,7 +35,8 @@ class ReturnValueModule extends Module
 			@get = args.get || args.evaluate # ()-> return window.innerWidth
 
 			# Function that runs a callback when the value changes
-			@watch = args.watch
+			if args.watch and args.watch.toString().indexOf('[native code]') is -1
+				@watcher = args.watch
 
 			# These can be dynamically recomputed based on a runtime mode
 			super args
@@ -62,7 +63,8 @@ class FunctionModule extends ReturnValueModule
 
 		# Default to static for most functions, or dynamic for ones with watchers
 		if !args.mode
-			if args.watch?
+			# This second part fixes the fact that Mozilla adds a watch function to objects
+			if args.watch? and args.watch.toString().indexOf('[native code]') is -1
 				args.mode = $wf.$runtimeMode.dynamic
 			else
 				args.mode = $wf.$runtimeMode.static

@@ -371,7 +371,7 @@
       _ref = $wf.$actualizer.actualize($wf.$processor.process($wf.$parser.parse(fss))), css = _ref.css, js = _ref.js;
       return window.fashiontests.runtime.simulateRuntime(css, js);
     };
-    return it("should watch function values and update expressions accordingly", function() {
+    it("should watch function values and update expressions accordingly", function() {
       window.FSTCOLOR = "blue";
       window.fashion.addFunction("fstColor", {
         output: $wf.$type.Color,
@@ -387,6 +387,35 @@
       window.FSTCOLOR = "yellow";
       window.dispatchEvent(new Event("FSTCHANGE"));
       return expect(getRule(0).style.cssText).toBe("background-color: yellow;");
+    });
+    return it("should redo the watchers when arguments change", function() {
+      window.FSTCOLOR = "yellow";
+      window.FSTCOLOR2 = "orange";
+      window.fashion.addFunction("globalColor", {
+        output: $wf.$type.Color,
+        watch: function(varName, c) {
+          window.addEventListener("FSTCHANGE_" + varName.value, c);
+          return function() {
+            return window.removeEventListener("FSTCHANGE_" + varName.value, c);
+          };
+        },
+        evaluate: function(varName) {
+          return window[varName.value];
+        }
+      });
+      testFSS("$varName: FSTCOLOR;\n.item {\n	background-color: globalColor($varName);\n}");
+      expect(getRule(0).style.cssText).toBe("background-color: yellow;");
+      window.FSTCOLOR = "green";
+      window.dispatchEvent(new Event("FSTCHANGE_FSTCOLOR"));
+      expect(getRule(0).style.cssText).toBe("background-color: green;");
+      style.varName = "FSTCOLOR2";
+      expect(getRule(0).style.cssText).toBe("background-color: orange;");
+      window.FSTCOLOR2 = "purple";
+      window.dispatchEvent(new Event("FSTCHANGE_FSTCOLOR2"));
+      expect(getRule(0).style.cssText).toBe("background-color: purple;");
+      window.FSTCOLOR2 = "red";
+      window.dispatchEvent(new Event("FSTCHANGE_FSTCOLOR"));
+      return expect(getRule(0).style.cssText).toBe("background-color: purple;");
     });
   };
 

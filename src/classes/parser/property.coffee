@@ -21,7 +21,7 @@ class Property
 
 # Represents a transition of a property
 class PropertyTransition
-	constructor: (easing, duration, delay) ->
+	constructor: (duration, easing, delay) ->
 		@easing = easing
 		@duration = duration
 		@delay = delay

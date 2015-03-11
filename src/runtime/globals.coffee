@@ -7,8 +7,9 @@ $wf.addRuntimeModule "globals", ["selectors"],
 		# Run when globals change
 		onChangeFunction = (global) => @updateGlobal.bind(this, global)
 
-		for name, global of FASHION.modules.globals when global.watch?
-			global.watch onChangeFunction global
+		for name, global of FASHION.modules.globals when global.watcher?
+			global.watcher onChangeFunction global
+			@updateGlobal global
 
 
 	# Refresh a global's value by regenerating selectors that rely on it

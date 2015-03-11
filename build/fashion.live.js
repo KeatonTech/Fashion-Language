@@ -172,16 +172,12 @@ into CSS and Javascript. It is not reccommended for production apps.
  */
 var currentScript;
 
-window.fashion.live = {
-  loadedEvent: "fashion-loaded"
-};
-
 currentScript = document.currentScript || document.scripts[document.scripts.length - 1];
 
 document.addEventListener('readystatechange', function() {
   if (document.readyState === "complete") {
     return window.fashion.$loader.loadStyles(function(scriptText) {
-      var css, event, js, parseTree, start, _ref;
+      var css, js, parseTree, start, _ref;
       start = new Date().getTime();
       parseTree = window.fashion.$parser.parse(scriptText);
       parseTree = window.fashion.$processor.process(parseTree);
@@ -190,10 +186,7 @@ document.addEventListener('readystatechange', function() {
       start = new Date().getTime();
       $wf.$dom.addStylesheet(css);
       $wf.$dom.addScript(js);
-      console.log("[FASHION] Page initialize finished in " + (new Date().getTime() - start) + "ms");
-      event = new Event(window.fashion.live.loadedEvent);
-      event.variableObject = window[window.fashion.variableObject];
-      return document.dispatchEvent(event);
+      return console.log("[FASHION] Page initialize finished in " + (new Date().getTime() - start) + "ms");
     });
   }
 });
@@ -584,7 +577,7 @@ Property = (function() {
 })();
 
 PropertyTransition = (function() {
-  function PropertyTransition(easing, duration, delay) {
+  function PropertyTransition(duration, easing, delay) {
     this.easing = easing;
     this.duration = duration;
     this.delay = delay;
@@ -740,7 +733,9 @@ ReturnValueModule = (function(_super) {
       this.type = args.type || args.output || args.outputType || $wf.$type.String;
       this.unit = args.unit || '';
       this.get = args.get || args.evaluate;
-      this.watch = args.watch;
+      if (args.watch && args.watch.toString().indexOf('[native code]') === -1) {
+        this.watcher = args.watch;
+      }
       ReturnValueModule.__super__.constructor.call(this, args);
     }
   }
@@ -772,7 +767,7 @@ FunctionModule = (function(_super) {
       delete args.unit;
     }
     if (!args.mode) {
-      if (args.watch != null) {
+      if ((args.watch != null) && args.watch.toString().indexOf('[native code]') === -1) {
         args.mode = $wf.$runtimeMode.dynamic;
       } else {
         args.mode = $wf.$runtimeMode["static"];
@@ -1219,7 +1214,7 @@ window.fashion.$parser.parseBlock = function(fashionText, regex, startIndex) {
 window.fashion.$parser.parseSelectorBody = function(bodyString, selector, parseTree) {
   var elm, elm2, mode, name, pObj, property, propertyNumber, regex, transition, value, valueMode, _i, _j, _len, _len1, _results;
   propertyNumber = 0;
-  regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*([^;}\n]*?)[\s]*(\![A-z0-9\-]+?)?[;}\n]/g;
+  regex = /[\s]*(\$?[\w\-\s]*)\:[\s]*(\[([\w\-\$\@\%]*)[\s]*([\w\-\$\@]*)[\s]*([\w\-\$\@\%]*)\]){0,1}[\s]*([^;}\n]*?)[\s]*(\![A-z0-9\-]+?)?[;}\n]/g;
   _results = [];
   while (property = regex.exec(bodyString)) {
     transition = void 0;
@@ -1374,7 +1369,7 @@ window.fashion.$parser.parseExpression = function(expString, parseTree, selector
     script = $wf.$parser.spliceString(script, start + scriptOffset, length, string);
     return scriptOffset += string.length - length;
   };
-  regex = /(\$([\w\-]+)\s*?\=|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|(\#[0-9A-Fa-f]{3,6})|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([^\s\)]*)|if(.*?)then(.*?)else(.*)|if(.*?)then(.*)|[`'"](.*?)[`'"])/g;
+  regex = /(\$([\w\-]+)\s*?\=\s|\@(self|this|parent)\.?([a-zA-Z0-9\-\_\.]*)|\$([\w\-]+)|\@([\w\-]+)|(\#[0-9A-Fa-f]{3,6})|([\-]{0,1}([\.]\d+|\d+(\.\d+)*)[a-zA-Z]{1,4})|([\w\-\@\$]*)\(|\)([^\s\)]*)|if(.*?)then(.*?)else(.*)|if(.*?)then(.*)|[`'"](.*?)[`'"])/g;
   shouldBreak = false;
   matchCount = 0;
   while (!shouldBreak && (section = regex.exec(expString))) {
@@ -1677,7 +1672,7 @@ window.fashion.$parser.expressionExpander = {
       unit = "";
     }
     parseTree.addFunctionDependency(name, fObj);
-    if (fObj.watch != null) {
+    if (fObj.watcher != null) {
       bindings.addFunctionBinding(name, scripts, bindings.copy(), mode);
     }
     script = "f['" + name + "'].get.call(" + (scripts.join(',')) + ")";
@@ -1697,12 +1692,18 @@ window.fashion.$parser.expressionExpander = {
     };
     ifExp = parse(ifExp.trim());
     trueExp = parse(trueExp.trim());
-    falseExp = parse(falseExp.trim());
-    if (trueExp.type !== falseExp.type) {
-      throw new FSETernaryTypeError(trueExp.script, falseExp.script);
-    }
-    if (trueExp.unit !== falseExp.unit) {
-      throw new FSETernaryUnitError(trueExp.script, falseExp.script);
+    if (falseExp != null) {
+      falseExp = parse(falseExp.trim());
+      if (trueExp.type !== falseExp.type) {
+        throw new FSETernaryTypeError(trueExp.script, falseExp.script);
+      }
+      if (trueExp.unit !== falseExp.unit) {
+        throw new FSETernaryUnitError(trueExp.script, falseExp.script);
+      }
+    } else {
+      falseExp = {
+        script: 'undefined'
+      };
     }
     script = "(" + ifExp.script + " ? " + trueExp.script + " : " + falseExp.script + ")";
     return new Expression(script, trueExp.type, trueExp.unit, bindings, mode);
@@ -2144,7 +2145,7 @@ window.fashion.$processor.properties = function(parseTree, propertyModules) {
 };
 window.fashion.$shared = {};
 window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime, varName, scope, elem) {
-  var indMode, scopeVal, vObj, _ref, _ref1;
+  var indMode, ran, scopeElem, scopeVal, vObj, _ref, _ref1, _ref2, _ref3, _ref4;
   vObj = variables[varName];
   if (!vObj) {
     console.log("[FASHION] Could not find variable '" + varName + "'");
@@ -2165,17 +2166,18 @@ window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime
       this.throwError("$" + varName + " does not have a value for scope '" + scope + "'");
     }
     if ((elem != null) && (this.getScopeOverride != null)) {
-      scopeVal = this.getScopeOverride(elem, varName, scope) || vObj.values[scope];
+      _ref = this.getScopeOverride(elem, varName, scope), scopeElem = _ref[0], scopeVal = _ref[1];
+      if (scopeVal == null) {
+        _ref1 = [elem, vObj.values[scope]], scopeElem = _ref1[0], scopeVal = _ref1[1];
+      }
     } else {
-      scopeVal = vObj.values[scope];
+      _ref2 = [elem, vObj.values[scope]], scopeElem = _ref2[0], scopeVal = _ref2[1];
     }
-    indMode = ((_ref = this.runtimeModes) != null ? _ref.individual : void 0) || (typeof $wf !== "undefined" && $wf !== null ? (_ref1 = $wf.$runtimeMode) != null ? _ref1.individual : void 0 : void 0);
-    if ((scopeVal.mode & indMode) === indMode) {
-      return 0;
-    }
+    indMode = ((_ref3 = this.runtimeModes) != null ? _ref3.individual : void 0) || (typeof $wf !== "undefined" && $wf !== null ? (_ref4 = $wf.$runtimeMode) != null ? _ref4.individual : void 0 : void 0);
     if (scopeVal.evaluate) {
+      ran = this.evaluate(scopeVal.evaluate, variables, globals, funcs, runtime, scopeElem);
       return {
-        value: this.evaluate(scopeVal, variables, globals, funcs, runtime, elem)
+        value: ran
       };
     } else {
       return {
@@ -2184,8 +2186,9 @@ window.fashion.$shared.getVariable = function(variables, globals, funcs, runtime
     }
   } else if (vObj["default"] !== void 0) {
     if (vObj["default"].evaluate) {
+      ran = this.evaluate(vObj["default"], variables, globals, funcs, runtime, elem);
       return {
-        value: this.evaluate(vObj["default"], variables, globals, funcs, runtime, elem)
+        value: ran
       };
     } else {
       return {
@@ -2704,7 +2707,7 @@ window.fashion.$actualizer = {
     $wfa.autoAddRequirements(runtimeData, parseTree, parseTree.selectors);
     $wfa.addRuntimeFunctions(runtimeData, parseTree);
     $wfa.removeUnnecessaryModuleData(runtimeData);
-    parseTree.scripts.push("document.dispatchEvent(new Event('" + $wf.readyEvent + "'));");
+    parseTree.scripts.push("setTimeout(function(){document.dispatchEvent(new Event('" + $wf.readyEvent + "'));},17);");
     css = $wf.styleHeader + $wfa.createCSS(runtimeData, cssSels);
     miniRuntimeData = $wfa.minifier.runtimeData(runtimeData);
     js = $wfa.createJS(runtimeData, miniRuntimeData, parseTree.scripts);
@@ -2726,7 +2729,7 @@ window.fashion.$actualizer.createJS = function(runtimeData, minifiedData, script
     selectors: {},
     individual: {},
     variables: {}
-  })) + ";\nFSEXPAND = " + ($wf.$stringify($wf.$actualizer.minifier.expandRuntimeData)) + ";\nFSEXPAND(window." + $wf.minifiedObject + ",window." + $wf.runtimeObject + ");\nFSREADY = function(r){d=document;c=\"complete\";\n	if(d.readyState==c)r()\n	else d.addEventListener('readystatechange',function(){if(d.readyState==c)r()})\n}\n" + (scripts.join('\n'));
+  })) + ";\nFSEXPAND = " + ($wf.$stringify($wf.$actualizer.minifier.expandRuntimeData)) + ";\nFSEXPAND(window." + $wf.minifiedObject + ",window." + $wf.runtimeObject + ");\nFSREADY = function(r){d=document;c=\"complete\";\n	if(d.readyState==c)r()\n	else d.addEventListener('DOMContentLoaded',r)\n}\n" + (scripts.join('\n'));
 };
 window.fashion.$actualizer.splitIndividual = function(selectors) {
   var cssRule, cssSelector, cssSelectors, id, indMode, indRule, indSelector, indSelectors, pid, property, selector, _ref;
@@ -3088,14 +3091,11 @@ window.fashion.$actualizer.createCSS = function(runtimeData, cssSelectors) {
     _ref = selector.properties;
     for (pid in _ref) {
       property = _ref[pid];
-      if (property.value == null) {
-        console.log(selector);
-      }
-      if ((selector.mode & $wf.$runtimeMode.globalDynamic) > 2) {
+      if ((property.mode & $wf.$runtimeMode.globalDynamic) > 2) {
         continue;
       }
       value = property.value;
-      if (selector.mode === $wf.$runtimeMode["static"]) {
+      if (property.mode === $wf.$runtimeMode["static"]) {
         if (typeof value === 'object' && value.value) {
           cssValue = evalFunction(value.value);
         } else {
@@ -3599,8 +3599,8 @@ $wf.addRuntimeModule("wait", [], {
 });
 $wf.addRuntimeModule("variables", ["evaluation", "selectors", "types", "errors"], {
   getVariable: window.fashion.$shared.getVariable,
-  variableValue: function(varName, element) {
-    return this.getVariable(FASHION.variables, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, varName, element).value;
+  variableValue: function(varName, element, scope) {
+    return this.getVariable(FASHION.variables, FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime, varName, scope, element).value;
   },
   setVariable: function(varName, value, scope, element) {
     var scopeElement, vObj;
@@ -3706,7 +3706,7 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
     selector = FASHION.selectors[selectorId];
     sheet = document.getElementById(FASHION.config.cssId).sheet;
     rules = sheet.rules || sheet.cssRules;
-    rule = sheet.rules[selector.rule];
+    rule = rules[selector.rule];
     _ref = selector.properties;
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -3807,7 +3807,13 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
       selector = _ref1[id];
       this.regenerateIndividualSelector(id);
     }
-    return window.FASHION.pageChanged = window.FASHION.domChanged = this.pageChanged.bind(this);
+    window.FASHION.pageChanged = window.FASHION.domChanged = this.pageChanged.bind(this);
+    window.FASHION.elementsRemoved = this.removedIndividualElements.bind(this);
+    return window.FASHION.elementRemoved = (function(_this) {
+      return function(element) {
+        return _this.removedIndividualElements(_this.expandNodeList([element]));
+      };
+    })(this);
   },
   updateSelectorElements: function(selector) {
     var element, id, individual, matchedElements, selectorName, _i, _len, _ref, _results;
@@ -3836,10 +3842,9 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
     return _results;
   },
   setPropertyOnIndividual: function(selectorId, propertyName) {
-    var id, individual, pObj, rule, selector, _ref, _results;
+    var id, individual, pObj, rule, selector, _i, _len, _ref, _ref1;
     selector = FASHION.individual[selectorId];
     _ref = selector.elements;
-    _results = [];
     for (id in _ref) {
       individual = _ref[id];
       if ((individual.cssid == null) || individual.cssid === -1) {
@@ -3847,20 +3852,14 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
         continue;
       }
       rule = FASHION.individualSheet.rules[individual.cssid];
-      _results.push((function() {
-        var _i, _len, _ref1, _results1;
-        _ref1 = selector.properties;
-        _results1 = [];
-        for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-          pObj = _ref1[_i];
-          if (this.makeCamelCase(pObj) === propertyName) {
-            _results1.push(rule.style[propertyName] = this.CSSRuleForProperty(pObj, individual.element, true));
-          }
+      _ref1 = selector.properties;
+      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+        pObj = _ref1[_i];
+        if (this.makeCamelCase(pObj) === propertyName) {
+          rule.style[propertyName] = this.CSSRuleForProperty(pObj, individual.element, true);
         }
-        return _results1;
-      }).call(this));
+      }
     }
-    return _results;
   },
   regenerateIndividualSelector: function(selectorId) {
     var element, id, selector, _ref, _results;
@@ -3881,6 +3880,9 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
   },
   regenerateElementSelector: function(selector, id, element) {
     var css, modifier, selectorName;
+    if (id.match(/[\$\#\.]/)) {
+      return;
+    }
     if (element.cssid !== -1) {
       FASHION.individualSheet.deleteRule(element.cssid);
     } else {
@@ -3946,6 +3948,34 @@ $wf.addRuntimeModule("individualized", ["selectors", "elements", "stylesheet-dom
       }
     }
     return _results;
+  },
+  removedIndividualElements: function(elements) {
+    var element, id, indObj, rules, _i, _len, _results;
+    if (typeof FASHION === "undefined" || FASHION === null) {
+      return;
+    }
+    _results = [];
+    for (_i = 0, _len = elements.length; _i < _len; _i++) {
+      element = elements[_i];
+      if ((element != null) && (element.id != null)) {
+        _results.push((function() {
+          var _ref, _results1;
+          _ref = FASHION.individual;
+          _results1 = [];
+          for (id in _ref) {
+            indObj = _ref[id];
+            if (!indObj.elements[element.id]) {
+              continue;
+            }
+            rules = FASHION.individualSheet.rules || FASHION.individualSheet.cssRules;
+            delete FASHION.elements[element.id];
+            _results1.push(delete indObj.elements[element.id]);
+          }
+          return _results1;
+        })());
+      }
+    }
+    return _results;
   }
 });
 
@@ -3989,7 +4019,7 @@ $wf.addRuntimeModule("functionWatchers", ["selectors"], {
     _results = [];
     for (name in _ref) {
       fObj = _ref[name];
-      if (fObj.watch != null) {
+      if (fObj.watcher != null) {
         _results.push((function() {
           var _results1;
           _results1 = [];
@@ -4041,15 +4071,15 @@ var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; 
 
 $wf.addRuntimeModule("DOMWatcher", [], {
   "$watchDom": function() {
-    var MutationObserver, observeFunction;
+    var observeFunction;
     if (window.FASHION_NO_OBSERVE === true) {
       return;
     }
-    if (typeof MutationObserver === "undefined" || MutationObserver === null) {
-      MutationObserver = WebKitMutationObserver;
+    if ((window.MutationObserver == null) && (typeof WebKitMutationObserver !== "undefined" && WebKitMutationObserver !== null)) {
+      window.MutationObserver = WebKitMutationObserver;
     }
-    if (MutationObserver == null) {
-      if (this.watchDomPolyfill) {
+    if (window.MutationObserver == null) {
+      if (this.LEGACY_watchDomPolyfill) {
         return this.LEGACY_watchDomPolyfill();
       } else {
         return this.throwError("Failed to setup DOM watchers, cannot detect changes.");
@@ -4070,7 +4100,7 @@ $wf.addRuntimeModule("DOMWatcher", [], {
       }
       return true;
     };
-    window.FSOBSERVER = new MutationObserver(function(mutations) {
+    window.FSOBSERVER = new window.MutationObserver(function(mutations) {
       if ((window.FASHION == null) || (FASHION.runtime == null)) {
         return;
       }
@@ -4103,8 +4133,11 @@ $wf.addRuntimeModule("DOMWatcher", [], {
   "callDomElementWatchers": function(tag, element) {
     var f, matchingIds, _i, _len, _ref, _ref1, _results;
     matchingIds = [element.id];
-    while (element(element.parentNode != null)) {
+    while (element = element.parentNode) {
       matchingIds.push(element.id);
+    }
+    if (window.FSDOMWATCHERS[tag] == null) {
+      return;
     }
     _ref = window.FSDOMWATCHERS[tag];
     _results = [];
@@ -4141,16 +4174,20 @@ $wf.addRuntimeModule("DOMWatcher", [], {
   "LEGACY_watchDomPolyfill": function() {
     var changeEvents, evtName, _i, _len, _results;
     console.log("[FASHION] Installing DOM Observer Polyfill. Will impact performance!");
-    document.body.addEventListener("DOMNodeInserted", (function(ev) {
-      return this.callDomGlobalWatchers("addNodes", this.expandNodeList([event.target]));
-    }), false);
+    document.body.addEventListener("DOMNodeInserted", ((function(_this) {
+      return function(ev) {
+        return _this.callDomGlobalWatchers("addNodes", _this.expandNodeList([ev.target]));
+      };
+    })(this)), false);
     changeEvents = ["DOMAttrModified", "DOMCharacterDataModified", "DOMElementNameChanged", "DOMAttributeNameChanged"];
     _results = [];
     for (_i = 0, _len = changeEvents.length; _i < _len; _i++) {
       evtName = changeEvents[_i];
-      _results.push(document.body.addEventListener(evtName, (function(ev) {
-        return this.callDomElementWatchers("changedNode", ev.target);
-      }), false));
+      _results.push(document.body.addEventListener(evtName, ((function(_this) {
+        return function(ev) {
+          return _this.callDomElementWatchers("changedNode", ev.target);
+        };
+      })(this)), false));
     }
     return _results;
   }
@@ -4167,9 +4204,11 @@ $wf.addRuntimeModule("globals", ["selectors"], {
     _results = [];
     for (name in _ref) {
       global = _ref[name];
-      if (global.watch != null) {
-        _results.push(global.watch(onChangeFunction(global)));
+      if (!(global.watcher != null)) {
+        continue;
       }
+      global.watcher(onChangeFunction(global));
+      _results.push(this.updateGlobal(global));
     }
     return _results;
   },
@@ -4241,6 +4280,7 @@ $wf.addRuntimeModule("stylesheet-dom", [], {
     }
     head = document.head || document.getElementsByTagName('head')[0];
     head.appendChild(sheetElement);
+    sheetElement.sheet.rules = sheetElement.sheet.rules || sheetElement.sheet.cssRules;
     return sheetElement;
   },
   removeStylesheet: function(element) {
@@ -4289,7 +4329,7 @@ $wf.addRuntimeModule("sheets", ["stylesheet-dom"], {
       rule.style.setProperty(property, value);
       if (prioritize) {
         ruleText = rule.cssText;
-        sheet.removeRule(id);
+        sheet.deleteRule(id);
         sheet.insertRule(ruleText, sheet.rules.length);
       }
       return;
@@ -4311,15 +4351,16 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
     return void 0;
   },
   "getScopeOverride": function(element, varName, scope) {
-    var scopeElement;
+    var scopeElement, val;
     scopeElement = this.getParentForScope(element, scope);
     if (!scopeElement) {
       return void 0;
     }
-    return this.getFashionAttribute(scopeElement, "$" + varName);
+    val = this.getFashionAttribute(scopeElement, "$" + varName);
+    return [this.elementFunction(scopeElement), val];
   },
   "setScopedVariableOnElement": function(element, varName, value) {
-    var bindLink, scope, vObj, _ref, _results;
+    var bindLink, nVal, scope, vObj, _ref, _results;
     if (typeof element === 'function') {
       element = element();
     }
@@ -4332,7 +4373,6 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
       if (scope !== '0') {
         if (this.matches(element, scope)) {
           this.regenerateVariableDependencies(varName, scope);
-          vObj = FASHION.variables[varName];
           if (vObj.dependents[scope] == null) {
             continue;
           }
@@ -4342,14 +4382,19 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
             _results1 = [];
             for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
               bindLink = _ref1[_i];
-              if (bindLink.length === 2) {
-                if (bindLink[0] === 'v') {
-
-                } else if (bindLink[0] === 'i') {
-                  _results1.push(this.addIndividualScopedSelectorOverride(bindLink[1], element));
-                } else {
-                  _results1.push(this.addScopedSelectorOverride(bindLink[1], element));
+              if (bindLink[0] === 'v') {
+                nVal = this.variableValue(bindLink[1], this.elementFunction(element), scope);
+                _results1.push(this.setScopedVariableOnElement(element, bindLink[1], nVal));
+              } else if (bindLink[0] === 'i') {
+                if (this.addIndividualScopedSelectorOverride == null) {
+                  continue;
                 }
+                _results1.push(this.addIndividualScopedSelectorOverride(bindLink[1], element));
+              } else {
+                if (this.addScopedSelectorOverride == null) {
+                  continue;
+                }
+                _results1.push(this.addScopedSelectorOverride(bindLink[1], element));
               }
             }
             return _results1;
@@ -4753,7 +4798,7 @@ $wf.$extend(window.fashion.$functions, new ((function() {
     transformFunction = ["matrix", "matrix3d", "translate", "translate3d", "translateX", "translateY", "translateZ", "scale", "scale3d", "scaleX", "scaleY", "scaleZ", "rotate", "rotate3d", "rotateX", "rotateY", "rotateZ", "skew", "skewX", "skewY", "perspective"];
     genericPassthrough = function(name) {
       var body;
-      body = "var a = arguments;\nvar s = \"" + name + "(\";\nfor(var i = 0; i < a.length; i++){\n	s += a[i].value;\n	if(i<a.length-1)s += \",\";\n}\nreturn s + \")\";";
+      body = "var a = arguments;\nvar s = \"" + name + "(\";\nfor(var i = 0; i < a.length; i++){\n	s += a[i].value + \"px\";\n	if(i<a.length-1)s += \",\";\n}\nreturn s + \")\";";
       return new Function(body);
     };
     for (_i = 0, _len = transformFunction.length; _i < _len; _i++) {
@@ -5013,6 +5058,65 @@ $wf.$extend(window.fashion.$properties, {
     }
   })
 });
+$wf.$extend(window.fashion.$properties, {
+  "set-attribute": new PropertyModule({
+    replace: true,
+    mode: window.fashion.$runtimeMode.individual,
+    apply: function(element, value, evaluate) {
+      var attribute, _ref;
+      _ref = evaluate().split(" "), attribute = _ref[0], value = _ref[1];
+      attribute = attribute.replace(/[\'\"]/g, "");
+      return element.setAttribute(attribute, value);
+    }
+  }),
+  "canvas-render": new PropertyModule({
+    replace: true,
+    mode: window.fashion.$runtimeMode.individual,
+    apply: function(element, value, evaluate) {
+      
+			//shim layer with setTimeout fallback
+			window.requestAnimFrame = (function(){
+			  return  window.requestAnimationFrame       ||
+			          window.webkitRequestAnimationFrame ||
+			          window.mozRequestAnimationFrame    ||
+			          function( callback ){
+			            window.setTimeout(callback, 1000 / 60);
+			          };
+			})();
+			;
+      var rateLimitedEvaluate;
+      rateLimitedEvaluate = function() {
+        var lrt;
+        if (!element.getAttribute("last-render-time")) {
+          element.setAttribute("last-render-time", new Date().getTime());
+          evaluate();
+        } else {
+          lrt = parseInt(element.getAttribute("last-render-time"));
+          if ((new Date().getTime()) - lrt > 1000 / 60) {
+            evaluate();
+          }
+        }
+        return window.requestAnimFrame(rateLimitedEvaluate.bind(this));
+      };
+      return rateLimitedEvaluate();
+    }
+  }),
+  "text-content": new PropertyModule({
+    replace: true,
+    mode: window.fashion.$runtimeMode.individual,
+    apply: function(element, value, evaluate) {
+      element.innerText = evaluate();
+      return element.textContent = evaluate();
+    }
+  }),
+  "value": new PropertyModule({
+    replace: true,
+    mode: window.fashion.$runtimeMode.individual,
+    apply: function(element, value, evaluate) {
+      return element.value = evaluate();
+    }
+  })
+});
 window.fashion.$blocks = {};
 window.fashion.$blocks["transition"] = new BlockModule({
   capabilities: ["transitionBlock"],
@@ -5196,8 +5300,12 @@ $wf.addRuntimeModule("transitionBlock", ["wait", "selectors", "types", "sheets"]
         continue;
       }
       t = property.value.transition;
-      l = parseFloat(this.evaluate(t.duration, 0, variables)) / 100 * duration;
-      msLength = l != null ? "" + l + "ms" : t.duration;
+      if (t.duration.indexOf("%" !== -1)) {
+        l = parseFloat(this.evaluate(t.duration, 0, variables)) / 100 * duration;
+        msLength = l != null ? "" + l + "ms" : t.duration;
+      } else {
+        msLength = t.duration;
+      }
       csstext += "" + property.name + " " + msLength + " " + (t.easing || '') + " " + (t.delay || '') + ",";
     }
     csstext = csstext.substr(0, csstext.length - 1) + ";";
@@ -5355,6 +5463,15 @@ window.fashion.$globals = {
         }
         return lastRatio = window.devicePixelRatio;
       }), 1000);
+    }
+  }),
+  browserwebkit: new GlobalModule({
+    type: $wf.$type.Boolean,
+    get: function() {
+      return /WebKit/.test(navigator.userAgent);
+    },
+    watch: function(onchange) {
+      return false;
     }
   })
 };

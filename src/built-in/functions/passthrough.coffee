@@ -18,7 +18,7 @@ $wf.$extend window.fashion.$functions, new class then constructor: ->
 				var a = arguments;
 				var s = "#{name}(";
 				for(var i = 0; i < a.length; i++){
-					s += a[i].value;
+					s += a[i].value + "px";
 					if(i<a.length-1)s += ",";
 				}
 				return s + ")";

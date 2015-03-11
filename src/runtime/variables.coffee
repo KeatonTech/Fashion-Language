@@ -3,11 +3,11 @@ $wf.addRuntimeModule "variables", ["evaluation", "selectors", "types", "errors"]
 
 	# This is shared functionality so we can just bind around the existing function
 	getVariable: window.fashion.$shared.getVariable
-	variableValue: (varName, element) -> 
+	variableValue: (varName, element, scope) -> 
 		@getVariable(
 			FASHION.variables, 
 			FASHION.modules.globals, FASHION.modules.functions, FASHION.runtime,
-			varName, element
+			varName, scope, element
 		).value
 
 	# Set a variable's value

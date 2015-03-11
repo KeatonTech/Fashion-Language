@@ -33,7 +33,7 @@ top = true, hideUnits = false, wrap = true) ->
 
 	# Detect functions and variables
 	regex = ///(
-			\$([\w\-]+)\s*?\=|		# Expression sets a variable
+			\$([\w\-]+)\s*?\=\s|	# Expression sets a variable
 			\@(self|this|parent)\.?	# Relative element reference (name)
 			([a-zA-Z0-9\-\_\.]*)|	# Relative element reference (property)
 			\$([\w\-]+)|			# Defined variable
@@ -372,7 +372,8 @@ window.fashion.$parser.expressionExpander =
 		parseTree.addFunctionDependency name, fObj
 
 		# Add the function watcher to the parse tree, if necessary
-		if fObj.watch? then bindings.addFunctionBinding name, scripts, bindings.copy(), mode
+		if fObj.watcher?
+			bindings.addFunctionBinding name, scripts, bindings.copy(), mode
 
 		# Return a neat little package
 		script = "f['#{name}'].get.call(#{scripts.join(',')})"
@@ -395,13 +396,17 @@ window.fashion.$parser.expressionExpander =
 
 		ifExp = parse ifExp.trim()
 		trueExp = parse trueExp.trim()
-		falseExp = parse falseExp.trim()
 
-		# Type checking
-		if trueExp.type isnt falseExp.type
-			throw new FSETernaryTypeError trueExp.script, falseExp.script
-		if trueExp.unit isnt falseExp.unit
-			throw new FSETernaryUnitError trueExp.script, falseExp.script
+		if falseExp? 
+			falseExp = parse falseExp.trim()
+
+			# Type checking
+			if trueExp.type isnt falseExp.type
+				throw new FSETernaryTypeError trueExp.script, falseExp.script
+			if trueExp.unit isnt falseExp.unit
+				throw new FSETernaryUnitError trueExp.script, falseExp.script
+
+		else falseExp = {script: 'undefined'}
 
 		# JS-style ternary
 		script = "(#{ifExp.script} ? #{trueExp.script} : #{falseExp.script})"

@@ -5,8 +5,8 @@ window.fashion.$parser.parseSelectorBody = (bodyString, selector, parseTree) ->
 
 	regex = ///
 			[\s]*(\$?[\w\-\s]*)\:		# Property/Variable Name
-			[\s]*(\[([\w\-\$\@]*)		# Transition Name
-			[\s]*([\w\-\$\@\%]*)[\s]*	# Transition Duration (optional)
+			[\s]*(\[([\w\-\$\@\%]*)		# Transition Duration
+			[\s]*([\w\-\$\@]*)[\s]*		# Transition Easing
 			([\w\-\$\@\%]*)\]){0,1}		# Transition Delay (optional)
 			[\s]*([^;}\n]*?)			# Property/Variable Value or Expression
 			[\s]*(\![A-z0-9\-]+?)?		# Flags (like !important or !static)

@@ -205,8 +205,10 @@ $wf.addRuntimeModule "transitionBlock", ["wait", "selectors", "types", "sheets"]
 		csstext = "transition: "
 		for property in properties when property.value.transition
 			t = property.value.transition
-			l = parseFloat(@evaluate t.duration, 0, variables) / 100 * duration
-			msLength = if l? then "#{l}ms" else t.duration
+			if t.duration.indexOf "%" isnt -1
+				l = parseFloat(@evaluate t.duration, 0, variables) / 100 * duration
+				msLength = if l? then "#{l}ms" else t.duration
+			else msLength = t.duration
 			csstext += "#{property.name} #{msLength} #{t.easing||''} #{t.delay||''},"
 
 		csstext = csstext.substr(0, csstext.length - 1) + ";"
