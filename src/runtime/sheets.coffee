@@ -45,9 +45,29 @@ $wf.addRuntimeModule "sheets", ["stylesheet-dom"],
 			if prioritize
 				ruleText = rule.cssText
 				sheet.deleteRule id
-				sheet.insertRule ruleText, sheet.rules.length
+				sheet.insertRule ruleText, 0
 
 			return
 
 		# Create a new style instead
 		sheet.insertRule "#{selector} {#{property}: #{value};}", sheet.rules.length
+
+###
+	# Fix for IE9 and IE10 that makes them actually edit the right CSS values
+	$IEFix: ()->
+
+		if !document.documentMode? then return
+		if document.documentMode < 9 then return
+		console.log "[FASHION] Overriding CSSStyleSheet Functions to fix IE silliness"
+		console.log "[FASHION] This will impact performance!"
+
+		# Switcheroo
+		realInsertRule = CSSStyleSheet.prototype.insertRule
+		CSSStyleSheet.prototype.insertRule = (rule, index)->
+			console.log this.rules.length
+			element = document.getElementById(this.id)
+			rules = element.innerHTML.split("}")
+			if rules.length is 0 then return element.innerHTML = rule
+			rules.splice(Math.max(index, this.rules.length - 1), 0, rule.replace("}",""))
+			element.innerHTML = rules.join("}")
+###

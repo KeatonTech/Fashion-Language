@@ -62,10 +62,11 @@ window.fashion.$loader =
 	loadExternalScript: (url, callback) ->
 		req = new XMLHttpRequest()
 		req.onreadystatechange = ()->
-			if req.readyState is 4 and req.status is 200
-				callback req.responseText
-			else if req.status > 400
-				console.log "[FASHION] Could not load script: #{url} (#{req.status})"
+			if req.readyState is 4 
+				if req.status is 200
+					callback req.responseText
+				else if req.status > 400
+					console.log "[FASHION] Could not load script: #{url} (#{req.status})"
 
 		req.open("GET", url, true);
 		req.send();

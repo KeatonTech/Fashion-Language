@@ -39,7 +39,11 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 		# Get the rule from the stylesheet
 		sheet = document.getElementById(FASHION.config.cssId).sheet
 		rules = sheet.rules || sheet.cssRules # Hello, firefox
-		rule = rules[selector.rule]
+
+		rule = rules[@countForIE rules, selector.rule]
+		if !rule?
+			console.log "[FASHION] Could not find rule"
+			console.log selector
 
 		# Go through each property looking for ones with the given name
 		# There could be multiple properties that match, usually as fallbacks
@@ -74,7 +78,24 @@ $wf.addRuntimeModule "selectors", ["evaluation", "errors"],
 		stylesheet.deleteRule selector.rule
 
 		# Add the regenerated selector
-		stylesheet.insertRule @CSSRuleForSelector(selector), selector.rule
+		ieIndex = @countForIE stylesheet.rules, selector.rule
+		stylesheet.insertRule @CSSRuleForSelector(selector), ieIndex
+
+
+	# Internet Explorer has a problem with counting so we have to fix it
+	# UPDATE: This may not be necessary
+	countForIE: (rules, ruleNumber) -> return ruleNumber 
+
+	###
+		# This is an easy task for most browsers
+		if !document.documentMode? then return ruleNumber
+
+		# But IE gets confused by commas, much like a third grader
+		offs = 0
+		for i in [0...ruleNumber]
+			offs += rules[i].selectorText.split(",").length - 1
+		return offs + ruleNumber
+	###
 
 
 	# ==== Templates for CSS Generation ==== #

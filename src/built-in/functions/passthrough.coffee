@@ -59,3 +59,30 @@ $wf.$extend window.fashion.$functions, new class then constructor: ->
 			mode: $wf.$runtimeMode.static
 			output: $wf.$type.String
 			"evaluate": genericPassthrough(name)
+
+
+$wf.$extend window.fashion.$functions, new class then constructor: ->
+
+	# Random function-like things in CSS
+	cssFunctions = [
+		"url", "calc"
+	]
+
+	genericPassthrough = (name)-> 
+		body = 	"""
+				var a = arguments;
+				var s = "#{name}(";
+				for(var i = 0; i < a.length; i++){
+					s += a[i].value;
+					if(i<a.length-1)s += ",";
+				}
+				return s + ")";
+				"""
+		return new Function body
+
+	for name in cssFunctions
+		@[name] = new FunctionModule
+			mode: $wf.$runtimeMode.static
+			output: $wf.$type.String
+			"evaluate": genericPassthrough(name)
+

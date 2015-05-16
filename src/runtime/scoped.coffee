@@ -53,11 +53,24 @@ $wf.addRuntimeModule "scopedVariables",
 						if !@addScopedSelectorOverride? then continue
 						@addScopedSelectorOverride bindLink[1], element
 
+
+	# Get the value of a variable on an element
+	"getScopedVariableOnElement": (element, varName) ->
+		vObj = FASHION.variables[varName]
+		while true
+			for scope, value of vObj.values when scope isnt '0' and @matches element, scope
+				if v = @getScopeOverride(element, varName, scope)[1] then return v
+				if value? then return value
+			if !(element = element.parentNode) then break
+		return @variableValue varName, element
+
+
 	# Install some useful functionality
 	"$initializeScoped": ()->
 
 		# Install a helpful API function
 		window.FASHION.setElementVariable = @setScopedVariableOnElement.bind FASHION.runtime
+		window.FASHION.getElementVariable = @getScopedVariableOnElement.bind FASHION.runtime
 
 		# Go through each variable and find scoped ones with individualized properties
 		indMode = @runtimeModes.individual

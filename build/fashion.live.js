@@ -238,7 +238,7 @@ window.fashion.$dom = {
     return head.appendChild(element);
   },
   addStylesheet: function(styleText, id) {
-    var rule, sheet, styleRules, _results;
+    var e, rule, sheet, styleRules, _results;
     if (id == null) {
       id = window.fashion.cssId;
     }
@@ -246,13 +246,21 @@ window.fashion.$dom = {
     sheet.setAttribute("type", "text/css");
     sheet.setAttribute("id", "" + id);
     $wf.$dom.addElementToHead(sheet);
+    sheet.sheet.reallength = 0;
     styleRules = styleText.split("\n");
     _results = [];
     for (id in styleRules) {
       rule = styleRules[id];
-      if (rule.length > 3) {
-        _results.push(sheet.sheet.insertRule(rule, id));
+      if (!(rule.length > 3)) {
+        continue;
       }
+      try {
+        sheet.sheet.insertRule(rule, id);
+      } catch (_error) {
+        e = _error;
+        sheet.sheet.insertRule("#FSIGNORE {}", id);
+      }
+      _results.push(sheet.sheet.reallength++);
     }
     return _results;
   },
@@ -955,10 +963,12 @@ window.fashion.$loader = {
     var req;
     req = new XMLHttpRequest();
     req.onreadystatechange = function() {
-      if (req.readyState === 4 && req.status === 200) {
-        return callback(req.responseText);
-      } else if (req.status > 400) {
-        return console.log("[FASHION] Could not load script: " + url + " (" + req.status + ")");
+      if (req.readyState === 4) {
+        if (req.status === 200) {
+          return callback(req.responseText);
+        } else if (req.status > 400) {
+          return console.log("[FASHION] Could not load script: " + url + " (" + req.status + ")");
+        }
       }
     };
     req.open("GET", url, true);
@@ -1014,7 +1024,7 @@ window.fashion.$parser.splitByTopLevelSpaces = function(value) {
   sq = dq = bt = false;
   acc = "";
   ret = [];
-  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\s]+(\s+[\+\-\/\*\=]\s+|[\+\/\*\=]))+[^\`\s]+|\s+(\&\&|\|\|)\s+|\s+(==|!==)\s+|if\s+|\s+then\s+|\s+else\s+|\s|[^\(\)\"\'\`\s]+)/g;
+  regex = /([^\(\)\"\'\`\s]*\(|\)|\"|\'|\`|([^\`\s\)]+(\s+[\+\-\/\*\=]\s+|[\+\/\*\=]))+([^\`\s\(]|if)+|\s+(\&\&|\|\|)\s+|\s+(==|!==)\s+|if\s+|\s+then\s+|\s+else\s+|\s|[^\(\)\"\'\`\s]+)/g;
   while (token = regex.exec(value)) {
     if (token[0] === " " && depth === 0 && !sq && !dq && !bt) {
       ret.push(acc);
@@ -1680,6 +1690,9 @@ window.fashion.$parser.expressionExpander = {
   },
   ternary: function(ifExp, trueExp, falseExp, parseArgs, top) {
     var bindings, funcs, globals, mode, ogstring, parse, parseTree, script, selector;
+    if ((ifExp == null) || (trueExp == null)) {
+      throw new FSETernaryTypeError();
+    }
     ogstring = parseArgs[0], parseTree = parseArgs[1], selector = parseArgs[2], funcs = parseArgs[3], globals = parseArgs[4];
     bindings = new ExpressionBindings;
     mode = 0;
@@ -2707,7 +2720,7 @@ window.fashion.$actualizer = {
     $wfa.autoAddRequirements(runtimeData, parseTree, parseTree.selectors);
     $wfa.addRuntimeFunctions(runtimeData, parseTree);
     $wfa.removeUnnecessaryModuleData(runtimeData);
-    parseTree.scripts.push("setTimeout(function(){document.dispatchEvent(new Event('" + $wf.readyEvent + "'));},17);");
+    parseTree.scripts.push("setTimeout(function(){\n	var e = document.createEvent(\"Event\");\n	e.initEvent('" + $wf.readyEvent + "',0, 0);\n	document.dispatchEvent(e);\n},17);");
     css = $wf.styleHeader + $wfa.createCSS(runtimeData, cssSels);
     miniRuntimeData = $wfa.minifier.runtimeData(runtimeData);
     js = $wfa.createJS(runtimeData, miniRuntimeData, parseTree.scripts);
@@ -3289,7 +3302,7 @@ window.fashion.$actualizer.addRuntimeFunctions = function(runtimeData, parseTree
   return _results;
 };
 window.fashion.$actualizer.hideIndividualizedSelectors = function(cssSelectors, scripts, indSels) {
-  var hideSel, hideSelectors, id, joinedSelector, key, len, selector, value;
+  var hideSel, hideSelectors, id, joinedSelector, selector;
   hideSelectors = [];
   for (id in indSels) {
     selector = indSels[id];
@@ -3304,12 +3317,13 @@ window.fashion.$actualizer.hideIndividualizedSelectors = function(cssSelectors, 
   hideSel = new Selector(joinedSelector, $wf.$runtimeMode["static"]);
   hideSel.addProperty(new Property("visibility", "hidden"));
   cssSelectors["hs"] = hideSel;
-  len = $wf.styleHeaderRules;
-  for (key in cssSelectors) {
-    value = cssSelectors[key];
-    len++;
-  }
-  return scripts.push("FSREADY(function(){\n	ss = document.getElementById(FASHION.config.cssId);\n	if(ss&&ss.sheet)ss.sheet.deleteRule(" + (len - 1) + ");\n});");
+
+  /*
+  	 * Figure out how many selectors there are so one can be added to the end
+  	len = $wf.styleHeaderRules
+  	len++ for key, value of cssSelectors
+   */
+  return scripts.push("FSREADY(function(){\n	ss = document.getElementById(FASHION.config.cssId);\n	var len = ss.sheet.reallength || ss.sheet.rules.length;\n	if(ss&&ss.sheet)ss.sheet.deleteRule(len - 1);\n});");
 };
 window.fashion.$actualizer.minifier = {
   runtimeData: function(runtimeData) {
@@ -3706,7 +3720,11 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
     selector = FASHION.selectors[selectorId];
     sheet = document.getElementById(FASHION.config.cssId).sheet;
     rules = sheet.rules || sheet.cssRules;
-    rule = rules[selector.rule];
+    rule = rules[this.countForIE(rules, selector.rule)];
+    if (rule == null) {
+      console.log("[FASHION] Could not find rule");
+      console.log(selector);
+    }
     _ref = selector.properties;
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -3724,7 +3742,7 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
     return _results;
   },
   regenerateSelector: function(sheet, selectorId) {
-    var cssElem, selector, stylesheet;
+    var cssElem, ieIndex, selector, stylesheet;
     if (sheet === "i") {
       return this.regenerateIndividualSelector(selectorId);
     }
@@ -3735,8 +3753,23 @@ $wf.addRuntimeModule("selectors", ["evaluation", "errors"], {
     cssElem = document.getElementById("" + FASHION.config.cssId);
     stylesheet = cssElem.sheet;
     stylesheet.deleteRule(selector.rule);
-    return stylesheet.insertRule(this.CSSRuleForSelector(selector), selector.rule);
+    ieIndex = this.countForIE(stylesheet.rules, selector.rule);
+    return stylesheet.insertRule(this.CSSRuleForSelector(selector), ieIndex);
   },
+  countForIE: function(rules, ruleNumber) {
+    return ruleNumber;
+  },
+
+  /*
+  		 * This is an easy task for most browsers
+  		if !document.documentMode? then return ruleNumber
+  
+  		 * But IE gets confused by commas, much like a third grader
+  		offs = 0
+  		for i in [0...ruleNumber]
+  			offs += rules[i].selectorText.split(",").length - 1
+  		return offs + ruleNumber
+   */
   CSSPropertyTemplate: window.fashion.$actualizer.cssPropertyTemplate,
   CSSSelectorTemplate: window.fashion.$actualizer.cssSelectorTemplate,
   CSSRuleForProperty: function(propertyObject, element, unwrapped) {
@@ -4243,6 +4276,18 @@ $wf.addRuntimeModule("elements", [], {
         if (property === "height") {
           return element.clientHeight;
         }
+        if (property === "offsetTop") {
+          return element.offsetTop;
+        }
+        if (property === "offsetBottom") {
+          return element.offsetBottom;
+        }
+        if (property === "offsetLeft") {
+          return element.offsetLeft;
+        }
+        if (property === "offsetRight") {
+          return element.offsetRight;
+        }
         return _this.getFashionAttribute(element, property) || element.getAttribute(property);
       };
     })(this);
@@ -4330,14 +4375,35 @@ $wf.addRuntimeModule("sheets", ["stylesheet-dom"], {
       if (prioritize) {
         ruleText = rule.cssText;
         sheet.deleteRule(id);
-        sheet.insertRule(ruleText, sheet.rules.length);
+        sheet.insertRule(ruleText, 0);
       }
       return;
     }
     return sheet.insertRule("" + selector + " {" + property + ": " + value + ";}", sheet.rules.length);
   }
 });
-$wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-dom", "variables", "individualizedHelpers"], {
+
+
+/*
+	 * Fix for IE9 and IE10 that makes them actually edit the right CSS values
+	$IEFix: ()->
+
+		if !document.documentMode? then return
+		if document.documentMode < 9 then return
+		console.log "[FASHION] Overriding CSSStyleSheet Functions to fix IE silliness"
+		console.log "[FASHION] This will impact performance!"
+
+		 * Switcheroo
+		realInsertRule = CSSStyleSheet.prototype.insertRule
+		CSSStyleSheet.prototype.insertRule = (rule, index)->
+			console.log this.rules.length
+			element = document.getElementById(this.id)
+			rules = element.innerHTML.split("}")
+			if rules.length is 0 then return element.innerHTML = rule
+			rules.splice(Math.max(index, this.rules.length - 1), 0, rule.replace("}",""))
+			element.innerHTML = rules.join("}")
+ */
+;$wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-dom", "variables", "individualizedHelpers"], {
   "getParentForScope": function(element, scope) {
     if (typeof element === 'function') {
       element = element();
@@ -4406,9 +4472,33 @@ $wf.addRuntimeModule("scopedVariables", ["evaluation", "elements", "stylesheet-d
     }
     return _results;
   },
+  "getScopedVariableOnElement": function(element, varName) {
+    var scope, v, vObj, value, _ref;
+    vObj = FASHION.variables[varName];
+    while (true) {
+      _ref = vObj.values;
+      for (scope in _ref) {
+        value = _ref[scope];
+        if (!(scope !== '0' && this.matches(element, scope))) {
+          continue;
+        }
+        if (v = this.getScopeOverride(element, varName, scope)[1]) {
+          return v;
+        }
+        if (value != null) {
+          return value;
+        }
+      }
+      if (!(element = element.parentNode)) {
+        break;
+      }
+    }
+    return this.variableValue(varName, element);
+  },
   "$initializeScoped": function() {
     var indMode, scope, vObj, val, varName, _ref, _results;
     window.FASHION.setElementVariable = this.setScopedVariableOnElement.bind(FASHION.runtime);
+    window.FASHION.getElementVariable = this.getScopedVariableOnElement.bind(FASHION.runtime);
     indMode = this.runtimeModes.individual;
     _ref = FASHION.variables;
     _results = [];
@@ -4826,6 +4916,29 @@ $wf.$extend(window.fashion.$functions, new ((function() {
     };
     for (_i = 0, _len = gradientFunctions.length; _i < _len; _i++) {
       name = gradientFunctions[_i];
+      this[name] = new FunctionModule({
+        mode: $wf.$runtimeMode["static"],
+        output: $wf.$type.String,
+        "evaluate": genericPassthrough(name)
+      });
+    }
+  }
+
+  return _Class;
+
+})()));
+
+$wf.$extend(window.fashion.$functions, new ((function() {
+  function _Class() {
+    var cssFunctions, genericPassthrough, name, _i, _len;
+    cssFunctions = ["url", "calc"];
+    genericPassthrough = function(name) {
+      var body;
+      body = "var a = arguments;\nvar s = \"" + name + "(\";\nfor(var i = 0; i < a.length; i++){\n	s += a[i].value;\n	if(i<a.length-1)s += \",\";\n}\nreturn s + \")\";";
+      return new Function(body);
+    };
+    for (_i = 0, _len = cssFunctions.length; _i < _len; _i++) {
+      name = cssFunctions[_i];
       this[name] = new FunctionModule({
         mode: $wf.$runtimeMode["static"],
         output: $wf.$type.String,
@@ -5469,6 +5582,15 @@ window.fashion.$globals = {
     type: $wf.$type.Boolean,
     get: function() {
       return /WebKit/.test(navigator.userAgent);
+    },
+    watch: function(onchange) {
+      return false;
+    }
+  }),
+  ismobile: new GlobalModule({
+    type: $wf.$type.Boolean,
+    get: function() {
+      return (window.orientation != null) && window.innerWidth < 800;
     },
     watch: function(onchange) {
       return false;

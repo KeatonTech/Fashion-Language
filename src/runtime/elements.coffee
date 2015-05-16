@@ -16,6 +16,11 @@ $wf.addRuntimeModule "elements", [],
 		if property is "width" then return element.clientWidth
 		if property is "height" then return element.clientHeight
 
+		if property is "offsetTop" then return element.offsetTop
+		if property is "offsetBottom" then return element.offsetBottom
+		if property is "offsetLeft" then return element.offsetLeft
+		if property is "offsetRight" then return element.offsetRight
+
 		# All else has failed, lookup the attribute
 		return @getFashionAttribute(element,property) || element.getAttribute(property)
 

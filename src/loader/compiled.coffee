@@ -16,7 +16,8 @@ window.fashion.$loader =
 
 		# HTML with all of the tags stripped, for later use
 		stripped = html.replace $wf.$loader.styleRegex(), ""
-		stripped = stripped.replace $wf.$loader.scriptRegex(), ""
+		stripped = stripped.replace $wf.$loader.scriptRegex(), (match)->
+			if match.indexOf("fs-preserve") != -1 then match else ""
 
 		# Load all the fss files
 		$wf.$loader.extractStyles head, htmlPath, (allFashion) ->
@@ -99,6 +100,7 @@ window.fashion.$loader =
 		regex = $wf.$loader.scriptRegex();
 
 		while tag = regex.exec head
+			if tag[0].indexOf("fs-preserve") isnt -1 then continue
 
 			# Check for a src attribute
 			if tag[2]?
@@ -109,7 +111,7 @@ window.fashion.$loader =
 				fs.readFile fssPath, resolvePromise.bind 0, fssPath, scripts.length
 				scripts.push ''
 
-			# Otherwise the style is already included
+			# Otherwise the script is already included
 			else 
 				console.log tag[3].indexOf($wf.$loader.fashionIdentifier)
 				if tag[3].indexOf($wf.$loader.fashionIdentifier) is -1

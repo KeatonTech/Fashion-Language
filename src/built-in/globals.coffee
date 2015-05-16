@@ -56,3 +56,8 @@ window.fashion.$globals =
 		type: $wf.$type.Boolean
 		get: () -> /WebKit/.test(navigator.userAgent)
 		watch: (onchange) -> return false
+
+	ismobile: new GlobalModule
+		type: $wf.$type.Boolean
+		get: () -> window.orientation? and window.innerWidth < 800
+		watch: (onchange) -> return false

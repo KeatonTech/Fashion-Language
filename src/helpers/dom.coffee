@@ -12,9 +12,16 @@ window.fashion.$dom =
 		
 		# Add the rules one-by-one
 		# Not really sure why the browser can't just do this part itself.
+		# But IE has some trouble counting so we have to help it along.
+		sheet.sheet.reallength = 0
 		styleRules = styleText.split("\n")
 		for id, rule of styleRules when rule.length > 3
-			sheet.sheet.insertRule rule, id
+			try 
+				sheet.sheet.insertRule rule, id
+			catch e
+				# This is sloppy but it's very hard to change indices at this point
+				sheet.sheet.insertRule "#FSIGNORE {}", id
+			sheet.sheet.reallength++
 
 	addScript: (scriptText) ->
 		script = document.createElement "script"

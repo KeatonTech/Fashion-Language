@@ -15,14 +15,17 @@ window.fashion.$actualizer.hideIndividualizedSelectors =
 	hideSel.addProperty new Property "visibility", "hidden"
 	cssSelectors["hs"] = hideSel
 
+	###
 	# Figure out how many selectors there are so one can be added to the end
 	len = $wf.styleHeaderRules
 	len++ for key, value of cssSelectors
+	###
 
 	# Add a script to remove this super selector at runtime
 	scripts.push	"""
 					FSREADY(function(){
 						ss = document.getElementById(FASHION.config.cssId);
-						if(ss&&ss.sheet)ss.sheet.deleteRule(#{len - 1});
+						var len = ss.sheet.reallength || ss.sheet.rules.length;
+						if(ss&&ss.sheet)ss.sheet.deleteRule(len - 1);
 					});
 					"""

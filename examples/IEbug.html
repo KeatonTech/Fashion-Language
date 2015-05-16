@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Fashion Test</title>
+	<script src="../../build/fashion.live.js"></script>
+	<style type="text/x-fashion">
+
+	$color: green;
+	$color2: blue;
+
+	$size: 32pt;
+	$height: 40px;
+
+	html {
+		margin: 0;
+		padding: 0;
+	}
+
+	h1 {
+		color: red;
+		font-size: $size;
+		text-align: center;
+	}
+
+	h2, h3 {
+		color: [linear 150ms] $color;
+		font-size: $size / 1.5;
+		text-align: center;
+	}
+
+	h4 {
+		color: [linear 150ms] $color2;
+		text-align: center;
+	}
+
+	</style>
+</head>
+<body>
+	<h1>Header One</h1>
+	<h2>Header Two</h2>
+	<h3>Header Three</h3>
+	<h4>Header Four</h4>
+</body>
+</html>

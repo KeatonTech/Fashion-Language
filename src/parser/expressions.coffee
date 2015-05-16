@@ -382,6 +382,7 @@ window.fashion.$parser.expressionExpander =
 
 	# Expand ternary operators
 	ternary: (ifExp, trueExp, falseExp, parseArgs, top) ->
+		if !ifExp? or !trueExp? then throw new FSETernaryTypeError()
 		[ogstring, parseTree, selector, funcs, globals] = parseArgs
 		bindings = new ExpressionBindings
 		mode = 0
