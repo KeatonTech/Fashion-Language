@@ -1,4 +1,4 @@
-**Fashion was a fun experiment in replacing CSS with a more powerful kind of stylesheet, and it saw some successes. Unfortunately, it turns out to be very difficult to reliably overcome the, let's call it quirkiness, or CSS. Fashion also currently has some major compatibility problems with Internet Explorer due to some nonstandard behavior in its stylesheet implementation. It's a fun language to play around with, and maybe it will inspire others to tackle the beast that is CSS, but I would strongly advise against using it on real projects.**
+**Fashion was a fun experiment in replacing CSS with a more powerful kind of stylesheet, and it saw some successes. Unfortunately, it turns out to be very difficult to reliably overcome the, let's call it quirkiness, of CSS. Fashion also currently has some major compatibility problems with Internet Explorer due to nonstandard behavior in its stylesheet implementation. It's a fun language to play around with, and maybe it will inspire others to tackle the beast that is CSS, but I would strongly advise against using it on real projects.**
 
 # Fashion: Style + Smarts
 
