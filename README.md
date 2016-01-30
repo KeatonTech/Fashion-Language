@@ -1,3 +1,5 @@
+**Fashion was a fun experiment in replacing CSS with a more powerful kind of stylesheet, and it saw some successes. Unfortunately, it turns out to be very difficult to reliably overcome the, let's call it quirkiness, or CSS. Fashion also currently has some major compatibility problems with Internet Explorer due to some nonstandard behavior in its stylesheet implementation. It's a fun language to play around with, and maybe it will inspire others to tackle the beast that is CSS, but I would strongly advise against using it on real projects.**
+
 # Fashion: Style + Smarts
 
 **Fashion is more than just an extension to CSS.** It is a fundamentally new language for the web that takes care of the *style, animation, and interactivity* of your website or web app. Fashion allows your Javascript to focus on functionality without getting tied down by DOM manipulation or style tags. By ***finally*** separating logic from presentation, you'll be able to use the same script files on Desktop and Mobile, or easily move components from one site to another. Fashion is built to structure the web of 2014 and beyond, while still supporting browsers of the past.
@@ -436,11 +438,11 @@ You can also extend fashion to add your own globals and blocks (things like @tra
 
 ## Status
 
-Fashion is still in the early stages of development. It is not feature complete and has a limited testing suite (Just over 100 unit tests). However, all of the features described here do work fairly reliably. I wouldn't reccomend building a whole site with it, but it's certainly not too early to start playing around with it. If you are interested in contributing, email me at keaton.brandt@gmail.com.
+Fashion is no longer under active development.
 
 #### Current Browser Compatibility
 
-Safari 5.1+, IE 9+, Evergreen Browsers(Firefox 4+, Chrome 5+, Opera 11.6+)
+Safari 5.1+, Microsoft Edge, Evergreen Browsers(Firefox 4+, Chrome 5+, Opera 11.6+)
 
 #### Current Size
 
